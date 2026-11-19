@@ -1,0 +1,244 @@
+<style>
+/* ══ 任务中心：只看执行队列，任务只来自首页 / AI 导演确认过的方案 ══ */
+.t-note{display:flex;align-items:center;gap:12px;flex:0 0 auto;padding:10px 13px;
+  border:1px solid #BFE0DA;background:#FFFCF5;border-radius:var(--r-md)}
+.t-note .tx{flex:1;min-width:0;font-size:var(--f5);color:#5A6272;line-height:1.7}
+.t-note .tx b{color:#33405A}
+.t-note .go{display:flex;gap:7px;flex:0 0 auto;flex-wrap:wrap}
+.t-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;flex:0 0 auto}
+.t-stats .u-card{padding:12px 14px}
+.t-stats b{font-size:20px;font-weight:700;display:block}
+.t-stats span{font-size:var(--f5);color:var(--ink3)}
+.t-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(230px,1fr);gap:clamp(8px,1%,12px)}
+.t-list{display:flex;flex-direction:column;min-height:0;padding:0}
+.t-list-head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap}
+.t-list-head b{font-size:var(--f3)}
+.t-filters{display:flex;gap:6px}
+.t-filter{height:25px;padding:0 10px;border:1px solid var(--line);border-radius:12px;font-size:var(--f5);
+  color:#5A6272;background:#FFFFFF;box-shadow:var(--sh-btn);cursor:pointer}
+.t-filter.on{background:#EAF5F3;border-color:#BFE0DA;color:#33405A}
+.t-rows{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:6px 14px 12px}
+.t-rows::-webkit-scrollbar{display:none}
+.t-row{border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;box-shadow:var(--sh-btn);cursor:pointer}
+.t-row:hover{border-color:#BFE0DA}
+.t-row.on{border-color:#BFE0DA;background:#FCFDFE}
+.t-row .r1{display:flex;align-items:center;gap:9px}
+.t-row .r1 .ic{width:15px;height:15px;color:#6A7282;flex:0 0 auto}
+.t-row .r1 b{font-size:var(--f4);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-row .r1 .u-tag{margin-left:auto;flex:0 0 auto}
+.t-row .r2{font-size:var(--f5);color:var(--ink3);margin:5px 0 8px;display:flex;gap:8px;flex-wrap:wrap}
+.t-row .r2 .last{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-row .r3{display:flex;align-items:center;gap:9px}
+.t-row .u-progress{flex:1}
+.t-row .pct{font-size:var(--f5);color:var(--ink2);width:34px;text-align:right}
+.t-row .acts{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.t-row .acts .u-btn{height:24px;padding:0 9px;font-size:10.5px}
+.t-empty-go{display:flex;gap:7px;margin-top:4px}
+.t-log{display:flex;flex-direction:column;min-height:0;padding:0}
+.t-log-head{padding:10px 14px;border-bottom:1px solid var(--line);font-size:var(--f3);font-weight:600;
+  display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.t-log-head .ic{width:15px;height:15px;color:var(--gold-deep)}
+.t-log-head span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-log-body{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:12px 14px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--f5);line-height:1.85;color:#4A5262}
+.t-log-body::-webkit-scrollbar{display:none}
+.t-log-body .ok{color:#2E7D52}.t-log-body .warn{color:#147567}.t-log-body .dim{color:#A6ADBB}
+.t-files{flex:0 0 auto;max-height:34%;overflow:auto;padding:10px 14px;scrollbar-width:none}
+.t-files::-webkit-scrollbar{display:none}
+.t-files h5{font-size:var(--f5);margin:0 0 7px;color:var(--ink2);font-weight:600}
+.t-file{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:var(--f5);color:#4A5262}
+.t-file .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-file .u-btn{height:23px;padding:0 8px;font-size:10.5px}
+.compact .t-stats b{font-size:15px}
+.tiny .t-stats{grid-template-columns:repeat(3,1fr)}
+.tiny .t-body{grid-template-columns:1fr}
+.tiny .t-log{display:none}
+</style>
+
+<section class="page" data-page="tasks">
+  <div class="u-head">
+    <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-task"/></svg>任务中心</div>
+      <div class="u-sub">执行队列 · 进度 / 日志 / 结果 / 取消 / 重试 · 这里不新建任务</div></div>
+    <div class="u-actions">
+      <button class="u-btn" id="tRefreshBtn"><svg class="ic"><use href="#i-refresh"/></svg>刷新</button>
+      <button class="u-btn" id="tClearBtn"><svg class="ic"><use href="#i-trash"/></svg>清空已完成</button>
+    </div>
+  </div>
+
+  <div class="t-note">
+    <div class="tx"><b>这里只管执行，不新建任务。</b>所有内容生成都要先在<b>首页</b>把需求描述完整、确认方案之后才会进入队列；这里能看真实进度、日志和成片，也能取消 / 重试 / 清空记录。</div>
+    <div class="go"><button class="u-btn sm" data-go="home">去首页描述需求</button>
+      </div>
+  </div>
+
+  <div class="t-stats" id="tStats"></div>
+
+  <div class="t-body">
+    <div class="u-card t-list">
+      <div class="t-list-head"><b>任务队列</b>
+        <div class="t-filters" id="tFilters"><button class="t-filter on" data-f="全部">全部</button><button class="t-filter" data-f="运行中">运行中</button><button class="t-filter" data-f="排队中">排队中</button><button class="t-filter" data-f="已完成">已完成</button><button class="t-filter" data-f="失败">需重试</button></div>
+        <span class="u-tag gray" style="margin-left:auto" id="tCount">0 条</span></div>
+      <div class="t-rows" id="tRows"><div class="u-empty"><div>读取任务队列…</div></div></div>
+    </div>
+
+    <div class="u-card t-log">
+      <div class="t-log-head"><svg class="ic"><use href="#i-list"/></svg><span id="tLogTitle">执行日志 · 点左边一个任务</span></div>
+      <div class="t-log-body" id="tLogBody"><div class="dim">选中任务后，这里显示它真实的执行日志。</div></div>
+      <div class="u-divider"></div>
+      <div class="t-files" id="tFiles"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)},$$=function(s){return [].slice.call(document.querySelectorAll(s))};
+  var TASKS=[],CUR='',FILTER='全部',inited=false;
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function A(p,d){return window.api(p,d)}
+  function say(m){if(window.say)window.say(m)}
+  function tagCls(s){return {'运行中':'blue','排队中':'gold','已完成':'green','失败':'gray','已取消':'gray'}[s]||'gray'}
+
+  /* 页面脚本早于 shell.html 的 window.api，等 riffcut-ready 再初始化 */
+  function init(){if(inited)return;inited=true;bind();load(true)}
+  document.addEventListener('riffcut-ready',function(e){
+    init();var l=(e.detail||{}).tasks;if(l&&l.length){TASKS=l;render()}
+  });
+  setTimeout(init,1200);
+
+  function bind(){
+    document.addEventListener('click',function(ev){
+      var t=ev.target,b=t.closest&&t.closest('button');
+      if(!b)return;
+      /* 只处理本页的按钮，别抢别的页面 */
+      if(!b.closest('[data-page="tasks"]'))return;
+      var f=b.getAttribute('data-f');
+      if(f){FILTER=f;$$('#tFilters .t-filter').forEach(function(x){x.classList.toggle('on',x===b)});renderRows();return}
+      var go=b.getAttribute('data-go');
+      if(go&&window.goPage){window.goPage(go);return}
+      if(b.id==='tRefreshBtn'){load(false);return}
+      if(b.id==='tClearBtn'){clearDone();return}
+      var act=b.getAttribute('data-act');
+      if(!act)return;
+      ev.stopPropagation();
+      var id=b.getAttribute('data-id')||CUR;
+      if(act==='log'){CUR=id;render();return}
+      if(act==='cancel')A('/api/tasks',{action:'cancel',id:id}).then(function(){say('已取消任务');load(true)}).catch(function(e){say(e.message)});
+      if(act==='retry')A('/api/tasks',{action:'retry',id:id}).then(function(){say('已重新排队');load(true)}).catch(function(e){say(e.message)});
+      if(act==='open'){
+        var path=b.getAttribute('data-path')||'';
+        A('/api/reveal',path?{path:path}:{}).then(function(){say('已在 Finder 里显示')}).catch(function(e){say(e.message)});
+      }
+    });
+    document.addEventListener('click',function(ev){
+      var row=ev.target.closest&&ev.target.closest('#tRows .t-row');
+      if(!row||ev.target.closest('button'))return;
+      CUR=row.getAttribute('data-id')||'';render();
+    });
+    document.addEventListener('taskchange',function(e){
+      var l=(e.detail||{}).tasks;if(l){TASKS=l;render()}
+    });
+    /* 页面上时每 3 秒拉一次真实队列，保证进度是活的 */
+    setInterval(function(){
+      var p=document.querySelector('[data-page="tasks"]');
+      if(p&&p.classList.contains('on'))load(true);
+    },3000);
+  }
+
+  function load(quiet){
+    if(!window.api)return;
+    A('/api/tasks',{action:'list'}).then(function(list){
+      TASKS=list||[];render();if(!quiet)say('任务队列已刷新');
+    }).catch(function(e){if(!quiet)say(e.message)});
+  }
+  function clearDone(){
+    var go=function(){
+      A('/api/tasks',{action:'clear'}).then(function(){say('已清空已完成 / 失败 / 取消的记录');load(true)})
+        .catch(function(e){say(e.message)});
+    };
+    if(window.confirmAction)window.confirmAction({
+      title:'清空已完成任务',okText:'确认清空',
+      html:'会清掉队列里<b>已完成 / 已取消 / 失败</b>的记录，正在运行和排队的任务不受影响。<br>成片文件本身不会删除。',onOk:go});
+    else if(window.confirm&&window.confirm('清空已完成任务？'))go();
+  }
+
+  function render(){renderStats();renderRows();renderLog()}
+  function renderStats(){
+    var box=$('#tStats');if(!box)return;
+    var n={'运行中':0,'排队中':0,'已完成':0,'失败':0},files=0;
+    TASKS.forEach(function(t){
+      if(n[t.state]!==undefined)n[t.state]++;
+      var f=t.result&&t.result.files;
+      if(f&&typeof f==='object')files+=Object.keys(f).length;
+    });
+    var cards=[['运行中',n['运行中'],''],['排队中',n['排队中'],''],['已完成',n['已完成'],'#2E7D52'],
+               ['需重试',n['失败'],'#147567'],['已产出成片',files,'']];
+    box.innerHTML=cards.map(function(c){
+      return '<div class="u-card"><b'+(c[2]?' style="color:'+c[2]+'"':'')+'>'+c[1]+'</b><span>'+c[0]+'</span></div>';
+    }).join('');
+    var cnt=$('#tCount');if(cnt)cnt.textContent=TASKS.length+' 条任务';
+  }
+  function renderRows(){
+    var box=$('#tRows');if(!box)return;
+    var list=TASKS.slice().reverse().filter(function(t){
+      return FILTER==='全部'||(FILTER==='需重试'?t.state==='失败':t.state===FILTER);
+    });
+    if(!list.length){
+      box.innerHTML='<div class="u-empty"><div>'+(TASKS.length?'这个筛选下没有任务。':'还没有任务。')
+        +'<br>到首页描述需求、确认方案后，任务会自动出现在这里。</div>'
+        +'<div class="t-empty-go"><button class="u-btn sm" data-go="home">去首页</button>'
+        +'</div></div>';return;
+    }
+    box.innerHTML=list.map(function(t){
+      var last=(t.logs||[]).slice(-1)[0]||'—';
+      var err=t.error?'<span style="color:#B04A4A">'+esc(t.error)+'</span>':'';
+      var acts='';
+      if(t.state==='排队中'||t.state==='运行中')
+        acts+='<button class="u-btn sm" data-act="cancel" data-id="'+esc(t.id)+'">取消任务</button>';
+      if(t.state==='失败')
+        acts+='<button class="u-btn sm gold" data-act="retry" data-id="'+esc(t.id)+'">重试</button>';
+      if(t.state==='已完成'&&t.result&&t.result.files){
+        var f=t.result.files,k=Object.keys(f)[0];
+        if(k)acts+='<button class="u-btn sm" data-act="open" data-path="'+esc(f[k])+'" data-id="'+esc(t.id)+'">查看结果</button>';
+      }
+      acts+='<button class="u-btn sm" data-act="log" data-id="'+esc(t.id)+'">看日志</button>';
+      return '<div class="t-row'+(CUR===t.id?' on':'')+'" data-id="'+esc(t.id)+'" data-s="'+esc(t.state)+'">'
+        +'<div class="r1"><svg class="ic"><use href="#i-task"/></svg><b>'+esc(t.name||'未命名任务')+'</b>'
+        +'<span class="u-tag '+tagCls(t.state)+'">'+esc(t.state)+'</span></div>'
+        +'<div class="r2"><span>'+esc(t.created||'')+'</span><span>进度 '+(t.progress||0)+'%</span>'
+        +'<span class="last">'+esc(last.slice(0,64))+'</span>'+err+'</div>'
+        +'<div class="r3"><div class="u-progress"><i style="width:'+(t.progress||0)+'%"></i></div>'
+        +'<span class="pct">'+(t.progress||0)+'%</span></div>'
+        +(acts?'<div class="acts">'+acts+'</div>':'')+'</div>';
+    }).join('');
+  }
+  function renderLog(){
+    var body=$('#tLogBody'),title=$('#tLogTitle'),files=$('#tFiles');
+    var t=TASKS.filter(function(x){return x.id===CUR})[0];
+    if(!t){
+      if(title)title.textContent='执行日志 · 点左边一个任务';
+      if(body)body.innerHTML='<div class="dim">选中任务后，这里显示它真实的执行日志。</div>';
+      if(files)files.innerHTML='';return;
+    }
+    if(title)title.textContent='执行日志 · '+t.name+' · '+t.state;
+    if(body){
+      var logs=t.logs||[];
+      body.innerHTML=logs.length?logs.map(function(l){
+        var cls=/完成|成功|✓/.test(l)?'ok':(/失败|错误|!/.test(l)?'warn':'');
+        return '<div class="'+cls+'">'+esc(l)+'</div>';
+      }).join(''):'<div class="dim">这个任务还没有产生日志。</div>';
+      body.scrollTop=body.scrollHeight;
+    }
+    if(files){
+      var f=t.result&&t.result.files;
+      var keys=f&&typeof f==='object'?Object.keys(f):[];
+      files.innerHTML='<h5>产出文件 · '+keys.length+' 个'+(t.state==='已完成'?'':'（尚未完成）')+'</h5>'
+        +(keys.length?keys.map(function(k){
+          return '<div class="t-file"><span class="nm" title="'+esc(f[k])+'">'+esc(k)+'</span>'
+            +'<button class="u-btn sm" data-act="open" data-path="'+esc(f[k])+'" data-id="'+esc(t.id)+'">在 Finder 显示</button></div>';
+        }).join(''):'<div style="font-size:var(--f5);color:var(--ink3)">这个任务没有产出文件（例如只生成方案）。</div>');
+    }
+  }
+})();
+</script>

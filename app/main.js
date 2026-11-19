@@ -1,0 +1,747 @@
+// 影创新版 · 主进程
+//
+// 架构：Electron 窗口 ← IPC → 本进程（Node）← stdio JSON-RPC → DSH 内核
+// 只两层，没有 Python 桥。
+/* ★ 启动计时。用户双击到能用多久是体验的生死线，必须能一眼看出慢在哪一步。
+   RiffCut_DEBUG=1 时每个关键节点往 stderr 打一行毫秒数。 */
+const __T0 = Date.now()
+const __mark = (n) => {
+  if (!process.env.RiffCut_STARTUP_TRACE) return
+  process.stderr.write('[boot] ' + String(Date.now() - __T0).padStart(6) + ' ms  ' + n + '\n')
+}
+__mark('main.js 加载开始')
+
+const Turn = require('./lib/turn')
+const { app, BrowserWindow, ipcMain, shell, dialog, protocol, net } = require('electron')
+const { join } = require('node:path')
+const { pathToFileURL } = require('node:url')
+const { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync } = require('node:fs')
+const { Kernel, KERNEL_DIR } = require('./lib/kernel')
+const { buildProfile } = require('./lib/profile')
+
+const ROOT = join(__dirname, '..')
+/* ★ 打包后 home 不能放在 app 包里。
+   .app 是只读的（而且改了会破签名），客户素材/工程/成片写进去等于写进安装包，
+   一换版本全丢。打包后指到 ~/Library/Application Support/影创新版，
+   开发时仍用仓库里的 home/（方便调试时直接看文件）。
+   判断依据用 app.isPackaged —— 不要用 __dirname 里有没有 .app，那个字符串不可靠。 */
+function resolveHome() {
+  if (process.env.RiffCut_HOME) return process.env.RiffCut_HOME
+  if (app.isPackaged) {
+    const { homedir } = require('node:os')
+    return join(homedir(), 'Library', 'Application Support', 'RiffCut影创')
+  }
+  return join(ROOT, 'home')
+}
+const HOME = resolveHome()
+const KERNEL = process.env.RiffCut_KERNEL || join(ROOT, 'kernel', 'dsh')
+const PROFILE = 'velora'
+const WIN_W = 1440, WIN_H = 900
+
+// ── 我们自己的页面用私有协议暴露给 DSH 界面里的 iframe ────────────────
+// 为什么要自定义协议而不是 file://：DSH 的界面是 http://127.0.0.1:PORT，
+// 从 http 页面里 iframe 一个 file:// 会被 Chromium 直接拦掉（跨协议）。
+// 私有协议登记成 standard + secure 之后就能正常嵌。
+/* ★ 应用名要在 app.whenReady 之前设。
+   不设的话 Dock / 菜单栏 / 关于面板都显示 package.json 里的 productName（「影创新版」），
+   而用户认的是 RiffCut影创。userData 目录也跟着这个名字走，
+   所以第一次改会让它指向新目录 —— 下面 resolveHome 用的是固定名，不受影响。 */
+app.setName('RiffCut影创')
+
+/* ★ 调试端口开关：只有显式设了 RiffCut_DEBUG_PORT 才开。
+   为什么需要它：Electron 的打包产物不认命令行里的 --remote-debugging-port
+   （会报 bad option），而排查「界面上点了没反应」「某个按钮不工作」这类问题，
+   没有 DevTools 协议就只能靠猜。开着它，外部工具才能读到真实 DOM、真点按钮。
+   默认关闭 —— 普通用户跑的时候不留任何监听端口。 */
+;(function debugPort() {
+  const p = Number(process.env.RiffCut_DEBUG_PORT) || 9333 /* TEST-TEMP */
+  if (!p || p < 1024 || p > 65535) return
+  try {
+    app.commandLine.appendSwitch('remote-debugging-port', String(p))
+    app.commandLine.appendSwitch('remote-allow-origins', '*')
+    process.stderr.write('[debug] DevTools 端口已开: ' + p + '\n')
+  } catch (e) { /* 开不了就算了，不能影响正常启动 */ }
+})()
+
+/* ★ 单实例锁：不做这件事的话，用户点两次图标就是两个进程、两个窗口、
+   两套内核抢同一个端口。症状是「打开一次启动两个窗口」+ 其中一个永远连不上内核。
+   第二个实例直接退出，把焦点还给已经开着的那个窗口。 */
+const _single = app.requestSingleInstanceLock()
+if (!_single) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWin && !mainWin.isDestroyed()) {
+      if (mainWin.isMinimized()) mainWin.restore()
+      mainWin.focus()
+    }
+  })
+}
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'velora', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
+])
+
+/**
+ * 内核要跑在有界面模式下才有原生 UI 能力：
+ * bundles = dsh-base + dsh-web-app → 保留插件市场、设置、插件管理。
+ * 我们自己的界面通过 webview 叠在它上面（不是替换）。
+ */
+function openUiUrl() { return process.env.RiffCut_UI_URL || null }
+
+function startKernel(win) {
+  const k = new Kernel({ kernelDir: KERNEL, homeDir: HOME, profile: PROFILE })
+  k.on('event', (sid, ev) => {
+    if (win.isDestroyed()) return
+    // ★ assistant/message 里混着 reasoning 和 tool-call，直接整条转给界面
+    //   会让聊天区出现一大段英文思考过程。这里按块拆开，界面各取各的。
+    let extra = null
+    if (ev && ev.type === 'assistant/message' && ev.data && ev.data.message) {
+      extra = Turn.makeTurn(ev.data.message)
+    }
+    win.webContents.send('kernel:event', { sessionId: sid, event: ev, turn: extra })
+  })
+  k.on('stderr', (d) => { process.env.RiffCut_DEBUG && process.stderr.write('[core] ' + d) })
+  k.on('ready', (info) => {
+    if (!win.isDestroyed()) win.webContents.send('kernel:ready', info)
+  })
+  // 内核自己打印的带 token 地址 —— 唯一能进的地址（裸端口 401）
+  // ★ 内核跑起来会打印一个带 token 的 Web UI 地址。我们不再把窗口跳过去 ——
+  //   那是 DSH 的界面，跳过去我们自己的前端就全没了（12 个页面一件不剩）。
+  //   内核只在后端跑，界面只用于调试时手动打开。
+  /* 子智能体通知：内核会发 subagent.started / subagent.finished，但它是通知不是请求，
+     内核不提供「列出当前在跑的子智能体」的查询。所以主进程自己记账（lib/agents.js），
+     界面到 /api/agents 读。顺手转一份给窗口，正在看这一页的人不用等轮询。 */
+  k.on('notify', (method, params) => {
+    try {
+      const G = require('./lib/agents')
+      const sid = (params && (params.sessionId || params.parentSessionId)) || ''
+      if (method === 'subagent.started') G.started(sid, params || {})
+      else if (method === 'subagent.finished') G.finished(sid, params || {})
+      else return
+      if (win && !win.isDestroyed()) win.webContents.send('kernel:agents', G.list())
+    } catch (e) {
+      /* 记账坏了不能影响内核本身 */
+      if (process.env.RiffCut_DEBUG) process.stdout.write('[core] 子智能体记账失败: ' + e.message + '\n')
+    }
+  })
+  k.on('web', (url) => {
+    kernelUiUrl = url
+    if (process.env.RiffCut_DEBUG) process.stdout.write('[core] Web UI（调试用，不加载）: ' + url + '\n')
+    if (!win.isDestroyed()) win.webContents.send('kernel:ui', url)
+  })
+  return k
+}
+
+let mainWin = null
+let kernel = null
+let kernelUiUrl = null
+
+function createWindow() {
+  mainWin = new BrowserWindow({
+    width: WIN_W, height: WIN_H,
+    minWidth: 1024, minHeight: 680,
+    show: false,
+    /* ★ 用 hidden 不是 hiddenInset：
+       hiddenInset 会把三颗系统红绿灯叠到我们自绘的顶栏上，
+       而前端 shell.html 里已经自己画了一套 .lights（还绑了最小化/全屏/关闭），
+       结果就是「红绿灯重影、位置还歪」。hidden 之后系统不画，
+       由前端那套负责；下面再把原生按钮藏掉兜底。 */
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: -100, y: -100 },
+    backgroundColor: '#0E1013',
+    webPreferences: {
+      preload: join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      // 原生 DSH 界面是 <webview> 加载内核自己的 Web UI —— 不开这个开关
+      // 标签存在但不会工作（点了没反应，控制台也没有明显报错）。
+      webviewTag: true,
+      // iframe 里也要能拿到 window.riffcut —— 剪辑台面板是 iframe，
+      // 不开这个开关它就只有 dom、调不到任何后端能力。
+      nodeIntegrationInSubFrames: true,
+    },
+  })
+  // 窗口先显示占位页（避免白屏几秒），内核起来后再 loadURL 跳过去。
+  // ★ 界面就是 DSH 自己的 Web UI —— 不复制、不注入、不魔改 DOM。
+  //   我们要改的地方（侧栏顶部 + 首页 hero）全部通过官方 client 插件的
+  //   slots 注册进去，内核升级时跟着走，不存在「他们改了结构我们就瞎」。
+  // 界面是我们自己的完整前端（旧版 12 个页面搬过来的），
+  // 用 velora://app/ 走自定义标准协议加载 —— 相对路径和 /api/* 都按正常网页规则工作。
+  /* 双保险：hidden 之后个别 macOS 版本仍会残留按钮区，
+     setWindowButtonVisibility(false) 直接把它们关掉。 */
+  try { mainWin.setWindowButtonVisibility(false) } catch (e) {}
+  /* ★ 两步加载：先亮启动页，再把完整界面换上来。
+     完整前端是一个 988KB 的 HTML、20 个内联脚本同时初始化、并发几十个 /api ——
+     实测要 12 秒才画第一帧。用户双击后对着黑屏等十几秒就是「软件打不开」。
+     启动页是 900 字节，几十毫秒就出来，logo 一出现用户心里就踏实了；
+     主界面在同一个窗口里随后顶上来。 */
+  mainWin.loadFile(join(__dirname, 'renderer', 'boot.html'))
+  setTimeout(() => {
+    try { if (mainWin && !mainWin.isDestroyed()) mainWin.loadURL('velora://app/') } catch (e) {}
+  }, 60)
+  /* ★ 不要等 ready-to-show 才显示窗口。
+     ready-to-show 要等「首帧可以画出来」，而我们这一整个前端是 16 个页面
+     一次性塞进同一个 HTML、各自的初始化脚本同时跑、并发几十个 /api 请求 ——
+     实测要 36 秒。用户双击后三十多秒什么都看不到，会以为软件坏了。
+     改成 dom-ready 就显示（此时窗口是深色底 + 顶栏，已经有东西了），
+     页面内容自己往上填。慢的部分在后台继续跑，不挡着用户看。 */
+  mainWin.once('dom-ready', () => { try { mainWin.show() } catch (e) {} })
+  // 兜底：万一 dom-ready 没触发（协议层出错），1.2 秒也把窗口亮出来
+  setTimeout(() => { try { if (mainWin && !mainWin.isDestroyed() && !mainWin.isVisible()) mainWin.show() } catch (e) {} }, 1200)
+  mainWin.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url).catch(() => {})
+    return { action: 'deny' }
+  })
+  return mainWin
+}
+
+/**
+ * 起内核之前先把端口定下来。
+ * ★ 必须在 Node 侧挑好写进 port.txt：profile 生成时把这个数字直接写进 YAML。
+ *   把「读文件算端口」塞进 cordis 的 !!js 表达式会拿到 [object Object]，
+ *   内核直接 ValidationError；写死一个值又会在撞端口时整个起不来。
+ */
+function pickPort() {
+  const P = require('./lib/paths')
+  const { createServer } = require('node:net')
+  return new Promise((resolve) => {
+    const srv = createServer()
+    srv.once('error', () => resolve(0))
+    srv.listen(0, '127.0.0.1', () => {
+      const port = srv.address().port
+      srv.close(() => {
+        try {
+          const dir = join(P.HOME, '配置')
+          if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+          writeFileSync(join(dir, 'port.txt'), String(port), 'utf8')
+        } catch {}
+        resolve(port)
+      })
+    })
+  })
+}
+
+/* 第一次启动（打包版）：把仓库里的 home/ 内容搬进 Application Support。
+   为什么要搬：客户素材、模板库、41 条导演技能、9 个剪辑工程都在 home 里，
+   不搬过去的话用户打开软件看到的是一个空软件，以为东西全没了。
+   只在目标目录不存在或为空时搬，绝不覆盖用户已有的数据。 */
+/* 首次启动：把包内自带的初始数据（模板库 / 内置技能 / 配置默认值）铺到 HOME。
+   ★ 只搬 Resources/seed-home 里那几样，不搬客户素材、不搬工程、不搬成片。
+     那些是用户的东西，第一次装软件别人不该看见我的项目。
+   ★ 逐个子目录搬，不整体搬：整体 cpSync 遇到 HOME 里已有同名目录时
+     行为取决 force 选项，容易把人家的配置覆盖掉。 */
+const SEED_DIRS = ['模板库', '内置', '配置', '系统']
+function seedHomeIfEmpty() {
+  if (!app.isPackaged) return
+  const { existsSync, mkdirSync, cpSync } = require('node:fs')
+  const seedRoot = join(ROOT, 'seed-home')
+  if (!existsSync(seedRoot)) return
+  mkdirSync(HOME, { recursive: true })
+  for (const d of SEED_DIRS) {
+    const src = join(seedRoot, d)
+    const dst = join(HOME, d)
+    if (!existsSync(src)) continue
+    // 已经有了就不动（用户可能改过配置）
+    if (existsSync(dst)) continue
+    try {
+      /* ★ 排除本地模型：那是几百 MB 的权重（语音识别 241MB、情感配音 1.5GB），
+         复制一遍首次启动要卡十几秒、用户磁盘还要多占一份。
+         它们只读，交给下面的 linkBigModels 建软链。 */
+      cpSync(src, dst, {
+        recursive: true,
+        filter: (p) => !p.includes(join('系统', '本地模型')),
+      })
+      console.log('[main] 铺初始数据：' + d)
+    } catch (e) {
+      console.error('[main] 铺 ' + d + ' 失败（不影响启动）: ' + e.message)
+    }
+  }
+  linkBigModels(seedRoot)
+}
+
+/** 本地模型权重（语音识别 241MB、情感配音 1.5GB）不要复制进用户数据目录。
+ *  ★ 复制 241MB 会让第一次启动卡十几秒，而且换版本时又得再复制一次。
+ *    这些文件是只读的，直接软链到安装包里的那份就行 —— 读起来一样，
+ *    启动是毫秒级。软链的目标在 .app 内部，打包时已经在包里，不会失效。 */
+function linkBigModels(seedRoot) {
+  const { existsSync, mkdirSync, symlinkSync, lstatSync, unlinkSync } = require('node:fs')
+  const srcLM = join(seedRoot, '系统', '本地模型')
+  if (!existsSync(srcLM)) return
+  const dstLM = join(HOME, '系统', '本地模型')
+  const walk = (from, to) => {
+    let ents = []
+    try { ents = require('node:fs').readdirSync(from, { withFileTypes: true }) } catch (e) { return }
+    for (const e of ents) {
+      const a = join(from, e.name), b = join(to, e.name)
+      if (e.isDirectory()) {
+        mkdirSync(b, { recursive: true })
+        walk(a, b)
+      } else if (e.isFile()) {
+        const st = lstatSync(b, { throwIfNoEntry: false })
+        /* ★ 软链存在但目标没了（客户把 app 从下载目录拖到 /Applications、
+           或者换了新版本），必须重建 —— 只判「是不是软链」就 continue 的话，
+           旧链会一直指着不存在的位置，界面上就是「Ming 引擎不在」。 */
+        if (st && st.isSymbolicLink()) {
+          let ok = false
+          try { ok = existsSync(b) } catch (e) { ok = false }
+          if (ok) continue
+          try { unlinkSync(b) } catch (e) {}
+        } else if (existsSync(b)) continue
+        try {
+          mkdirSync(join(to), { recursive: true })
+          /* 用启动时算出来的绝对路径。
+             seedRoot 是 process.resourcesPath 推出来的，所以「客户把 app 拖到
+             /Applications」这种挪动，下次启动会重新算出正确位置；
+             配合上面那段自愈（旧链断了就 unlink 重建），挪多少次都对。
+             相对链在这里不成立：Application Support 与安装包之间没有固定层级。 */
+          symlinkSync(require("node:fs").realpathSync(a), b)
+        } catch (err) {}
+      }
+    }
+  }
+  try {
+    mkdirSync(dstLM, { recursive: true })
+    walk(srcLM, dstLM)
+    console.log('[main] 本地模型已软链到安装包（不占用户磁盘）')
+  } catch (e) {
+    console.error('[main] 软链本地模型失败（不影响启动）: ' + e.message)
+  }
+}
+
+app.whenReady().then(async () => {
+  __mark('whenReady 触发')
+  seedHomeIfEmpty()
+  __mark('初始数据就绪')
+  // velora://studio/ → app/renderer/studio.html
+  // velora://app/  → 我们自己的完整前端（app/ui/src 构建出来的 ui.html）
+  // 以及它的 /api/*（由 lib/uiserver.js 翻译成 lib/ 各模块）。
+  // 与上面 studio 那套并存：studio 是简化七屏，app 是旧版 12 个页面的完整前端。
+  const uiHandler = require('./lib/uiserver').handler({
+    root: join(__dirname, 'renderer'),
+    homePage: 'ui.html',
+  })
+  protocol.handle('velora', (req) => {
+    let rel = 'studio.html'
+    try {
+      const _u0 = new URL(req.url)
+      if (_u0.host === 'app') return uiHandler(req)
+    } catch {}
+    try {
+      const u = new URL(req.url)
+      if (u.host === 'studio' || u.host === '') {
+        rel = u.pathname === '/' || u.pathname === '' ? 'studio.html' : u.pathname.replace(/^\/+/, '')
+      } else {
+        rel = u.pathname.replace(/^\/+/, '') || 'studio.html'
+      }
+    } catch {}
+    // 防穿越：只允许 renderer 目录下的文件
+    const safe = rel.replace(/\.\./g, '')
+    // 模板缩略图单独走一条：velora://studio/thumbs/<名字>.png
+    // 不这样做的话 studio.html 拿不到预览图 —— 它是 velora:// 源，
+    // 直接引用 home/模板库/thumbs 下的本地文件会被跨源拦掉。
+    if (safe.startsWith('thumbs/')) {
+      try {
+        const T = require('./lib/templates')
+        const f = join(T.thumbsRoot(), safe.slice('thumbs/'.length))
+        if (!existsSync(f)) return new Response('no thumb', { status: 404 })
+        return net.fetch(pathToFileURL(f).toString())
+      } catch {
+        return new Response('no thumbs', { status: 404 })
+      }
+    }
+    // 剪辑台要拿工程里的素材（assets/xxx.mp4）：iframe 是 velora:// 源，
+    // 直接引用 file:// 绝对路径会被跨源拦掉，所以也走这条路。
+    //   velora://proj/<工程名>/assets/<文件名>  →  <工程目录>/assets/<文件名>
+    //   velora://proj/<工程名>/out/<文件名>     →  <工程目录>/out/<文件名>（预览片）
+    // 预览片落在 产出/预览（不是工程目录），单独开一条
+    //   velora://out/<文件名>  →  <客户>/产出/预览/<文件名>
+    //   velora://lib/<文件名>  →  <客户>/产出/图片/<文件名>（素材库缩略图）
+    if (safe.startsWith('out/') || safe.startsWith('lib/')) {
+      try {
+        const C = require('./lib/core')
+        const isOut = safe.startsWith('out/')
+        const fname = decodeURIComponent(safe.slice(isOut ? 4 : 4)).replace(/\.\./g, '')
+        const dir = isOut ? C.custPaths().previews : C.custPaths().images
+        const f = join(dir, fname)
+        if (!existsSync(f)) return new Response('no media: ' + fname, { status: 404 })
+        return net.fetch(pathToFileURL(f).toString())
+      } catch (e) {
+        return new Response('media error: ' + String(e && e.message), { status: 404 })
+      }
+    }
+    if (safe.startsWith('proj/')) {
+      try {
+        const TL = require('./lib/timeline')
+        const parts = safe.slice('proj/'.length).split('/')
+        const pname = decodeURIComponent(parts.shift() || '')
+        const rest = parts.map(decodeURIComponent).join('/').replace(/\.\./g, '')
+        const f = join(TL.projDir(pname), rest)
+        if (!existsSync(f)) return new Response('no media: ' + rest, { status: 404 })
+        return net.fetch(pathToFileURL(f).toString())
+      } catch (e) {
+        return new Response('proj error: ' + String(e && e.message), { status: 404 })
+      }
+    }
+    const file = join(__dirname, 'renderer', safe)
+    if (!existsSync(file)) return new Response('not found: ' + safe, { status: 404 })
+    return net.fetch(pathToFileURL(file).toString())
+  })
+
+  __mark('协议就绪')
+  await pickPort()
+  __mark('端口选好')
+  const win = createWindow()
+  __mark('窗口创建')
+  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
+
+  // 开机自启内核 —— 用户打开软件就该能用，不该先点一下「启动」。
+  // 失败也不卡死：把错误送到界面，用户可以点重试。
+  try {
+    const prof = buildProfile({ kernelDir: KERNEL, homeDir: HOME, profile: PROFILE })
+    kernel = startKernel(win)
+    await kernel.start({
+      provider: prof.provider, model: prof.model,
+      cwd: HOME, env: prof.env,
+    })
+    __mark('内核就绪')
+    // 把主进程这个内核交给对话层认领 —— 内核全进程只能有一个，
+    // 两边各起一个会抢同一个端口，后起的 code=1 退出。
+    try { require('./lib/kernelchat').adopt(kernel) } catch (e) { /* 对话层坏了不影响内核 */ }
+  } catch (err) {
+    const msg = String((err && err.message) || err)
+    process.stderr.write('[core] 启动失败: ' + msg + '\n')
+    if (!win.isDestroyed()) {
+      win.webContents.executeJavaScript(
+        'document.getElementById("m") && (document.getElementById("m").textContent = ' + JSON.stringify('内核启动失败：' + msg) + ')'
+      ).catch(() => {})
+    }
+  }
+})
+
+/* 前端自绘红绿灯的窗口控制。
+   ★ 原生按钮已经被隐藏（hidden + setWindowButtonVisibility(false)），
+     如果这里不接，用户就没有任何办法最小化/关闭窗口 —— 那比不画还糟。 */
+ipcMain.handle('win:action', (e, act) => {
+  const w = BrowserWindow.fromWebContents(e.sender) || mainWin
+  if (!w || w.isDestroyed()) return false
+  if (act === 'close') w.close()
+  else if (act === 'min') w.minimize()
+  else if (act === 'max') { w.isMaximized() ? w.unmaximize() : w.maximize() }
+  else return false
+  return true
+})
+
+/* 一键重启：装插件/改 bundle 后内核只在启动时读一次 profile，必须重启整个 App。
+   relaunch 要在 exit 之前调；先让 IPC 回一句 ok，再延时退出，
+   否则渲染进程还没收到回应就被杀掉，界面会卡在「重启中」。 */
+ipcMain.handle('app:restart', () => {
+  try { if (kernel) kernel.stop() } catch (e) {}
+  setTimeout(() => {
+    try { app.relaunch() } catch (e) { /* 开发模式下可能不支持，退出即可 */ }
+    app.exit(0)
+  }, 300)
+  return { ok: true }
+})
+
+app.on('window-all-closed', () => {
+  if (kernel) kernel.stop()
+  app.quit()
+})
+
+// ── IPC ────────────────────────────────────────────────────────────────
+// ── 剪辑台的专用 IPC ────────────────────────────────────────────────────
+// 为什么不用 tools:call：剪辑台每拖一下片段就要存盘（几十毫秒一次），
+// 走工具层要过授权判定、要拼人读文本、还要 JSON 来回转，卡手。
+// 这五个通道直接对 timeline.js，出入都是结构化数据。
+ipcMain.handle('tl:list', () => {
+  try { return { ok: true, items: require('./lib/timeline').listProjects() } }
+  catch (e) { return { ok: false, error: String(e && e.message) } }
+})
+
+ipcMain.handle('tl:load', (_e, name) => {
+  try {
+    const T = require('./lib/timeline')
+    const d = T.load(name)
+    // 顺手把素材池一起给出去 —— 剪辑台左侧要列出可拖的素材
+    let assets = []
+    try { assets = T.assets(name) || [] } catch {}
+    return { ok: true, doc: d, assets }
+  } catch (e) { return { ok: false, error: String(e && e.message) } }
+})
+
+ipcMain.handle('tl:save', (_e, name, doc) => {
+  try {
+    // 只认结构化字段，别把界面上的临时态（选中、缩放）写进工程文件
+    const T = require('./lib/timeline')
+    const clean = {
+      name: doc.name, width: doc.width, height: doc.height, fps: doc.fps,
+      duration: doc.duration, tracks: doc.tracks,
+    }
+    if (doc.plan) clean.plan = doc.plan
+    return { ok: true, doc: T.save(name, clean) }
+  } catch (e) { return { ok: false, error: String(e && e.message) } }
+})
+
+ipcMain.handle('tl:import', (_e, name, srcPath) => {
+  try {
+    const T = require('./lib/timeline')
+    const r = T.importAsset(name, srcPath)
+    return { ok: true, asset: r, assets: T.assets(name) }
+  } catch (e) { return { ok: false, error: String(e && e.message) } }
+})
+
+ipcMain.handle('tl:preview', async (_e, name) => {
+  // 出预览 → 返回一条 velora://proj/ 的地址，界面直接丢进 <video>
+  try {
+    const R = require('./lib/render')
+    const r = await R.renderProject(name, { final: false })
+    if (!r || r.ok === false) return { ok: false, error: String((r && r.error) || '渲染失败') }
+    const file = String(r.path || '')
+    const base = file.split('/').pop()
+    return { ok: true, url: 'velora://out/' + encodeURIComponent(base), path: file, ms: r.ms }
+  } catch (e) { return { ok: false, error: String(e && e.message) } }
+})
+
+ipcMain.handle('app:info', () => {
+  let tools = 0, templates = 0, skills = 0
+  try { tools = Object.keys(require('./lib/tools').REGISTRY).length } catch {}
+  try { templates = require('./lib/templates').catalog().length } catch {}
+  try { skills = require('./lib/skills').listSkills().length } catch {}
+  return {
+    root: ROOT, home: HOME, kernel: KERNEL, version: app.getVersion(),
+    kernelProbe: Kernel.probe(KERNEL),
+    // 数字都从真实数据来 —— 界面上不许写死「456 个模板 / 125 个工具」这种
+    // 看起来像事实、实际会随版本飘的数
+    tools, templates, skills,
+    level: (() => { try { return require('./lib/core').levelOf() } catch { return '建议' } })(),
+    scope: (() => { try { return require('./lib/core').scopeOf() } catch { return '影创' } })(),
+  }
+})
+
+/* 打开外链（注册页 / 控制台）。
+   为什么单独做一个 IPC：渲染进程是 velora:// 自定义协议 + sandbox，
+   直接 window.open 会被 setWindowOpenHandler 里的 deny 拦掉；
+   这里只放行 http/https，避免 file:// 或自定义协议被当成外链打开。 */
+ipcMain.handle('app:openExternal', async (_e, url) => {
+  try {
+    const u = String(url || '').trim()
+    if (!/^https?:\/\//i.test(u)) return { ok: false, error: '只允许 http/https 链接' }
+    await shell.openExternal(u)
+    return { ok: true, url: u }
+  } catch (e) {
+    return { ok: false, error: String((e && e.message) || e) }
+  }
+})
+
+/* 反馈：直接唤起系统邮件客户端，把版本/系统信息预先填进正文。
+   为什么不用网页表单：本机软件没有服务端，收反馈最省事的就是邮件；
+   预填诊断信息是为了省掉「你用的什么版本」这一轮来回。 */
+ipcMain.handle('feedback:mail', async (_e, opts = {}) => {
+  try {
+    const FEEDBACK_TO = 'China@cyanweb.cn'
+    const ver = app.getVersion()
+    const os = require('os')
+    const kind = String(opts.kind || '反馈')
+    const subject = `[RiffCut 影创 ${kind}] v${ver} · ${os.platform()} ${os.arch()}`
+    const body = [
+      '请描述你遇到的问题或建议（越具体越好）：',
+      '',
+      '',
+      '',
+      '────────────────────',
+      '以下信息请保留，方便定位问题：',
+      `软件版本：${ver}`,
+      `系统版本：${os.platform()} ${os.release()} (${os.arch()})`,
+      `Electron：${process.versions.electron || '-'}`,
+      `Node：${process.versions.node || '-'}`,
+      `内核：${KERNEL}`,
+      `数据目录：${HOME}`,
+    ].join('\n')
+    const url = 'mailto:' + FEEDBACK_TO +
+      '?subject=' + encodeURIComponent(subject) +
+      '&body=' + encodeURIComponent(body)
+    await shell.openExternal(url)
+    return { ok: true, to: FEEDBACK_TO }
+  } catch (e) {
+    return { ok: false, error: String((e && e.message) || e) }
+  }
+})
+
+ipcMain.handle('kernel:start', async (_e, opts = {}) => {
+  if (kernel && kernel.ready) return { ok: true, already: true }
+  try {
+    const prof = buildProfile({ kernelDir: KERNEL, homeDir: HOME, profile: PROFILE })
+    kernel = startKernel(BrowserWindow.getAllWindows()[0])
+    const info = await kernel.start({
+      provider: opts.provider || prof.provider,
+      model: opts.model || prof.model,
+      cwd: opts.cwd || join(ROOT, 'data'),
+      env: prof.env,
+    })
+    return { ok: true, info, provider: prof.provider, model: prof.model }
+  } catch (err) {
+    return { ok: false, error: String(err && err.message || err) }
+  }
+})
+
+ipcMain.handle('kernel:prompt', async (_e, { sessionId, text, cwd }) => {
+  if (!kernel || !kernel.ready) return { ok: false, error: '内核没起' }
+  try {
+    if (cwd) await kernel.setCwd(sessionId, cwd).catch(() => {})
+    const r = await kernel.prompt(sessionId, text)
+    return { ok: true, messageId: r?.messageId }
+  } catch (err) {
+    return { ok: false, error: String(err && err.message || err) }
+  }
+})
+
+ipcMain.handle('kernel:wait', async (_e, { sessionId, timeout }) => {
+  if (!kernel || !kernel.ready) return { ok: false, error: '内核没起' }
+  try { const r = await kernel.wait(sessionId, timeout || 0); return { ok: true, r } }
+  catch (err) { return { ok: false, error: String(err && err.message || err) } }
+})
+
+ipcMain.handle('kernel:model', async (_e, { sessionId, provider, model }) => {
+  // 换模型：内核支持按会话切换
+  try { const r = await kernel.call('session/model/set', { sessionId, provider, model }); return { ok: true, r } }
+  catch (err) { return { ok: false, error: String(err && err.message || err) } }
+})
+
+// ── 通用工具通道：界面调工具的唯一入口 ────────────────────────────────
+// 为什么不做成一堆细粒度 IPC：42 个工具、每个参数都不一样，一个个写
+// handler 既冗长又和 lib/tools.js 的注册表脱钩（改了注册表忘了改 IPC，
+// 界面就报「不支持」）。这里直接透传给 tools.call，注册表是唯一真相。
+//
+// 权限在 lib/tools.js 的 allowed() 里判（LEVELS 四档 + mutates 特例），
+// 界面点击和 AI 调用走同一套判定 —— 不存在「界面能点、AI 不能做」的缝。
+ipcMain.handle('tools:call', async (_e, { name, args, customer } = {}) => {
+  try {
+    const T = require('./lib/tools')
+    const C = require('./lib/core')
+    const tool = T.REGISTRY[name]
+    if (!tool) return { ok: false, error: '没有这个工具：' + name }
+    const cust = customer || C.currentCustomer()
+    if (!T.allowed(tool, cust)) {
+      return {
+        ok: false, denied: true,
+        error: `当前授权档「${C.levelOf()}」不允许用「${tool.name}」。` +
+               `到设置里把档位调到「${tool.level}」或更高。`,
+      }
+    }
+    // tools.call 自己就返回 {ok, text} / {ok:false, error}，不要再包一层
+    // （包了界面上就得写 r.data.ok，很容易漏判、把失败当成功显示）
+    return await T.call(name, args || {}, cust)
+  } catch (e) {
+    return { ok: false, error: String((e && e.message) || e) }
+  }
+})
+
+// 工具清单：给界面画按钮/开关用，也顺手让「能力」面板显示真实数字
+ipcMain.handle('tools:list', async () => {
+  try {
+    const T = require('./lib/tools')
+    const C = require('./lib/core')
+    const cust = C.currentCustomer()
+    const items = Object.values(T.REGISTRY).map(t => ({
+      name: t.name,
+      desc: String(t.desc || '').split('\n')[0].slice(0, 80),
+      level: t.level,
+      mutates: t.mutates || 'read',
+      allowed: T.allowed(t, cust),
+    }))
+    return { ok: true, items, total: items.length, level: C.levelOf(), scope: C.scopeOf() }
+  } catch (e) { return { ok: false, error: String(e.message || e), items: [] } }
+})
+
+// ── 权限与范围（AI 的授权档 / 可见目录）──────────────────────────────
+ipcMain.handle('app:perm', async (_e, p = {}) => {
+  try {
+    const C = require('./lib/core')
+    const out = { ok: true, level: C.levelOf(), scope: C.scopeOf() }
+    if (p.level) out.level = C.setLevel(String(p.level))
+    if (p.scope) out.scope = C.setScope(String(p.scope))
+    return out
+  } catch (e) { return { ok: false, error: String(e.message || e) } }
+})
+
+// ── 素材：模板与技能 ───────────────────────────────────────────────────
+ipcMain.handle('assets:templates', async (_e, q = {}) => {
+  try {
+    const T = require('./lib/templates')
+    const all = T.catalog()
+    let items = all
+    if (q.cat) items = items.filter(x => x.cat === String(q.cat))
+    if (q.q) items = T.search(items, String(q.q))
+    const lim = Math.max(1, Number(q.limit) || 400)
+    return {
+      ok: true, total: items.length, source: '模板库',
+      items: items.slice(0, lim).map(x => ({
+        name: x.name, title: x.title || x.name, cat: x.cat, kind: x.kind,
+        duration: x.duration, thumb: x.hasThumb ? ('/tplthumb/' + x.name + '.png') : '',
+        desc: String(x.desc || '').slice(0, 120),
+      })),
+    }
+  } catch (e) { return { ok: false, error: String(e.message || e) } }
+})
+
+ipcMain.handle('assets:skills', async () => {
+  try {
+    const S = require('./lib/skills')
+    const items = S.listSkills().map(s => ({ name: s.title || s.id, id: s.id, desc: String(s.whenToUse || s.summary || '') }))
+    return { ok: true, items, total: items.length }
+  } catch (e) { return { ok: false, error: String(e.message || e), items: [] } }
+})
+
+// ── 原生 DSH 界面（webview 里加载内核自己的 Web UI）──────────────────
+ipcMain.handle('native:open', async () => ({ ok: true }))
+
+ipcMain.handle('native:info', async () => {
+  // 内核的 web-app bundle 会在 port.txt 那个端口起界面；带 token 走一次换 cookie
+  try {
+    const P = require('./lib/paths')
+    const portFile = join(P.HOME, '配置', 'port.txt')
+    if (!existsSync(portFile)) return { ok: false, url: '' }
+    const port = String(readFileSync(portFile, 'utf8')).trim()
+    if (!port) return { ok: false, url: '' }
+    return { ok: true, url: `http://127.0.0.1:${port}/` }
+  } catch { return { ok: false, url: '' } }
+})
+
+// ── 打开路径 ───────────────────────────────────────────────────────────
+ipcMain.handle('sys:open', async (_e, p) => {
+  try {
+    const P = require('./lib/paths')
+    const T = require('./lib/tools')
+    const r = T.resolveUserPath(p, null)
+    if (!r.ok) return { ok: false, error: r.error }
+    await shell.openPath(r.abs)
+    return { ok: true }
+  } catch (e) { return { ok: false, error: String(e.message || e) } }
+})
+
+/* 选文件夹（原生对话框）。Electron 里 window.webkit 不存在，旧 WKWebView 通道
+   的 folder.postMessage 永远不触发——以前「添加工作区」只能走 webkitdirectory，
+   拿到的是相对路径、加不进去。这里给一条真能拿绝对路径的通道。 */
+ipcMain.handle('sys:pickFolder', async (_e, opts = {}) => {
+  try {
+    const w = BrowserWindow.fromWebContents(_e.sender) || mainWin
+    const r = await dialog.showOpenDialog(w, {
+      title: opts.title || '选择文件夹',
+      properties: ['openDirectory', 'createDirectory'],
+    })
+    if (r.canceled || !r.filePaths || !r.filePaths.length) return { ok: false, canceled: true }
+    return { ok: true, path: r.filePaths[0] }
+  } catch (e) { return { ok: false, error: String(e.message || e) } }
+})
+
+/* 拖拽进来的 File 取绝对路径。Electron 32+ 移除了 File.path，
+   必须用 webUtils.getPathForFile（主进程侧调用）。 */
+ipcMain.handle('sys:pathForFile', async (_e, file) => {
+  try {
+    const { webUtils } = require('electron')
+    const p = webUtils.getPathForFile(file)
+    return { ok: !!p, path: p || '' }
+  } catch (e) { return { ok: false, error: String(e.message || e) } }
+})

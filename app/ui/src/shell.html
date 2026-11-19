@@ -1,0 +1,2373 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RiffCut 影创 AI Studio</title>
+<style>
+/* ══ 设计令牌（2026-11-17 统一专业标准）═══════════════════════════════
+   原则：一档强调色、三档圆角、五档字号、无渐变无吉祥物色。
+   ⚠ 变量名沿用了旧的 --gold* 是因为全站 120 处引用它们，
+     一次性改名风险远大于收益；这里只换「值」，语义全部转成中性/强调。
+     --gold      极浅中性底（原来是香槟金，现在只是比白深一档的灰）
+     --gold-soft 浅中性底（选中态背景）
+     --gold-deep 唯一强调色（原来是金铜，现在是青绿，和主按钮同色系）
+     --green/--purple 只作为状态点保留，不再大面积铺色。
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#FFFFFF; --card:#FFFFFF; --panel:#FFFFFF;
+  --ink:#1E2430; --ink2:#5A6272; --ink3:#98A0AF;
+  --line:#E7EAF0; --hover:#F4F6FA;
+  /* 唯一强调色：青绿。全站只允许它和中性灰，不再有金/粉/紫。 */
+  --accent:#1B8B7E; --accent-ink:#147567; --accent-soft:#EAF5F3; --accent-line:#BFE0DA;
+  --gold:#F6F8FB; --gold-soft:#F0F3F8; --gold-deep:#1B8B7E;
+  --green:#C6F1D9; --purple:#DDE3EC;
+  /* 圆角只留三档：4（小控件）/ 8（按钮、输入）/ 12（卡片、面板） */
+  --r-lg:12px; --r-md:8px; --r-sm:4px;
+  /* 字号只留四档：20 页面标题 / 15 小标题·重点 / 12 正文 / 10.5 微标签 */
+  --f1:20px; --f2:15px; --f3:12px; --f4:12px; --f5:10.5px;
+  --sh-1:0 1px 2px rgba(28,38,58,.06),0 4px 14px rgba(28,38,58,.06);
+  --sh-btn:0 1px 2px rgba(28,38,58,.08),inset 0 1px 0 rgba(255,255,255,.9);
+  --sh-in:inset 0 1px 2px rgba(28,38,58,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);
+  /* 正文基准固定 15px（--f2）。不给基准值的话浏览器默认 16px 会成为一个
+     计划外的第六档字号，凡是没显式声明的地方都会漏出这一档。 */
+  font-size:var(--f2);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",Arial,sans-serif;
+  color:var(--ink);-webkit-font-smoothing:antialiased}
+/* 控件不继承字号会出现浏览器默认的 13.3333px 档，把它也压回令牌体系 */
+button,input,select,textarea{font-family:inherit;color:inherit;font-size:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+.ic{width:20px;height:20px;display:block;flex:0 0 auto}
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
+#frame{position:absolute;inset:0;width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+/* ── 标题栏（macOS 交通灯） ───────────── */
+/* ★ -webkit-app-region:drag 是 Electron 里「拖这块能移动窗口」的唯一开关。
+   没有它，标题栏就是一块普通 div —— 鼠标按住拖不动窗口，
+   而原生标题栏已经被 titleBarStyle:'hidden' 藏掉了，所以整窗没有任何地方能拖。
+   反过来，按钮上必须 no-drag，否则点在按钮上的第一下会被当成「开始拖窗口」，
+   点击事件根本不触发（这就是红绿灯点了没反应的一半原因）。 */
+.titlebar{flex:0 0 clamp(48px,6.2%,64px);display:flex;align-items:center;padding:0 20px;
+  position:relative;background:#FFFFFF;border-bottom:1px solid var(--line);
+  box-shadow:0 1px 3px rgba(28,38,58,.04);z-index:5;
+  -webkit-app-region:drag;user-select:none}
+.titlebar button,.titlebar input,.titlebar .lights,.titlebar .tb-actions,
+.titlebar .tb-brand{-webkit-app-region:no-drag}
+/* 双击标题栏 = 系统默认的「最大化/还原」 */
+.titlebar{-webkit-user-select:none}
+/* ── 窗口按钮（原来是 12px 自绘三色点，跟系统那三个叠在一起像一串小圆点）
+   现在：原生窗口的交通灯已经在 main.swift 里关掉了，这里就是唯一的三个按钮。
+   尺寸取 macOS 标准 12px 圆 + 视觉留白，间距 8px，跟系统那种一眼分不出差别；
+   只有 hover 才浮出符号，不 hover 时是纯色圆点，不喧宾夺主。 */
+.lights{display:flex;align-items:center;gap:10px;padding-right:2px}
+.lights i{width:15px;height:15px;border-radius:50%;display:grid;place-items:center;
+  font-size:10.5px;line-height:1;font-weight:700;font-style:normal;color:rgba(0,0,0,.55);
+  cursor:pointer;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.14);
+  transition:filter .14s}
+.lights i:hover{filter:brightness(.92)}
+.lights i:active{filter:brightness(.82)}
+.lights i span{opacity:0;transition:opacity .14s}
+.lights:hover i span{opacity:1}
+.lights .r{background:#FF5F57}.lights .y{background:#FEBC2E}.lights .g{background:#28C840}
+.tb-brand{position:absolute;left:clamp(104px,7.6%,118px);display:flex;align-items:center;gap:9px}
+.tb-brand img{height:18px;width:auto;object-fit:contain;display:block}
+.tb-brand .tb-customer{font-size:var(--f5);color:var(--ink3);margin-left:8px;padding-left:10px;border-left:1px solid var(--line)}
+.tb-actions{margin-left:auto;display:flex;align-items:center;gap:14px;color:#4A5262;position:relative}.tb-actions button{width:28px;height:28px;display:grid;place-items:center;color:#4A5262;border-radius:8px;transition:background .16s,box-shadow .16s}
+.tb-actions button:hover{background:#F5F7FB;box-shadow:var(--sh-btn)}
+.tb-actions .ic{width:17px;height:17px}
+
+/* ── 页眉正中的系统级告警 ────────────────
+   只给「不修好就没法用」的故障用：FFmpeg 缺失、本机服务没起来、渲染链路坏了。
+   普通操作反馈也走页眉 say()，但告警在场时 say() 自动下移一行，两者不叠。
+   红色呼吸脉冲用逐条 animation-* 属性写，不用含变量的简写（WebKit 会把整条 throw 掉）。 */
+.sys-alert{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  display:flex;align-items:center;gap:9px;max-width:min(580px,44vw);
+  padding:5px 6px 5px 12px;border-radius:8px;
+  background:#FFF4F3;border:1px solid #F1C2BE;color:#A3251B;
+  font-size:var(--f5);font-weight:600;line-height:1.2;z-index:7;
+  animation-name:saBreath;animation-duration:2.4s;animation-timing-function:ease-in-out;
+  animation-iteration-count:infinite}
+.sys-alert[hidden]{display:none}
+@keyframes saBreath{
+  0%,100%{box-shadow:0 0 0 0 rgba(211,59,47,0),0 2px 8px rgba(211,59,47,.08)}
+  50%{box-shadow:0 0 0 5px rgba(211,59,47,.15),0 2px 12px rgba(211,59,47,.16)}}
+.sys-alert .sa-dot{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:#D33B2F;
+  animation-name:saDot;animation-duration:1.7s;animation-timing-function:ease-out;
+  animation-iteration-count:infinite}
+@keyframes saDot{
+  0%{box-shadow:0 0 0 0 rgba(211,59,47,.55)}
+  70%{box-shadow:0 0 0 7px rgba(211,59,47,0)}
+  100%{box-shadow:0 0 0 0 rgba(211,59,47,0)}}
+.sys-alert .sa-tx{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sys-alert button{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;
+  padding:0;line-height:1;flex:0 0 auto}
+.sys-alert .sa-more{padding:4px 9px;border-radius:8px;background:#FBE0DD;font-weight:700;
+  transition:background .15s}
+.sys-alert .sa-more:hover{background:#F7CDC9}
+.sys-alert .sa-x{width:20px;height:20px;display:grid;place-items:center;border-radius:50%;
+  font-size:12px;opacity:.6;transition:opacity .15s,background .15s}
+.sys-alert .sa-x:hover{opacity:1;background:#FBE0DD}
+/* 收起态：缩成一颗红点继续挂着眼皮底下，问题没修好就不会真消失 */
+.sys-alert.mini{max-width:none;padding:6px;border-radius:50%;gap:0}
+.sys-alert.mini .sa-tx,.sys-alert.mini .sa-more,.sys-alert.mini .sa-x{display:none}
+.sys-alert.mini{cursor:pointer}
+
+/* ── 工作区 ───────────────────────────── */
+.workspace{flex:1;min-height:0;display:grid;grid-template-columns:clamp(184px,14.5%,220px) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+  transition:grid-template-columns .22s ease}
+body.side-collapsed .workspace{grid-template-columns:64px minmax(0,1fr)}
+/* 进剪辑页自动收起侧栏那套（ed-zone / side-peek / .side-hot）已整体删除：
+   主栏只剩 4 项 + 一个「更多」，自动折叠省不出空间，反而让侧栏在剪辑页反复隐现。
+   要窄屏就自己点顶部折叠按钮。 */
+.sidebar{position:relative;display:flex;flex-direction:column;padding:0 12px;overflow:hidden;
+  background:#FFFFFF;border-right:1px solid var(--line)}
+/* 侧栏不再铺丝绸底纹：一张半透明贴图铺满整条侧栏，字压在上面显灰、显脏。
+   纯白 + 右侧一道 1px 分隔线更干净，也和主区同一层纸面。 */
+/* 顶部折叠条：顺带把整组导航往下带一点 */
+.side-top{position:relative;z-index:3;height:38px;flex:0 0 auto;display:flex;align-items:center;
+  justify-content:space-between;padding:0 3px 0 15px}
+.side-top .st-label{font-size:var(--f5);color:var(--ink3);letter-spacing:1.4px;font-weight:600}
+/* 折叠按钮：只留图标本身 —— 无边框、无底色、无阴影（2026-11-17 用户要求）。
+   悬浮时靠颜色和一层极淡的圆角底提示可点，不做「实体按钮」那种盒子。 */
+.side-toggle{position:relative;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;
+  color:#8A92A2;background:transparent;border:0;
+  transition:background .18s,color .18s,transform .18s}
+.side-toggle .ic{width:18px;height:18px;grid-area:1/1}
+.side-toggle .ic-expand{display:none}
+.side-toggle:hover{color:#1B8B7E;background:rgba(27,139,126,.08)}
+.side-toggle:active{transform:scale(.93)}
+.side-toggle::after{content:attr(data-tip);position:absolute;right:calc(100% + 10px);top:50%;
+  white-space:nowrap;pointer-events:none;padding:5px 10px;border-radius:8px;
+  background:#2A3140;color:#fff;font-size:10.5px;font-weight:500;letter-spacing:.4px;
+  box-shadow:0 5px 16px rgba(28,38,58,.22);opacity:0;transform:translateY(-50%) translateX(4px);
+  transition:opacity .16s,transform .16s;z-index:20}
+.side-toggle::before{content:"";position:absolute;right:calc(100% + 5px);top:50%;
+  border:5px solid transparent;border-left-color:#2A3140;pointer-events:none;
+  opacity:0;transform:translateY(-50%);transition:opacity .16s;z-index:20}
+.side-toggle:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
+.side-toggle:hover::before{opacity:1}
+body.side-collapsed .side-top{justify-content:center;padding:0}
+body.side-collapsed .side-top .st-label{display:none}
+body.side-collapsed .side-toggle .ic-collapse{display:none}
+body.side-collapsed .side-toggle .ic-expand{display:block}
+body.side-collapsed .side-toggle::after{display:none}
+.nav{margin-top:6px;flex:0 0 auto;min-height:0;overflow:auto;scrollbar-width:none;position:relative;z-index:1;
+  display:flex;flex-direction:column;justify-content:flex-start;gap:4px;padding:2px 0 12px}
+.nav::-webkit-scrollbar{display:none}
+/* 所有导航项与高亮块统一宽度：选中/悬浮长度完全一致 */
+.nav a{position:relative;flex:0 0 auto;width:100%;height:clamp(38px,4.4vh,46px);
+  display:flex;align-items:center;gap:11px;padding:0 14px;border-radius:var(--r-md);
+  color:#39414F;font-size:15px;text-decoration:none;white-space:nowrap;
+  transition:background .16s,color .16s,box-shadow .16s}
+.nav a.on::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:18px;border-radius:0 3px 3px 0;background:var(--gold-deep)}
+/* 折叠态：只留图标，文字用 font-size:0 收掉（不用改 DOM） */
+body.side-collapsed .nav a{width:40px;padding:0 10px;justify-content:center;gap:0;font-size:0}
+body.side-collapsed .nav a .ic{flex:0 0 20px}
+/* 折叠态：品牌标仍然压底（margin-top:auto 保留），只是别贴着窗口下沿。
+   原来 margin-bottom:12px 几乎顶到底边，留白收到 34px 往上提一点点。 */
+/* 折叠态（64px）整块品牌区收掉：原来靠那个三角 V 图形标占位，
+   图形标删了、字标 132px 又塞不进 64px，留着只会截成半截字。
+   页眉那条已经有一份完整的 RiffCut 影创字标，这里不重复。 */
+.side-brand .wm-mini{display:none}
+/* 折叠态：margin-top:auto 仍然压底，只把 margin-bottom 加大把它往上提 22px。
+   用户要的是「往上一点」这种像素级微调，不是贴到导航下面。 */
+body.side-collapsed .side-brand{display:flex;align-items:center;padding:6px 0 0;margin-bottom:32px}
+body.side-collapsed .side-brand .wordmark{display:none}
+body.side-collapsed .side-brand .wm-mini{display:block;width:40px;height:auto}
+body.side-collapsed .side-brand .sl,body.side-collapsed .side-brand .by{display:none}
+.nav a .ic{width:19px;height:19px;color:#39414F;flex:0 0 auto}
+.nav a:hover{background:var(--hover);box-shadow:var(--sh-btn)}
+/* 选中态：浅青绿底 + 深青字，不要描边也不要投影。
+   原来那条 inset 0 0 0 1px 金描边 + 灰底，在 4 项一窄条上看着像贴了块脏胶带。 */
+.nav a.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:600;
+  box-shadow:none}
+.nav a.on .ic{color:var(--accent)}
+.nav a.on:hover{background:#DFF0ED}
+/* 左下角只留文字字标（RiffCut 影创）+ 标语 + 出品方。
+   原来上面还有一个三角 V 图形标，跟字标里的 V 重复，删掉了；
+   所以这里要补一点上留白，否则字标会显得被挤在会话列表下面。 */
+.side-brand{position:relative;z-index:1;margin-top:auto;margin-bottom:14px;padding-left:15px;
+  display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding-top:6px}
+.side-brand .wordmark{width:100%;max-width:174px;height:auto;object-fit:contain;
+  display:block;margin-bottom:6px}   /* 按宽度不按高度：新字标 9.16:1，按 24px 高算宽要 220px，侧栏只有 174px 可用，会被裁掉后半截 */
+.side-brand .sl{font-size:var(--f5);color:#7C8494;letter-spacing:.5px}
+.side-brand .by{font-size:var(--f5);color:#5C7FB8}
+
+/* ── 会话区（照 DSH：常驻在固定项下面，占满剩余高度）──────────
+   侧栏要承载「我之前做过什么」，所以这块必须常驻、可滚动，不能收成抽屉。
+   固定项只有 4 个、会话可能有几十条 —— 高度分配上就让会话区吃 flex，
+   固定项与底部「更多」都是 flex:0 0 auto，谁的条数变了都不会互相挤。 */
+.side-conv{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+  margin:10px 0 6px;padding-top:10px;border-top:1px solid var(--line)}
+.sc-head{flex:0 0 auto;display:flex;align-items:center;gap:2px;height:26px;padding:0 5px 0 15px}
+.sc-t{font-size:var(--f5);color:var(--ink3);letter-spacing:1.2px;font-weight:600;flex:1;min-width:0}
+.sc-ic{flex:0 0 24px;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;
+  background:transparent;border:0;color:#96A0B0;padding:0;transition:background .14s,color .14s}
+.sc-ic svg{width:14px;height:14px}
+.sc-ic:hover{background:var(--hover);color:#39414F}
+.sc-ic.on{background:var(--accent-soft);color:var(--accent-ink)}
+.sc-search{flex:0 0 auto;padding:6px 8px 2px}
+.sc-search[hidden]{display:none}
+.sc-search input{width:100%;height:30px;padding:0 10px;border-radius:8px;
+  border:1px solid var(--line);background:#F7F9FC;font-size:var(--f4);color:#1E2430;
+  outline:none;transition:border-color .14s,background .14s}
+.sc-search input:focus{border-color:var(--accent-line);background:#FFFFFF}
+.sc-list{flex:1 1 auto;min-height:0;overflow:auto;overflow-x:hidden;
+  display:flex;flex-direction:column;gap:1px;padding:4px 8px 4px 8px;
+  scrollbar-width:none}
+.sc-list::-webkit-scrollbar{width:0}
+.sc-item{position:relative;display:block;width:100%;text-align:left;
+  padding:7px 9px;border-radius:8px;background:transparent;border:0;
+  transition:background .14s}
+.sc-item:hover{background:var(--hover)}
+.sc-item.on{background:var(--accent-soft)}
+.sc-item .row{display:flex;align-items:baseline;gap:6px;min-width:0}
+/* ── 会话三段式菜单（分组方式 / 排序方式 / 筛选会话）──
+   照 DSH 的那张三段菜单搬过来：勾选态用右侧对勾表示，不换底色 ——
+   换底色会让整块菜单变成一堆色块，跟侧栏的白底打架。 */
+.cf-menu{position:fixed;z-index:900;min-width:212px;padding:5px;
+  background:#fff;border:1px solid var(--line);border-radius:11px;
+  box-shadow:0 12px 32px -10px rgba(20,30,50,.24),0 2px 6px rgba(20,30,50,.06);
+  display:flex;flex-direction:column;gap:1px;
+  opacity:0;transform:translateY(-4px);transition:opacity .14s,transform .14s}
+.cf-menu.on{opacity:1;transform:none}
+.cf-h{padding:7px 9px 4px;font-size:11px;color:var(--ink3);font-weight:600;letter-spacing:.3px}
+.cf-it{display:flex;align-items:center;gap:9px;height:32px;padding:0 9px;
+  border:0;background:none;border-radius:7px;cursor:pointer;
+  font-size:13.5px;color:var(--ink);text-align:left;width:100%}
+.cf-it:hover{background:#F3F6FA}
+.cf-it .ic{width:15px;height:15px;flex:0 0 auto;color:var(--ink2)}
+.cf-it .lb{flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cf-it .ck{width:14px;height:14px;flex:0 0 auto;color:var(--accent);opacity:0}
+.cf-it.on .ck{opacity:1}
+.cf-sep{height:1px;background:var(--line);margin:4px 6px}
+/* 分组标题：可折叠，箭头在左；计数贴右 */
+.sc-grp{margin-top:2px}
+.sc-gt{display:flex;align-items:center;gap:6px;width:100%;height:28px;padding:0 8px;
+  border:0;background:none;cursor:pointer;border-radius:6px;
+  font-size:11.5px;font-weight:600;color:var(--ink3);letter-spacing:.2px}
+.sc-gt:hover{background:#F5F7FA;color:var(--ink2)}
+/* 文件夹图标代替三角：展开时是开口夹（多一道横线），收起是合口夹。
+   不再旋转 —— 转一个文件夹会很怪。 */
+.sc-gt .ws{width:13px;height:13px;flex:0 0 auto;color:var(--ink3)}
+.sc-gt:hover .ws{color:var(--ink2)}
+.sc-gt .nm2{flex:1 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-gt .n2{flex:0 0 auto;font-variant-numeric:tabular-nums;color:var(--ink3)}
+.sc-grp .bd{display:flex;flex-direction:column}
+.sc-grp.closed .bd{display:none}
+/* 置顶标志：标题后面一枚灰色小图钉，不另起一行、不改行高。
+   灰色而不是品牌青 —— 它是个「状态标记」，不是可点的动作，着色会抢正文。 */
+.sc-item .pin{width:17px;height:17px;flex:0 0 auto;color:#8B93A3;
+  align-self:center;opacity:.95}
+.sc-item.on .pin,.sc-item:hover .pin{color:#6B7385;opacity:1}
+.sc-item .row b{flex:1 1 auto;min-width:0}
+.sc-item .when{flex:0 0 auto;font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.sc-item .more{flex:0 0 auto;display:none;place-items:center;width:18px;height:18px;
+  border-radius:5px;border:0;background:none;color:#98A0AF;cursor:pointer;padding:0;
+  align-self:center}
+.sc-item:hover .more,.sc-item.on .more,.sc-item .more.on{display:grid}
+.sc-item .more:hover{background:#fff;color:#1E2430;box-shadow:0 1px 2px rgba(20,30,50,.10)}
+.sc-item .more svg{width:13px;height:13px}
+.sc-item b{display:block;font-size:13.5px;font-weight:500;color:#39414F;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.45}
+.sc-item.on b{color:var(--accent-ink);font-weight:600}
+.sc-item .sub{display:block;font-size:11.5px;color:var(--ink3);line-height:1.45;
+  margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-item .acts{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:none;
+  display:none;align-items:center;gap:2px}
+.sc-item .acts{display:none !important}
+.sc-item .act{display:grid;place-items:center;width:20px;height:20px;border-radius:6px;
+  color:#9AA2B1;cursor:pointer;border:1px solid transparent}
+.sc-item .act:hover{color:#1E2430;border-color:#E3E8F0;background:#fff}
+.sc-item .act.del:hover{color:#D33B2F;border-color:#F0D2CE}
+.sc-item .act svg{width:12px;height:12px}
+
+/* 会话「⋯」浮层：挂在 body 上，定位于按钮右下 */
+.conv-menu{position:fixed;z-index:900;min-width:132px;padding:4px;
+  background:#fff;border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 10px 28px -8px rgba(20,30,50,.22),0 2px 6px rgba(20,30,50,.06);
+  display:flex;flex-direction:column;gap:1px;
+  opacity:0;transform:translateY(-4px);transition:opacity .14s,transform .14s}
+.conv-menu.on{opacity:1;transform:none}
+.conv-menu button{display:flex;align-items:center;gap:9px;height:30px;padding:0 10px;
+  border:0;background:none;border-radius:6px;cursor:pointer;text-align:left;
+  font-size:12.5px;color:#39414F;white-space:nowrap}
+.conv-menu button:hover{background:var(--hover)}
+.conv-menu button svg{width:13px;height:13px;flex:0 0 13px;color:#7A8291}
+.conv-menu button.danger{color:#B4453C}
+.conv-menu button.danger svg{color:#B4453C}
+.conv-menu button.danger:hover{background:#FDF3F2}
+.sc-item .del{position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;border-radius:6px;display:none;place-items:center;
+  background:#FFFFFF;border:1px solid var(--line);color:#98A0AE;padding:0}
+.sc-item:hover .del{display:grid}
+.sc-item .del:hover{color:#D33B2F;border-color:#F0D2CE}
+.sc-item .del svg{width:12px;height:12px}
+/* 空态：库里只有一条会话时会看到这个。
+   必须明确写出「还没有会话」＋一句怎么办，否则空列表看着像加载失败。 */
+.sc-empty{padding:16px 10px;font-size:var(--f5);line-height:1.8;color:var(--ink3)}
+.sc-empty b{display:block;color:#5A6272;font-weight:600;font-size:var(--f4);margin-bottom:3px}
+/* 搜索/筛选生效但没有结果 */
+.sc-none{padding:14px 10px;font-size:var(--f5);color:var(--ink3)}
+/* 折叠态：会话区放不下标题，整个收掉。
+   但「我在哪条会话里」的感知不能丢 —— 由 .side-set 的高亮承担。 */
+body.side-collapsed .side-conv{display:none}
+
+/* 「更多」入口：贴在固定项下面、会话区上面。
+   叫「更多」不叫「设置」：它列的是所有没钉到上面的模块，设置只是其中之一。
+   高亮跟 .nav a.on 完全同一套（同底色、同描边、同 3px 竖条），
+   否则用户从浮层跳到某个模块后回看侧栏，会以为哪都没选中。 */
+.side-set{position:relative;z-index:1;flex:0 0 auto;display:flex;align-items:center;gap:10px;
+  width:100%;height:clamp(38px,4.4vh,46px);padding:0 14px;margin:2px 0 0;border-radius:var(--r-md);
+  background:transparent;border:0;color:#39414F;font-size:15px;text-align:left;
+  transition:background .16s,color .16s}
+.side-set .ic{width:19px;height:19px;flex:0 0 19px;color:#39414F}
+.side-set:hover{background:var(--hover)}
+.side-set.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:600;
+  box-shadow:none}
+.side-set.on .ic{color:var(--accent)}
+.side-set.on::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:18px;border-radius:0 3px 3px 0;background:var(--gold-deep)}
+/* 进去的是哪个模块，直接在按钮上标出来 —— 不然只知道「在更多里」等于不知道 */
+.side-set .sub{display:none;margin-left:auto;font-size:var(--f5);font-weight:400;color:var(--ink3)}
+.side-set.on .sub{display:block}
+body.side-collapsed .side-set .sub{display:none}
+body.side-collapsed .side-set{width:40px;padding:0 10px;justify-content:center;gap:0;font-size:0}
+body.side-collapsed .side-set .ic{flex:0 0 20px}
+
+/* ── 设置浮层（对齐 DSH：左列模块 + 右侧说明）────────────── */
+.set-mask{position:fixed;inset:0;z-index:300;display:none;
+  background:rgba(20,28,42,.32);backdrop-filter:blur(2px);
+  align-items:center;justify-content:center;padding:24px}
+.set-mask.on{display:flex;animation:setIn .16s ease}
+@keyframes setIn{from{opacity:0}to{opacity:1}}
+/* 面板要装得下一整页真实内容（表格、轨道、图表），所以不能再是 760×520 的小框。
+   放大到接近全屏，左列保持窄：右边是内容，左边只是索引。 */
+.set-panel{display:grid;grid-template-columns:236px minmax(0,1fr);
+  width:min(1180px,94vw);height:min(780px,90vh);
+  background:#FFFFFF;border-radius:14px;overflow:hidden;
+  box-shadow:0 24px 70px rgba(16,24,40,.26),0 2px 8px rgba(16,24,40,.08)}
+.set-left{background:#F7F9FC;border-right:1px solid var(--line);
+  padding:16px 12px 12px;display:flex;flex-direction:column;min-height:0}
+.set-h{font-size:var(--f5);color:var(--ink3);letter-spacing:1.4px;font-weight:600;
+  padding:4px 10px 4px}
+/* 这一行说清两个动作，否则用户看到图钉不知道点它会干什么 */
+.set-tip{font-size:10.5px;color:#A6AEBC;line-height:1.5;padding:0 10px 9px}
+.set-list{display:flex;flex-direction:column;gap:2px;overflow:auto;min-height:0}
+.set-list::-webkit-scrollbar{width:0}
+/* 一行 = 跳页区 + 图钉区，两个独立点击目标，所以不能整行做成 button */
+/* 行是「文字列表」不是「一堆色块」：默认全透明，只有 hover / 当前项才出底色。
+   钉住的项靠左侧一条 2px 青条 + 实心图钉表达，不靠背景色 ——
+   12 行全上色会变成一堵墙，看不出主次。 */
+.set-item{position:relative;display:flex;align-items:center;gap:2px;width:100%;
+  border-radius:8px;transition:background .14s}
+.set-item:hover{background:#EDF1F7}
+.set-item.cur{background:#FFFFFF;box-shadow:0 1px 3px rgba(20,30,50,.10)}
+.set-go{display:flex;align-items:center;gap:11px;flex:1 1 auto;min-width:0;
+  height:36px;padding:0 4px 0 12px;border-radius:8px;background:transparent;border:0;
+  color:#3E4655;font-size:14px;text-align:left;white-space:nowrap}
+.set-go .ic{width:17px;height:17px;flex:0 0 17px;color:#7A8394}
+.set-go span{overflow:hidden;text-overflow:ellipsis}
+.set-item.cur .set-go{color:#1E2430;font-weight:600}
+.set-item.cur .set-go .ic{color:var(--accent)}
+.set-item.on .set-go::before{content:"";position:absolute;left:2px;top:50%;
+  transform:translateY(-50%);width:2px;height:13px;border-radius:0 2px 2px 0;
+  background:var(--accent);opacity:.85}
+/* 图钉：钉上是实心青绿，没钉是空心中灰。
+   平时半透明，鼠标进这一行才显形 —— 12 个图钉同时亮着太吵。 */
+.set-pin{flex:0 0 26px;width:26px;height:26px;margin-right:6px;border-radius:6px;
+  display:grid;place-items:center;background:transparent;border:0;padding:0;
+  color:#C2C9D4;opacity:0;transition:opacity .14s,color .14s,background .14s}
+.set-item:hover .set-pin,.set-pin.on{opacity:1}
+.set-pin svg{width:14px;height:14px}
+.set-pin:hover{background:#E2E8F1;color:#6B7484}
+.set-pin.on{color:var(--accent)}
+.set-pin.on:hover{background:var(--accent-soft);color:var(--accent-ink)}
+/* 主栏最多放 6 项：再多侧栏就成了竖排长列表，跟「四项就够」的初衷相反。
+   到上限时图钉置灰并给 title 说明原因，不是静默点不动。 */
+.set-pin.full{color:#DDE2E9}
+.set-pin.full:hover{background:#F0F3F7;color:#C2C9D4}
+/* 右侧两态：
+     · 常态：一屏说明（这模块是干什么的）
+     · 内嵌：真的把那个页面搬进来，占满右侧整块
+   之所以要把 .page 搬进浮层而不是复制一份 HTML，是因为页面里绑着各自的
+   JS 状态（选中素材、播放进度、表单草稿），复制一份等于两套状态互相打架。 */
+.set-right{position:relative;padding:0;display:flex;flex-direction:column;min-height:0}
+.set-x{position:absolute;right:14px;top:14px;width:30px;height:30px;border-radius:8px;
+  display:grid;place-items:center;background:transparent;border:0;color:#8A92A2;
+  transition:background .14s,color .14s}
+.set-x svg{width:17px;height:17px}
+.set-x:hover{background:var(--hover);color:#1E2430}
+.set-body{flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;
+  padding:38px 40px 26px}
+/* 内嵌时说明区必须整块收掉，不能只靠 padding:0 ——
+   它 still 占着 flex 空间，会把下面的页面挤成半高（实测只剩 284px）。 */
+.set-body.is-embed{display:none}
+.set-title{font-size:20px;font-weight:700;color:#1E2430;letter-spacing:.2px}
+.set-desc{margin-top:10px;font-size:14px;line-height:1.72;color:#5A6272;max-width:52ch}
+.set-hint{margin-top:22px;font-size:13px;color:#98A0AE;line-height:1.7}
+/* 内嵌标题条：必须能退回来，否则进了模块就没有出口（浮层里没有侧栏） */
+.set-embar{flex:0 0 auto;display:none;align-items:center;gap:10px;height:46px;
+  padding:0 50px 0 14px;border-bottom:1px solid var(--line);background:#FCFDFE}
+.set-embar.on{display:flex}
+.set-back{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;
+  border-radius:7px;background:transparent;border:1px solid var(--line);color:#5A6272;
+  font-size:13px;transition:background .14s,color .14s}
+.set-back:hover{background:#F2F5F9;color:#1E2430}
+.set-back svg{width:13px;height:13px}
+.set-embar b{font-size:14px;font-weight:600;color:#1E2430}
+/* 搬进来的页面：.page 本身是 absolute inset:0 + display:none，
+   在这里要强制显示（它可能不是当前页），其余排版沿用页面自己那套。 */
+.set-stage{position:relative;flex:1 1 auto;min-height:0;display:none}
+.set-stage.on{display:block}
+.set-stage > .page{display:flex!important;position:absolute;inset:0}
+@media (max-width:900px){
+  .set-panel{grid-template-columns:minmax(0,1fr);height:min(92vh,100%)}
+  .set-left{border-right:0;border-bottom:1px solid var(--line);max-height:196px}
+  .set-body{padding:22px 22px 18px}
+}
+
+.pages{position:relative;min-width:0;min-height:0;height:100%;overflow:hidden;background:#FFFFFF}
+.page{position:absolute;inset:0;display:none;flex-direction:column;
+  padding:clamp(10px,1.2%,18px);gap:clamp(8px,1.1%,14px);overflow:hidden}
+.page.on{display:flex}
+
+/* ── 通用组件（u-） ────────────────────── */
+.u-card{background:#FFFFFF;border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-1);overflow:hidden}
+.u-head{display:flex;align-items:flex-start;gap:12px;flex:0 0 auto}
+.u-head .txt{flex:1;min-width:0}
+.u-title{font-size:var(--f1);font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:9px}
+.u-sub{font-size:var(--f5);color:var(--ink3);margin-top:4px;letter-spacing:.3px}
+.u-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.u-btn{height:32px;padding:0 14px;border-radius:var(--r-sm);background:#FFFFFF;border:1px solid var(--line);
+  font-size:var(--f4);color:#3E4655;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  box-shadow:var(--sh-btn);transition:background .16s,box-shadow .16s,transform .16s;white-space:nowrap}
+.u-btn:hover{background:#FAFBFD;box-shadow:var(--sh-1);transform:translateY(-1px)}
+/* 页签条：把「品牌资产」并进「客户与素材库」，用页签在两者间切换，
+   不再单独占一个一级菜单位。样式跟 u-btn 同一套尺寸语言，只换形态。 */
+.u-tabs{display:flex;gap:2px;flex:0 0 auto;padding:3px;border-radius:8px;
+  background:#F2F5F9;border:1px solid #E7ECF3}
+.u-tabs button{height:28px;padding:0 14px;border:0;border-radius:8px;background:transparent;
+  font-size:var(--f4);color:#5A6473;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  transition:background .16s,color .16s,box-shadow .16s;white-space:nowrap}
+.u-tabs button:hover{color:#2C3340}
+.u-tabs button.on{background:#FFFFFF;color:#2C3340;font-weight:600;
+  box-shadow:0 1px 3px rgba(20,30,50,.10)}
+.u-tabs button .ic{width:14px;height:14px}
+.u-tabs .cnt{font-size:10.5px;color:#98A0AE;font-weight:400}
+.u-tabs button.on .cnt{color:#1B8B7E}
+.u-btn .ic{width:14px;height:14px}
+.u-btn.gold{background:linear-gradient(180deg,#EEF1F6 0%,#E3E8F0 100%);color:#33405A;font-weight:600;border-color:#EAF5F3;
+  box-shadow:0 2px 6px rgba(190,145,70,.26),inset 0 1px 0 rgba(255,255,255,.65)}
+.u-btn.gold:hover{box-shadow:0 4px 12px rgba(190,145,70,.34),inset 0 1px 0 rgba(255,255,255,.65)}
+.u-btn.sm{height:26px;padding:0 10px;font-size:var(--f5)}
+.u-btn.dark{background:#252B36;color:#fff;border-color:#252B36;box-shadow:0 2px 8px rgba(37,43,54,.24)}
+.u-btn.dark:hover{background:#3A4252}
+.u-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.u-tabs button{color:var(--ink3);font-size:var(--f3);position:relative;padding:0 0 10px;white-space:nowrap}
+.u-tabs button.on{color:var(--ink);font-weight:600}
+.u-tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--gold-deep);border-radius:4px}
+.u-tag{display:inline-flex;align-items:center;gap:4px;height:21px;padding:0 8px;border-radius:12px;
+  background:#F3F5F9;color:#5A6272;font-size:var(--f5);white-space:nowrap}
+.u-tag.gold{background:#EAF5F3;color:#5A6272}
+.u-tag.green{background:#E4F7EC;color:#2E7D52}
+.u-tag.blue{background:#E8F0FE;color:#3567C0}
+.u-tag.purple{background:#EFEAFB;color:#6E55A8}
+/* 失败态：原来全站只有 green/gold/blue/purple/gray，没有「红」这一档，
+   于是失败的任务只能用灰的，看上去跟「已完成」一样不显眼。
+   红色只给真正的失败用，不要拿它做强调色。 */
+.u-tag.red{background:#FBEDED;color:#B04949}
+.u-tag.gray{background:#F1F3F7;color:#8A92A2}
+.u-dot{width:7px;height:7px;border-radius:50%;background:#35B26B;display:inline-block;flex:0 0 auto}
+.u-dot.off{background:#C4CAD5}.u-dot.warn{background:#E9A23B}
+.u-field{display:flex;flex-direction:column;gap:6px}
+.u-field label{font-size:var(--f5);color:var(--ink2);font-weight:600}
+.u-input,.u-select{height:34px;border:1px solid var(--line);border-radius:var(--r-sm);background:#FFFFFF;
+  box-shadow:var(--sh-in);padding:0 10px;font-size:var(--f4);display:flex;align-items:center;gap:8px;min-width:0}
+.u-input input,.u-select select{border:0;outline:none;background:transparent;width:100%;font-size:var(--f4);color:#333B49;min-width:0}
+.u-select select{appearance:none;cursor:pointer}
+.u-input .ic,.u-select .ic{width:13px;height:13px;color:#9AA2B1;flex:0 0 auto}
+.u-scroll{overflow:auto;scrollbar-width:none;min-height:0}
+.u-scroll::-webkit-scrollbar{display:none}
+.u-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  color:var(--ink3);font-size:var(--f4);padding:26px;text-align:center;height:100%}
+.u-empty .ic{width:30px;height:30px;color:#C9CFDA}
+.u-switch{width:34px;height:19px;border-radius:12px;background:#D9DEE8;position:relative;flex:0 0 auto;
+  transition:background .18s;box-shadow:var(--sh-in)}
+.u-switch::after{content:"";position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.18);transition:transform .18s}
+.u-switch.on{background:var(--gold-deep)}
+.u-switch.on::after{transform:translateX(15px)}
+.u-progress{height:5px;border-radius:4px;background:#EDF0F5;overflow:hidden}
+.u-progress i{display:block;height:100%;background:linear-gradient(90deg,#E3E8F0,#1B8B7E);border-radius:4px}
+.u-divider{height:1px;background:var(--line);flex:0 0 auto}
+.u-row{display:flex;align-items:center;gap:10px}
+.u-thumb{border-radius:8px;background-size:cover;background-position:center;border:1px solid rgba(0,0,0,.04);
+  box-shadow:0 2px 8px rgba(28,38,58,.10)}
+.u-primary{color:var(--gold-deep)}
+
+/* ── 通知：只有后台长任务才留，顶部只显示最后一条（通知按钮左边） ───────── */
+.tb-notice{display:none;align-items:center;gap:6px;max-width:230px;min-width:0;
+  padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:#FBFCFE;
+  font-size:var(--f5);color:var(--ink2);white-space:nowrap;overflow:hidden}
+.tb-notice.on{display:inline-flex}
+.tb-notice .dot{width:6px;height:6px;border-radius:50%;background:#1B8B7E;flex:0 0 auto}
+.tb-notice.bad .dot{background:#C96A6A}
+.tb-notice .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tb-actions button.unread{position:relative}
+.tb-actions button.unread::after{content:"";position:absolute;top:3px;right:3px;
+  width:6px;height:6px;border-radius:50%;background:#1B8B7E;border:1px solid #fff}
+.notice-pop{position:fixed;top:52px;right:16px;width:310px;z-index:420;
+  background:#fff;border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 12px 34px rgba(28,38,58,.16);padding:10px 12px;display:none}
+.notice-pop.on{display:block}
+.notice-pop h4{margin:0 0 8px;font-size:var(--f4);color:var(--ink);display:flex;align-items:center;gap:6px}
+.notice-pop h4 button{margin-left:auto;font-size:var(--f5);color:var(--ink3);white-space:nowrap;
+  border:0;background:none;padding:2px 6px;border-radius:4px;cursor:pointer}
+.notice-pop h4 button:hover{background:#F5F7FB;color:var(--ink)}
+/* ── 紧凑化 ───────────────────────────── */
+.compact .side-brand .wordmark{max-width:168px}
+.compact .side-brand .sl,.compact .side-brand .by{font-size:10.5px}
+.compact .page{padding:8px;gap:8px}
+.compact .u-title{font-size:15px}
+.tiny .page{padding:6px;gap:6px}
+
+/* ══ 全局统一悬浮框：软件里所有「新建 / 添加 / 上传 / 编辑」都用这一套 ══ */
+/* 确认框永远压在最上面：音色弹窗（340）、任务卡都在它下面。
+   以前确认框是 300，被 340 的音色弹窗盖住 —— 点音色时确认框「弹了但看不见」。 */
+#mConfirmModal{z-index:900}
+.v-modal{position:fixed;inset:0;z-index:340;display:none;align-items:center;justify-content:center}
+.v-modal.open{display:flex}
+.v-shade{position:absolute;inset:0;background:rgba(24,30,42,.36);backdrop-filter:blur(2px)}
+.v-dialog{position:relative;width:min(520px,92vw);max-height:88vh;display:flex;flex-direction:column;
+  background:#fff;border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 24px 70px rgba(20,28,44,.28);overflow:hidden}
+.v-dialog-wide{width:min(720px,94vw)}
+.v-dhd{display:flex;align-items:center;gap:9px;padding:14px 17px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.v-dhd b{font-size:var(--f2)}
+.v-x{margin-left:auto;width:26px;height:26px;border:0;background:transparent;color:#8A92A2;
+  font-size:20px;line-height:1;cursor:pointer;border-radius:8px;display:grid;place-items:center}
+.v-x:hover{background:#F2F4F8;color:#3A4252}
+.v-dbd{padding:15px 17px;overflow:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:11px}
+.v-dft{display:flex;align-items:center;gap:8px;padding:12px 17px;border-top:1px solid var(--line);flex:0 0 auto}
+.v-dft .u-btn:first-child{margin-right:auto}
+.v-f{display:flex;flex-direction:column;gap:6px}
+.v-f>label{font-size:var(--f5);color:var(--ink2);font-weight:600}
+.v-f .u-input{height:34px}
+.v-f .u-input input{height:100%;font-size:var(--f4)}
+.v-sel,.v-ta{width:100%;border:1px solid var(--line);border-radius:var(--r-sm);background:#fff;
+  color:var(--ink);font-size:var(--f4);padding:8px 10px;outline:none;font-family:inherit;box-sizing:border-box}
+.v-sel{height:34px;padding:0 10px}
+.v-ta{min-height:66px;resize:vertical;line-height:1.6}
+.v-sel:focus,.v-ta:focus{border-color:#BFE0DA}
+.v-row{display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap}
+.v-row .v-f{flex:1;min-width:140px}
+.v-chk{display:flex;align-items:center;gap:7px;font-size:var(--f5);color:var(--ink2);cursor:pointer;user-select:none}
+.v-chk input{width:15px;height:15px;accent-color:#1B8B7E}
+.v-inline{display:flex;gap:6px;align-items:center}
+.v-inline .u-input{flex:1;min-width:0}
+.v-paste{flex:0 0 auto;width:34px;height:34px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:#fff;color:#7A8292;display:grid;place-items:center;cursor:pointer}
+.v-paste .ic{width:15px;height:15px}
+.v-paste:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
+.v-tip{font-size:var(--f5);color:var(--ink3);line-height:1.75;background:#F8FAFD;
+  border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+.v-tip b{color:var(--ink);font-weight:600}
+.v-tip .v-path{display:block;margin-top:5px;font-family:ui-monospace,Menlo,monospace;
+  font-size:var(--f5);color:#147567;word-break:break-all}
+.v-sep{height:1px;background:var(--line);margin:2px 0}
+
+
+/* ══ 从 2026-11-17-000024 构建备份补回：删登录/注册样式时删除范围跨过头，
+      把这几块的样式一并带走了（任务浮条、通用弹窗、危险确认框、页眉提示）。 ══ */
+/* 普通操作反馈：页眉正中一条细字，自动消失，不遮挡工作区、不进通知中心。
+   2026-11-15 用户反馈：以前固定在页面底部，点时间线片段时黑条正好压在轨道上挡住内容。
+   现在移到页眉居中；单行省略 + title 存全文，长错误悬停能看全，停留时长按字数给。
+   页眉正中已被系统级红色告警占着时，自动落到页眉下方一行，两者不叠。 */
+.mini-toast{position:fixed;top:clamp(5px,1.1vh,14px);left:50%;
+  transform:translateX(-50%) translateY(6px);
+  background:rgba(30,36,48,.9);color:#fff;padding:7px 16px;border-radius:12px;
+  font-size:var(--f5);line-height:1.55;text-align:center;opacity:0;
+  transition:opacity .18s,transform .18s;
+  pointer-events:none;z-index:400;max-width:min(720px,72vw);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-toast.bad{background:rgba(154,46,38,.94)}
+.mini-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.mini-toast.with-alert{top:clamp(52px,7vh,72px)}
+/* 后台任务指示：右下角常驻小卡。只报进度，不挡点击、不加遮罩、切页也还在。
+   规矩：读文件夹 / 建索引这类耗时活都在后台跑，前端一切照旧可操作。 */
+.g-task{position:fixed;right:16px;bottom:16px;z-index:380;display:none;align-items:center;gap:10px;
+  background:#FFFFFF;border:1px solid var(--line);border-radius:12px;padding:9px 13px;
+  box-shadow:0 14px 36px rgba(20,28,44,.16);max-width:min(360px,72vw);pointer-events:none}
+.g-task.on{display:flex}
+.g-task .g-spin{width:15px;height:15px;flex:0 0 auto;border-radius:50%;
+  border:2px solid #E9DFC9;border-top-color:#C08F32;animation:gSpin .8s linear infinite}
+.g-task .g-txt{min-width:0}
+.g-task b{display:block;font-size:var(--f4);font-weight:600;color:#2B323D;line-height:1.35;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-task .g-sub{display:block;font-size:var(--f5);color:#7C8494;line-height:1.4;margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-task .g-t{font-size:var(--f5);color:#7C8494;font-variant-numeric:tabular-nums;flex:0 0 auto}
+/* 添加 / 编辑模型：悬浮弹窗 */
+.m-modal{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;
+  padding:18px;background:rgba(22,28,40,.34);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.m-modal.open{display:flex}
+.m-dialog{width:min(520px,94vw);max-height:86vh;overflow:auto;background:#fff;
+  border:1px solid var(--line);border-radius:16px;box-shadow:0 22px 60px rgba(20,28,44,.24);
+  padding:18px 20px 16px;display:flex;flex-direction:column;gap:12px}
+.m-dialog::-webkit-scrollbar{width:6px}
+.m-dialog::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:3px}
+.m-dialog-hd{display:flex;align-items:center;gap:9px}
+.m-dialog-hd b{font-size:15px;color:var(--ink)}
+.m-dialog-hd .m-x{margin-left:auto;width:28px;height:28px;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:#fff;color:var(--ink3);font-size:17px;line-height:1;cursor:pointer}
+.m-dialog-hd .m-x:hover{color:var(--ink);background:#F7F8FA}
+.m-paste{flex:0 0 auto;width:34px;height:36px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:#fff;color:var(--ink3);display:grid;place-items:center;cursor:pointer}
+.m-paste .ic{width:15px;height:15px}
+.m-paste:hover{border-color:#E7CE9B;color:#9A7433;background:#FFFDF8}
+.m-hint{font-size:var(--f5);color:var(--ink3);line-height:1.6;min-height:18px}
+.m-hint.warn{color:#9A7433;background:#FFFDF8;border:1px solid #EFE0C0;border-radius:8px;padding:7px 10px}
+.m-dialog-ft{display:flex;justify-content:flex-end;gap:8px;padding-top:11px;border-top:1px solid var(--line)}
+.m-dialog-ft .u-btn{min-width:82px;height:34px}
+.m-dialog-ft .u-btn:disabled{opacity:.42;cursor:default;filter:grayscale(.6)}
+.m-dialog.m-detail{width:min(880px,100%);max-height:94vh;overflow:hidden;
+  padding:12px 18px 10px;gap:10px}
+.m-dialog.m-detail .m-dialog-ft{padding-top:7px}
+.m-dialog.m-detail .m-dialog-ft .u-btn{height:28px}
+.m-detail-body .m-dialog-ft{flex:0 0 auto}
+/* 危险操作二次确认 */
+.m-confirm .m-dialog{width:min(430px,92vw)}
+.m-confirm-txt{font-size:var(--f4);color:var(--ink2);line-height:1.75}
+.m-confirm-txt b{color:#B45B5B}
+.m-confirm-row{display:flex;gap:7px;align-items:center}
+.m-confirm-row .u-input{flex:1;min-width:0;height:36px}
+.m-confirm-row .u-input input{height:100%;font-size:var(--f4)}
+.m-confirm .m-dialog-ft .u-btn.danger{background:#FFF1F1;border-color:#E9C1C1;color:#B45B5B}
+.m-confirm .m-dialog-ft .u-btn.danger:disabled{opacity:.45;cursor:default;filter:grayscale(.4)}
+.compact .m-dialog{width:min(470px,94vw)}
+.tiny .m-dialog{width:94vw;padding:14px}
+</style>
+</head>
+<body>
+
+<svg class="sprite" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.6 12 3.2l9 7.4V20a1 1 0 0 1-1 1h-5.2v-6.2H9.2V21H4a1 1 0 0 1-1-1z" fill="currentColor"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 18.2 6 21v-2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="9" cy="11" r="1.15" fill="currentColor"/><circle cx="15" cy="11" r="1.15" fill="currentColor"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 8.7v9.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-clap" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 7l3.2-4 3 4M9.2 7l3.2-4 3 4M15.4 7l3.2-4 2.4 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7.5 12.5l2.5 2.2-2.5 2.2M12 18h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 2.8 20.5 7v10L12 21.2 3.5 17V7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3.5 7 12 11.4 20.5 7M12 11.4v9.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.2A2.2 2.2 0 0 1 6.2 3H19v15.5H6.2A2.2 2.2 0 0 0 4 20.7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 18.8A2.2 2.2 0 0 1 6.2 21H19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 7.5h7M8 11h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-board" viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 3.5v-1.2h8v1.2M8 9h8M8 13h8M8 17h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-task" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 11.8l2.3 2.3 4.8-4.9" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13.6c.05-.5.05-1.1 0-1.6l1.7-1.3-1.7-3-2 .7a7.7 7.7 0 0 0-1.4-.8L15.6 5h-3.4l-.4 2.1c-.5.2-1 .5-1.4.8l-2-.7-1.7 3 1.7 1.3a8 8 0 0 0 0 1.6L6.7 14.4l1.7 3 2-.7c.4.3.9.6 1.4.8l.4 2.1h3.4l.4-2.1c.5-.2 1-.5 1.4-.8l2 .7 1.7-3z" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 6-2 7-2 7h16s-2-1-2-7M10.5 20a2 2 0 0 0 3 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19.5V4.5M4 19.5h16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="m6.5 15 4-4.5 3.2 2.6L20 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.8 20.5a7.2 7.2 0 0 1 14.4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2.5 13.9 9l6.6 2-6.6 2-1.9 6.5L10.1 13l-6.6-2 6.6-2z" fill="currentColor"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5 19 12 7 19.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6.5" y="4.5" width="4" height="15" rx="1" fill="currentColor"/><rect x="13.5" y="4.5" width="4" height="15" rx="1" fill="currentColor"/></symbol>
+  <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.6" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="6" cy="18" r="2.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.2 7.8 20 19M8.2 16.2 20 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="3.3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="M20 11.5 12.4 19a4.5 4.5 0 0 1-6.4-6.4l8-8a3 3 0 0 1 4.3 4.3l-8 8a1.5 1.5 0 0 1-2.1-2.1l7.2-7.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8.5" cy="9" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v15a1 1 0 0 0 1 1h15M2 6h15a1 1 0 0 1 1 1v15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M3.5 11.2 20.5 3.6 13 20.4l-2.6-6.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m10.4 13.8 10.1-10.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-vol" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-tri" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6z" fill="currentColor"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="m15.5 15.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6.2M20 5.5V11h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 8 4 12l5 4M4 12h9a6 6 0 0 1 0 12h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 8 5 4-5 4M20 12h-9a6 6 0 0 0 0 12h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 6.5h16M9 6.5V4h6v2.5M6.5 6.5l1 13.5h9l1-13.5M10 10v7M14 10v7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+  <symbol id="i-magnet" viewBox="0 0 24 24"><path d="M5 4v8a7 7 0 0 0 14 0V4h-4v8a3 3 0 0 1-6 0V4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M5 8h4M15 8h4" stroke="currentColor" stroke-width="1.7"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.7" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+  <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 6h16M12 6v13M9 19h6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12m0 0 4.5-4.5M12 16l-4.5-4.5M4 18v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6.3M20 5v6h-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.4-8A5.5 5.5 0 0 1 17.2 9.2 3.9 3.9 0 0 1 17 18z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5.3l3.4 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-flow" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="5" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="16" width="7" height="5" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6.5 8v5a3 3 0 0 0 3 3H14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="15" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="9" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+</svg>
+
+<div id="frame">
+  <header class="titlebar">
+    <div class="lights">
+      <i class="r" data-win="close" title="关闭"><span>×</span></i>
+      <i class="y" data-win="min" title="最小化"><span>−</span></i>
+      <i class="g" data-win="max" title="缩放"><span>+</span></i>
+    </div>
+    <div class="tb-brand">
+      <img src="assets/brand_full.png" alt="RiffCut 影创">
+      <span class="tb-customer" id="tbCustomer">当前客户：未选择</span>
+    </div>
+    <!-- 系统级故障提示：页眉正中，红色呼吸脉冲，一直挂着直到修好
+         为什么放这：以前「FFmpeg 未就绪」「服务没起来」这类话只在底部黑条闪 2 秒，
+         用户压根没看见，等点导出才失败。这种错关系到能不能干活，必须一眼就看见。 -->
+    <div class="sys-alert" id="sysAlert" role="alert" aria-live="assertive" hidden>
+      <i class="sa-dot" aria-hidden="true"></i>
+      <span class="sa-tx" id="sysAlertTx"></span>
+      <button class="sa-more" id="sysAlertMore" type="button">怎么处理</button>
+      <button class="sa-x" id="sysAlertX" type="button" title="收起（问题还在，缩成红点挂着）">×</button>
+    </div>
+    <div class="tb-actions">
+      <span class="tb-notice" id="tbNotice" title=""><i class="dot"></i><span class="tx"></span></span>
+      <button id="tbFeedback" title="反馈（发邮件给 China@cyanweb.cn）"><svg class="ic"><use href="#i-chat"/></svg></button>
+      <button id="tbBell" title="通知"><svg class="ic"><use href="#i-bell"/></svg></button>
+      <div class="notice-pop" id="noticePop">
+        <h4>重要通知 <button id="noticeClear">清空</button></h4>
+        <div class="notice-list" id="noticeList"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 账号登录/注册整块已删：本机软件不需要账号，出片只看本机模型和素材。 -->
+
+  <div class="workspace">
+    <aside class="sidebar">
+      <div class="side-top">
+        <span class="st-label">工作台</span>
+        <button class="side-toggle" id="sideToggle" data-tip="收起侧栏" title="收起侧栏" aria-label="收起侧栏">
+          <svg class="ic ic-collapse" viewBox="0 0 24 24" fill="none">
+            <rect x="2.8" y="4" width="18.4" height="16" rx="2.6" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M9 4v16" stroke="currentColor" stroke-width="1.6"/>
+            <path d="m16.6 9.2-3 2.8 3 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="ic ic-expand" viewBox="0 0 24 24" fill="none">
+            <rect x="2.8" y="4" width="18.4" height="16" rx="2.6" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M9 4v16" stroke="currentColor" stroke-width="1.6"/>
+            <path d="m13.6 9.2 3 2.8-3 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <!-- 主栏只放做一条片真正会走到的四步：提问 → 剪辑 → 素材 → 发布。
+           其余模块全部收进底部的「设置」浮层，免得侧栏排成一长条找不着。
+           浮层里的项仍然用 data-page，goPage 照旧工作，只是不再占侧栏位置。 -->
+      <!-- 主栏是「可自定义的固定项」：用户自己决定哪几项钉在上面。
+           点了「更多」浮层里的图钉才会增减，默认只钉四项 —— 做一条片真正会走到的路径。
+           钉了哪些存在 localStorage（riffcut.nav.pinned），重开还是他自己的排列。 -->
+      <nav class="nav" id="navList"></nav>
+
+      <!-- 「更多」：紧挨在固定项下面、会话区上面（不是最底部）。
+           点开就是全部模块的浮层 —— 图钉决定哪几项钉到上面那排固定项里。
+           放在这个位置的理由：它是「固定项的延伸」，读起来是同一个列表的后半段；
+           压到最底部反而像个系统设置入口，跟里面装的 8 个业务模块对不上。 -->
+      <button class="side-set" id="sideSet" title="更多" aria-label="更多">
+        <svg class="ic"><use href="#i-grid"/></svg><span>更多</span>
+      </button>
+
+      <!-- 会话区：照 DSH 的做法常驻在固定项下面，占满剩余高度。
+           顶部一行是「会话」标题 + 搜索 / 筛选 / 新建，跟 DSH 一致。
+           标题那条不能省 —— 没有它，下面这堆时间不明的东西看着像导航。 -->
+      <div class="side-conv" id="sideConv">
+        <div class="sc-head">
+          <span class="sc-t">会话</span>
+          <button class="sc-ic" id="scSearchBtn" title="搜索会话" aria-label="搜索会话">
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="10.8" cy="10.8" r="6.3" stroke="currentColor" stroke-width="1.9"/><path d="m15.5 15.5 4.5 4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+          </button>
+          <button class="sc-ic" id="scFilterBtn" title="分组、排序、筛选" aria-label="分组排序筛选">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="15" cy="7" r="2" stroke="currentColor" stroke-width="1.7"/><circle cx="9" cy="17" r="2" stroke="currentColor" stroke-width="1.7"/></svg>
+          </button>
+          <button class="sc-ic" id="scArchBtn" title="归档：收起来但没删的对话" aria-label="归档">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 8h16v10.4A1.6 1.6 0 0 1 18.4 20H5.6A1.6 1.6 0 0 1 4 18.4V8zm1.2-4h13.6A1.2 1.2 0 0 1 20 5.2V7H4V5.2A1.2 1.2 0 0 1 5.2 4zM9.6 12h4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="sc-ic" id="scNewBtn" title="新建会话" aria-label="新建会话">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 6.5A1.6 1.6 0 0 1 5.6 4.9h8.2A1.6 1.6 0 0 1 15.4 6.5v6.6a1.6 1.6 0 0 1-1.6 1.6H8.6L5.6 17v-2.3h-1A1.6 1.6 0 0 1 4 13.1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M18.4 9.4h.4A1.6 1.6 0 0 1 20.4 11v5.4a1.6 1.6 0 0 1-1.6 1.6h-.6V20l-2.2-1.9" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="sc-search" id="scSearch" hidden>
+          <input id="scSearchInput" type="text" placeholder="搜会话标题" autocomplete="off">
+        </div>
+        <div class="sc-list" id="scList"></div>
+      </div>
+
+      <div class="side-brand">
+        <img class="wordmark" src="assets/wordmark.png" alt="RiffCut 影创">
+        <img class="wm-mini" src="assets/wm_mini.png" alt="影创">
+        <div class="sl">让创意，成为影像。</div>
+        <div class="by">由 Cyanweb 提供</div>
+      </div>
+    </aside>
+
+    <div class="pages" id="pages">
+<script>
+/* ── 排队壳：页面片段的脚本在这里就先跑了，比下面 shell 的 window.api 早几百行。
+   以前片段里一上手就 window.api(...) 会抛 TypeError，并且把同一块后面所有
+   事件绑定一起吞掉 —— 症状是「按钮点了完全没反应」（看板开关就是这么废的）。
+   现在先挂一个只入队的假 api，真身装好后自动重放，调用方什么都不用改。 */
+(function(){
+  /* api 要拿返回值（Promise），所以必须真排队、真重放 */
+  var Q=[];
+  window.api=function(){
+    var a=arguments;
+    return new Promise(function(res,rej){ Q.push([a,res,rej]) });
+  };
+  window.__apiFlush=function(real){
+    window.api=real;
+    var q=Q.splice(0);
+    for(var i=0;i<q.length;i++){
+      (function(it){
+        try{ real.apply(null,it[0]).then(it[1],it[2]) }catch(e){ it[2](e) }
+      })(q[i]);
+    }
+  };
+
+  /* 其余这几个是「即发即忘」的副作用（弹提示、切页、刷新轨道），
+     没就绪时先记下来，真身挂上时补发 —— 不这么做的话，片段里在顶层
+     调一次 window.say 就会 TypeError，同一块后面的事件绑定全被吞掉。
+     症状和 api 那个一样：按钮点了完全没反应，而且不报在明面上。 */
+  var D=[];
+  ['say','notice','goPage','riffcutOpenEdit','refreshTimeline','pollTask',
+   '__convSetCurrent','__convReload','__markNav'].forEach(function(n){
+    window[n]=function(){
+      D.push([n,arguments]);
+    };
+  });
+  window.__deferFlush=function(){
+    var q=D.splice(0);
+    for(var i=0;i<q.length;i++){
+      (function(it){
+        var f=window[it[0]];
+        if(typeof f!=='function')return;
+        try{ f.apply(null,it[1]) }catch(e){}
+      })(q[i]);
+    }
+  };
+  /* 真身散落在下面几千行里，等 load 之后一次补发就够了；
+     800ms 再补一刀，兜住 live.js 里异步挂上的那几个。 */
+  window.addEventListener('load',function(){
+    window.__deferFlush();
+    setTimeout(function(){window.__deferFlush()},800);
+  });
+})();
+</script>
+<!--PAGES-->
+    </div>
+  </div>
+
+  <!-- 「更多」浮层：照 DSH 的做法 —— 左边一列是全部模块，右边是这一项干什么。
+       两个交互分开：
+         · 点行体 → 直接跳过去并关浮层（不要「打开」按钮，多一下没人愿意点）
+         · 点行尾的图钉 → 只切换「钉不钉到侧栏上面」，不跳页
+       图钉是这块的核心：侧栏上方那 4 项不是写死的，用户钉了谁就是谁。 -->
+  <div class="set-mask" id="setMask">
+    <div class="set-panel" role="dialog" aria-label="更多" aria-modal="true">
+      <div class="set-left">
+        <div class="set-h">更多</div>
+        <div class="set-tip">点名称直接进入 · 点图钉钉到侧栏</div>
+        <div class="set-list" id="setList"></div>
+      </div>
+      <div class="set-right">
+        <button class="set-x" id="setClose" title="关闭" aria-label="关闭">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18"
+            stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <!-- 内嵌某个模块时才有这一条：它是回到说明页的唯一出口 -->
+        <div class="set-embar" id="setEmbBar">
+          <button class="set-back" id="setBack">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M14 6l-6 6 6 6"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round"/></svg>返回</button>
+          <b id="setEmbName">首页</b>
+        </div>
+        <div class="set-body" id="setBody">
+          <div class="set-title" id="setTitle">更多</div>
+          <div class="set-desc" id="setDesc">左边是全部模块。点名字直接在这里打开它，不用跳出去；点后面的图钉可以把它钉到侧栏上面那排。</div>
+          <div class="set-hint">上面那排固定项是你自己定的 —— 常用的钉上去，不常用的留在这里。</div>
+        </div>
+        <!-- 真页面搬进来的位置（不是复制 HTML，是把 .page 节点挂过来） -->
+        <div class="set-stage" id="setStage"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mini-toast" id="toast"></div>
+
+  <!-- 后台任务进度（读文件夹 / 建索引）：右下角，不挡操作 -->
+  <div class="g-task" id="gTask" role="status" aria-live="polite">
+    <span class="g-spin"></span>
+    <div class="g-txt"><b id="gTaskT">正在读取文件夹…</b><span class="g-sub" id="gTaskS">读取文件列表</span></div>
+    <span class="g-t" id="gTaskTime">0.0s</span>
+  </div>
+
+  <!-- 通用删除/危险操作确认框：必须放在 .pages 之外。
+       放在某个 page section 里时，其它页的 section 是 display:none，
+       整个弹窗会跟着隐藏，导致所有页面的删除按钮点了「没反应」。 -->
+  <div class="m-modal m-confirm" id="mConfirmModal" role="dialog" aria-modal="true" aria-label="确认操作">
+    <div class="m-dialog">
+      <div class="m-dialog-hd">
+        <svg class="ic" style="width:17px;height:17px;color:#B45B5B"><use href="#i-trash"/></svg>
+        <b id="mConfirmTitle">确认操作</b>
+        <button class="m-x" id="mConfirmX" title="关闭" aria-label="关闭">×</button>
+      </div>
+      <div class="m-confirm-txt" id="mConfirmText"></div>
+      <div id="mConfirmInputWrap" style="display:none">
+        <div class="m-confirm-row">
+          <div class="u-input"><input id="mConfirmInput" placeholder="输入：清理全部" spellcheck="false" autocomplete="off"></div>
+          <button class="m-paste" id="mConfirmPaste" title="自动填入指定文字"><svg class="ic"><use href="#i-copy"/></svg></button>
+        </div>
+        <div class="m-hint" style="margin-top:7px">点右侧按钮可自动填入，或手动输入指定文字。输错不能执行。</div>
+      </div>
+      <div class="m-dialog-ft">
+        <button class="u-btn sm" id="mConfirmCancel">取消</button>
+        <button class="u-btn sm" id="mConfirmAlt" style="display:none">另一个选择</button>
+        <button class="u-btn sm gold danger" id="mConfirmOk" disabled>确认</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="folderPicker" webkitdirectory directory multiple style="display:none">
+
+<script>
+(function(){
+  /* 流式布局紧凑化 */
+  function fit(){
+    var h=document.documentElement.clientHeight||window.innerHeight;
+    document.body.classList.toggle('compact',h<1000);
+    document.body.classList.toggle('tiny',h<720);
+  }
+  window.addEventListener('resize',fit);
+  if(window.visualViewport)window.visualViewport.addEventListener('resize',fit);
+  fit();
+
+  /* 统一提示：只在出错 / 操作被拦住时才在页眉弹一条，普通反馈静默。
+     2026-11-15 用户口径「随便点一下就提示没意义，只有错误的时候提示不行吗」：
+     点一下分镜弹「第 N 段 · 素材名 · 秒数」属于噪音，工具栏里本来就有段信息。
+     判定 = 调用方 say(msg,true)，或文本命中 SAY_ERR；命中即染红。
+     静默时不动当前正在显示的错误提示，避免把上一条错误提前关掉。
+     临时排查可恢复全部提示：localStorage.setItem('riffcut.say.verbose','1')。 */
+  var toast=document.getElementById('toast'),tm;
+  var SAY_ERR=/失败|出错|报错|错误|异常|超时|读不到|不能|无法|不可用|不支持|没连上|连不上|未响应|没起来|拒绝|中止|中断|无效|找不到|不存在|请先|先选|先说|太短|没听清|没权限|没有权限|禁用|缺少|不足|超限|HTTP\s*\d|fetch|ffmpeg|ffprobe|Error|Exception|Failed|Cannot|Could not|denied|NotAllowed|refused|timeout/i;
+  function sayIsError(s,bad){return !!bad||SAY_ERR.test(s)}
+  window.say=function(m,bad){
+    if(!toast)return;
+    var s=String(m==null?'':m);
+    var err=sayIsError(s,bad);
+    /* 系统性故障（服务连不上 / FFmpeg 起不来）只留页眉那条常驻告警 */
+    if(window.sysAlert&&/失败|没连上|连不上|未响应|超时|fetch|HTTP\s*\d|ffmpeg|ffprobe/i.test(s)
+       &&(window.sysAlert.has('service')||window.sysAlert.has('ffmpeg')))return;
+    var verbose=false;
+    try{verbose=localStorage.getItem('riffcut.say.verbose')==='1'}catch(e){}
+    if(!err&&!verbose)return;   /* 信息性反馈：不弹，也不动上一条提示 */
+    toast.textContent=s;
+    toast.title=s;   /* 单行省略后，鼠标悬停仍能读到全文 */
+    /* 页眉正中已被系统级告警占着 → 这条落到页眉下方一行，别和红条叠在一起 */
+    var sa=document.getElementById('sysAlert');
+    toast.classList.toggle('with-alert',!!(sa&&!sa.hidden));
+    toast.classList.toggle('bad',err);
+    toast.classList.add('on');clearTimeout(tm);
+    var ms=Math.min(7000,Math.max(2000,s.length*120));
+    tm=setTimeout(function(){toast.classList.remove('on')},ms);
+  };
+
+  /* ── 系统级告警（页眉正中，红色呼吸脉冲）────────
+     用法：
+       sysAlert.set('ffmpeg', '剪辑导出不可用：FFmpeg 没起来', {
+         detail:  '因为 …<br>可以这样修 …',      // 「怎么处理」里给真人看的话
+         retry:   function(){ return Promise },  // 可选：点「重新检测」跑一次，resolve(true) 自动撤掉告警
+         retryText:'重新检测'
+       })
+       sysAlert.clear('ffmpeg')   // 只撤自己那条，别的故障不受影响
+     为什么不用 say()：普通提示 2 秒就没了，用户看不到，等真点导出才失败。
+     这类故障关系到「软件能不能干活」，必须一直挂在眼皮底下，不修好不走。
+     点 × 只是收成一颗红点（问题仍在），不会真消失。 */
+  window.sysAlert=(function(){
+    var el=document.getElementById('sysAlert'),tx=document.getElementById('sysAlertTx'),
+        bMore=document.getElementById('sysAlertMore'),bX=document.getElementById('sysAlertX');
+    if(!el)return {set:function(){},clear:function(){},has:function(){return false}};
+    var issues={},order=[],mini=false,busy=false;
+
+    function head(){
+      for(var i=0;i<order.length;i++){ if(issues[order[i]])return issues[order[i]] }
+      return null;
+    }
+    function render(){
+      var it=head();
+      if(!it){
+        el.hidden=true;el.classList.remove('mini');
+        document.body.classList.remove('has-sysalert');mini=false;
+        dragGuardSoon();return;
+      }
+      el.hidden=false;
+      if(tx)tx.textContent=it.text||'';
+      el.classList.toggle('mini',mini);
+      document.body.classList.add('has-sysalert');
+      if(bMore)bMore.textContent=it.retry?(it.retryText||'重新检测'):'怎么处理';
+      dragGuardSoon();
+    }
+    /* ── 拖拽条避让 ──
+       原生壳在窗口顶部铺了一条透明拖拽条接管窗口拖动。告警条恰好长在它正中间，
+       于是点「重新检测」「×」全被拖拽条吃掉，按钮永远没反应。
+       把告警条的实际矩形报给原生，拖拽条绕开这块区域。 */
+    function syncDragGuard(){
+      try{
+        var mh=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.dragGuard;
+        if(!mh)return;
+        /* ★ 2026-11-18：原来只报「系统告警条」一块 rect，
+           页眉里其它可点的东西（品牌字标、AI 导演、Beta、清空对话、通知铃、客户名）
+           全都落在原生那条透明拖拽条底下 —— 点不动。
+           现在把页眉里所有可交互元素的矩形一起报上去，原生逐块放行。
+           只要页眉在顶部 52px 内，就都归它管。 */
+        var rects=[];
+        try{
+          var tb=document.querySelector('.titlebar');
+          if(tb){
+            var tbR=tb.getBoundingClientRect();
+            /* ★ 报页眉里所有可见子元素，不只是 button。
+               「RiffCut 影创」字标是个 img、「当前客户：未选择」是个 span，
+               它们不是按钮，但双击字标会缩放窗口、点客户名没反应 ——
+               所以这里按元素逐个报，原生那块放行。
+               去掉子元素后只留叶子节点，免得同一个区域报一堆重叠矩形。 */
+            var els=tb.querySelectorAll('button,a,input,select,textarea,img,span,i,div');
+            for(var i=0;i<els.length;i++){
+              var e=els[i];
+              if(!e||!e.getBoundingClientRect)continue;
+              var r=e.getBoundingClientRect();
+              if(!r.width||!r.height)continue;
+              /* 只要它跟页眉有交叠（页眉元素可能溢出页眉一点）就报 */
+              if(r.bottom<=tbR.top||r.top>=tbR.bottom)continue;
+              /* 叶子节点才报：里面还有子元素的（div.lights / div.tb-brand）
+                 会跟子元素重复，矩形叠着没意义。
+                 例外：button 一定要报 —— 通知铃是个 button，里面套着 svg，
+                 按叶子规则会被滤掉，铃铛就点不到了。 */
+              var isBtn=(e.tagName==='BUTTON');
+              var hasChild=false;
+              for(var c=0;c<e.children.length;c++){
+                var cr=e.children[c].getBoundingClientRect();
+                if(cr.width&&cr.height){hasChild=true;break}
+              }
+              if(hasChild&&!isBtn)continue;
+              rects.push({x:r.left,y:r.top,w:r.width,h:r.height});
+            }
+            /* 告警条是 div 不是按钮，单独报 */
+            if(el&&!el.hidden){
+              var ar=el.getBoundingClientRect();
+              if(ar.width&&ar.height)rects.push({x:ar.left,y:ar.top,w:ar.width,h:ar.height});
+            }
+          }
+        }catch(e2){}
+        mh.postMessage({rects:rects});
+      }catch(e){}
+    }
+    function dragGuardSoon(){
+      if(window.requestAnimationFrame)requestAnimationFrame(syncDragGuard);
+      else setTimeout(syncDragGuard,16);
+    }
+    window.addEventListener('resize',dragGuardSoon);
+    /* ★ 页面刚打开时也要报一次。
+       以前只在「告警条状态变了」和「窗口 resize」时报 —— 首次打开时原生那边
+       一个避让区都没有，页眉里的按钮全被透明拖拽条盖住。
+       另外页眉内容会变（客户名写上、通知铃出现），过一会儿再补报一次。 */
+    dragGuardSoon();
+    setTimeout(dragGuardSoon,400);
+    setTimeout(dragGuardSoon,1500);
+    if(window.MutationObserver){
+      try{
+        var tb=document.querySelector('.titlebar');
+        if(tb)new MutationObserver(function(){dragGuardSoon()})
+                 .observe(tb,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden','style']});
+      }catch(e){}
+    }
+    function detailHtml(it){
+      var h='<div style="line-height:1.75">'+(it.detail||it.text||'')+'</div>';
+      h+='<div style="margin-top:12px;padding:10px 12px;border-radius:8px;background:#FFF6F5;'
+        +'border:1px solid #F3CCC8;color:#A3251B;font-size:12px">'
+        +'这条提示会一直挂在页眉中间，直到问题解决。'
+        +'<br>需要人工处理时，可以先把这条收成红点（不挡视线，但仍然在）。</div>';
+      return h;
+    }
+    /* 一键修：点「重新检测」直接跑，不再先弹一个「确定吗」的框多一次点击。
+       跑的时候按钮变成「检测中…」防连点；修好了就撤告警并提示一句。 */
+    function runRetry(it){
+      if(!it||!it.retry){openDetail();return}
+      if(busy)return;busy=true;
+      var label=it.retryText||'重新检测';
+      if(bMore){bMore.textContent='检测中…';bMore.disabled=true}
+      Promise.resolve().then(it.retry).then(function(okNow){
+        busy=false;
+        if(bMore){bMore.disabled=false;bMore.textContent=label}
+        if(okNow){window.sysAlert.clear(it.key);if(window.say)say('已修好，可以正常使用了')}
+        else if(window.say)say('还是不行，点告警条看具体原因');
+      }).catch(function(e){
+        busy=false;
+        if(bMore){bMore.disabled=false;bMore.textContent=label}
+        if(window.say)say((e&&e.message)||'检测失败');
+      });
+    }
+    function openDetail(){
+      var it=head(); if(!it)return;
+      if(typeof window.confirmAction!=='function'){
+        // 极端情况（脚本没就绪）：退回最朴素的方式，别把用户挡在门外
+        if(window.say)window.say(it.text);
+        return;
+      }
+      var btnText=it.retry?(it.retryText||'重新检测'):'知道了';
+      window.confirmAction({
+        title:it.title||'需要处理的问题',
+        html:detailHtml(it),
+        okText:btnText,
+        onOk:function(){
+          if(!it.retry){ window.sysAlert.clear(it.key); return }
+          runRetry(it);
+        },
+      });
+    }
+
+    if(bMore)bMore.addEventListener('click',function(e){
+      e.stopPropagation();
+      var it=head();if(!it)return;
+      if(it.retry)runRetry(it); else openDetail();
+    });
+    if(bX)bX.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(busy)return;
+      /* × 只是收成页眉上的一颗红点：问题没解决就不能让它彻底消失，
+         用户想再管的时候点那颗红点就展开回来了。 */
+      mini=true;render();
+    });
+    el.addEventListener('click',function(){
+      if(el.classList.contains('mini')){mini=false;render();return}
+      openDetail();
+    });
+
+    return {
+      set:function(key,text,opt){
+        opt=opt||{};
+        key=key||'sys';
+        var isNew=!issues[key];          // 必须是「新问题」才自动展开
+        if(isNew)order.push(key);
+        issues[key]={key:key,text:text,detail:opt.detail||'',title:opt.title||'',
+                     retry:opt.retry||null,retryText:opt.retryText||''};
+        /* 新冒出来的问题自动展开，别让它悄悄躺在红点里；
+           但后台每几秒会复查同一件事再 set 一次，这时候不能把用户刚收起的
+           红点又弹开 —— 那样点 × 等于没点（实测就是这个毛病）。 */
+        if(isNew)mini=false;
+        render();
+        return key;
+      },
+      clear:function(key){
+        if(key){ if(issues[key]){delete issues[key];order=order.filter(function(k){return k!==key})} }
+        else { issues={};order=[] }
+        render();
+      },
+      has:function(key){ return key?!!issues[key]:!!head() },
+      open:openDetail
+    };
+  })();
+
+  /* ── 后台任务进度条（右下角）──
+     为什么要有：读文件夹 / 建索引可能几十秒。以前的做法是把页面上的按钮 disabled 掉，
+     用户看到一屏灰按钮，还以为软件死了。现在改成：活都在后台跑，这里只报进度，
+     页面上任何按钮照旧可点，切客户、切页面、搜素材都不受影响。 */
+  window.taskUI=(function(){
+    var box=document.getElementById('gTask'),ttl=document.getElementById('gTaskT'),
+        sub=document.getElementById('gTaskS'),tmEl=document.getElementById('gTaskTime'),
+        t0=0,tick=null,n=0;
+    return {
+      start:function(title,stage){
+        n++;t0=Date.now();
+        if(ttl)ttl.textContent=title||'后台处理中…';
+        if(sub)sub.textContent=stage||'正在处理…';
+        if(tmEl)tmEl.textContent='0.0s';
+        if(box)box.classList.add('on');
+        if(!tick)tick=setInterval(function(){
+          if(tmEl)tmEl.textContent=((Date.now()-t0)/1000).toFixed(1)+'s';
+        },200);
+      },
+      title:function(s){if(s&&ttl)ttl.textContent=s},
+      stage:function(s){if(s&&sub&&sub.textContent!==s)sub.textContent=s},
+      done:function(){
+        n=Math.max(0,n-1);if(n>0)return;
+        if(tick){clearInterval(tick);tick=null}
+        if(box)box.classList.remove('on');
+        if(tmEl)tmEl.textContent='0.0s';
+      },
+      busy:function(){return n>0}
+    };
+  })();
+
+  /* ── 重要通知：只有后台长任务（出片 / 素材分析等）完成或失败才进来 ──
+     顶部通知按钮左边只显示最后一条，铃铛点开能看历史；点选项、保存设置等不打扰 */
+  var NOTICES=[];
+  try{NOTICES=JSON.parse(localStorage.getItem('riffcut.notices')||'[]')}catch(e){NOTICES=[]}
+  function saveNotices(){try{localStorage.setItem('riffcut.notices',JSON.stringify(NOTICES.slice(0,30)))}catch(e){}}
+  function nEsc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+  function renderNotices(){
+    var pill=document.getElementById('tbNotice'),list=document.getElementById('noticeList'),
+        bell=document.getElementById('tbBell'),last=NOTICES[0];
+    if(pill){
+      pill.classList.toggle('on',!!last);
+      pill.classList.toggle('bad',!!(last&&last.bad));
+      pill.querySelector('.tx').textContent=last?last.msg:'';
+      pill.title=last?last.msg:'';
+    }
+    if(bell)bell.classList.toggle('unread',NOTICES.length>0&&!bell.dataset.seen);
+    if(list)list.innerHTML=NOTICES.length?NOTICES.map(function(n){
+      return '<div class="notice-row'+(n.bad?' bad':'')+'"><i></i><span>'+nEsc(n.msg)+
+             '</span><span class="t">'+nEsc(n.t)+'</span></div>';
+    }).join(''):'<div class="notice-empty">还没有重要通知。<br>出片、素材分析等后台任务完成后会出现在这里。</div>';
+  }
+  window.notice=function(msg,ok){
+    NOTICES.unshift({msg:String(msg||''),bad:ok===false,
+                     t:new Date().toTimeString().slice(0,5)});
+    NOTICES=NOTICES.slice(0,30);saveNotices();
+    var bell=document.getElementById('tbBell');if(bell)bell.dataset.seen='';
+    renderNotices();
+  };
+  var bellBtn=document.getElementById('tbBell'),pop=document.getElementById('noticePop');
+  if(bellBtn)bellBtn.addEventListener('click',function(e){
+    e.stopPropagation();
+    if(pop)pop.classList.toggle('on');
+    bellBtn.dataset.seen='1';renderNotices();
+  });
+  document.addEventListener('click',function(e){
+    if(pop&&pop.classList.contains('on')&&!pop.contains(e.target)&&e.target!==bellBtn)
+      pop.classList.remove('on');
+  });
+  var nc=document.getElementById('noticeClear');
+  if(nc)nc.addEventListener('click',function(e){
+    e.stopPropagation();NOTICES=[];saveNotices();renderNotices();
+  });
+  renderNotices();
+
+  /* 侧栏折叠：收起后只留图标，选择记在本机 */
+  var sideBtn=document.getElementById('sideToggle');
+  function applySide(c){
+    document.body.classList.toggle('side-collapsed',c);
+    if(sideBtn){var t=c?'展开侧栏':'收起侧栏';sideBtn.title=t;sideBtn.setAttribute('aria-label',t);sideBtn.setAttribute('data-tip',t)}
+  }
+  try{applySide(localStorage.getItem('riffcut.side.collapsed')==='1')}catch(e){}
+
+  /* 剪辑页的「自动收起侧栏 + 左边缘悬浮」已去掉。
+     原因：主栏现在只有 4 项 + 一个「更多」，本来就窄，自动折叠省不出多少空间，
+     反而每次进剪辑页侧栏就消失、鼠标离不开左边缘就一直展开，很折腾。
+     需要窄屏时用户自己点顶部那个折叠按钮（.side-toggle）就够了。 */
+  if(sideBtn)sideBtn.addEventListener('click',function(){
+    var c=!document.body.classList.contains('side-collapsed');
+    applySide(c);
+    try{localStorage.setItem('riffcut.side.collapsed',c?'1':'0')}catch(e){}
+    window.say(c?'侧栏已收起，点箭头可展开':'侧栏已展开');
+  });
+
+  /* ══ 本机服务 API（真实功能都走这里） ══ */
+  window.RiffCut={settings:{},models:[],chat_models:[],library:{items:[]},tasks:[],projects:[],
+                 skills:[],voices:[],customers:[],customer:'影创',currentModelId:'',plan:null};
+  var __apiReal=function(path,data,extra){
+    /* extra.signal 传 AbortController.signal：点「停止方块」时前端立刻断线，不再干等 */
+    extra=extra||{};
+    var h=data===undefined?{}:{'Content-Type':'application/json'};
+    /* 本机请求凭据：服务在首页 <head> 注入，window.api 统一带上，
+       挡住本机其它进程/网页直接调 /api/*。关掉 require_token 后服务端不再校验。 */
+    if(window.__RiffCut_TOKEN__)h['X-RiffCut-Token']=window.__RiffCut_TOKEN__;
+    var o={method:data===undefined?'GET':'POST',headers:h};
+    if(data!==undefined)o.body=JSON.stringify(data);
+    if(extra.signal)o.signal=extra.signal;
+    /* 服务本身连不上 / 报 5xx：这不是「这次操作没成功」，是软件现在干不了活。
+       以前这种错只在页面底部闪一行字，用户以为点一下重试就好。现在一律挂页眉正中，
+       带红色呼吸脉冲、带「马上重连」，修好自己撤掉。 */
+    function serverDown(e){
+      if(window.showServiceDown)window.showServiceDown(e);
+    }
+    return fetch(path,o).catch(function(e){
+      if(e&&e.name==='AbortError')throw e;          /* 用户自己点了停止，不算故障 */
+      serverDown(e);throw e;
+    }).then(function(r){
+      if(r.status>=500){var e2=new Error('本机服务出错（HTTP '+r.status+'）');serverDown(e2);throw e2}
+      /* 请求能拿到响应就说明服务活着 —— 把「本机服务没连上」那条红条撤掉。
+         以前只有 bootOnce 成功时才 clear，而 bootOnce 只在失败重试链里跑：
+         一次偶发 500（比如模板要现场下东西超时）挂上红条，之后所有请求都正常，
+         红条却一直留在页眉上，用户以为软件坏了不敢用。 */
+      if(window.sysAlert)window.sysAlert.clear('service');
+      return r.json();
+    }).then(function(j){
+      if(!j.ok){
+        var e=new Error(j.error||'这一步没跑成');
+        /* 接口报的错如果指向 ffmpeg，说明不是这一次操作的问题，是整条剪辑链路坏了：
+           顺手复查一次，页眉告警自己就挂上去，用户不用等下一次点导出再撞一次。 */
+         if(window.checkFfmpeg&&/ffmpeg|ffprobe/i.test(e.message)){
+           window.checkFfmpeg({ok:false,ffmpeg:e.message,path:''});
+         } else {
+           window.say(e.message);
+         }
+         throw e;
+      }
+      return j.data;
+    });
+  };
+  /* 真身装好，把片段里排队的那批调用放出去（排队壳在 body 的 pages 容器上方） */
+  if(window.__apiFlush)window.__apiFlush(__apiReal); else window.api=__apiReal;
+
+  window.pollTask=function(tid,onDone){
+    var stopped=false,failures=0,timer=0;
+    function schedule(){
+      if(!stopped)timer=setTimeout(tick,Math.min(5000,900+failures*300));
+    }
+    function tick(){
+      window.api('/api/tasks',{action:'list'}).then(function(list){
+        failures=0;
+        window.RiffCut.tasks=list;
+        document.dispatchEvent(new CustomEvent('taskchange',{detail:{tasks:list}}));
+        var t=null;list.forEach(function(x){if(x.id===tid)t=x});
+        if(t&&(t.state==='已完成'||t.state==='失败'||t.state==='已取消')){
+          stopped=true;clearTimeout(timer);
+          if(t.state==='已完成'){
+            window.notice('✓ '+t.name+' 完成',true);
+            if(onDone)onDone(t.result,t);
+          } else if(t.state==='失败')window.notice('✗ '+t.name+'：'+(t.error||'失败'),false);
+          return;
+        }
+        schedule();
+      }).catch(function(){
+        /* 网络抖动不丢任务终态；退避重试，长任务也没有九分钟上限。 */
+        failures++;schedule();
+      });
+    }
+    tick();
+    return function(){stopped=true;clearTimeout(timer)};
+  };
+  /* 选一次就记住：设置（服务端）是权威，localStorage 只是同一次运行里的快照。
+     以前只写 localStorage —— App 用 file:// 载入页面，重启后 localStorage 是空的，
+     于是每次都退回 is_default 那个「后来添加的模型」。 */
+  window.useChatModel=function(id){
+    id=String(id||'');
+    (window.RiffCut||{}).currentModelId=id;
+    try{localStorage.setItem('riffcut.currentModel',id)}catch(e){}
+    return window.api('/api/models',{action:'use',id:id}).then(function(r){
+      if(r&&r.ok===false)throw new Error((r&&r.error)||'没能记住这个模型');
+      return r;
+    });
+  };
+  /* ── 启动自检 ──────────────────────────
+     以前这两个检查都只 say 一句：底部黑条 2 秒没了，用户以为软件正常，
+     等真点导出才发现不能用。现在统一挂到页眉正中的红色呼吸告警上，
+     并且能自动重连、能点「重新检测」，好了自己撤掉。 */
+  var BOOT_TRY=0,READY_FIRED=false;
+  function ffmpegProblem(ff){
+    ff=ff||{};
+    if(ff.ok)return null;
+    var why=ff.ffmpeg?('当前拿到的答复：'+String(ff.ffmpeg).slice(0,120)):('程序路径：'+(ff.path||'未找到'));
+    return {
+      key:'ffmpeg',
+      text:'剪辑导出不可用：FFmpeg 没起来',
+      title:'FFmpeg 没起来',
+      detail:'没有它，出片、转码、抽帧、合成配音这些活全都做不了。<br><br>'+why
+        +'<br><br>一般是三种原因：<br>'
+        +'① 软件内自带的 ffmpeg 被系统拦下了（换机器、拷贝安装最常见）；<br>'
+        +'② 装在了「下载」目录里，被系统的隔离策略挡住；<br>'
+        +'③ 文件被杀毒软件删了。<br><br>'
+        +'先点下面的「重新检测」。还不行就把 RiffCut 影创 整个应用拖到「应用程序」文件夹再打开一次。'
+    };
+  }
+  /* 启动时先让软件「自己修」，别一上来就吓人：
+     4 秒宽限期内不报警，这期间复查一次（会自动重签修复）。修不好才挂页眉告警。
+     用户的规矩：能自己修当然更好；报出来之后，点「修复」必须真能修好才算数。 */
+  var FF_G={pending:false,settled:false};   // pending=正在等自愈；settled=已经报过，别再等
+  window.checkFfmpeg=function(ff,opt){
+    opt=opt||{};
+    var p=ffmpegProblem(ff);
+    if(!p){
+      FF_G.pending=false;FF_G.settled=false;
+      if(window.sysAlert)window.sysAlert.clear('ffmpeg');
+      return true;
+    }
+    if(!window.sysAlert)return false;
+    /* 宽限期内（4 秒）谁再调都只是继续等，不许提前报警 ——
+       启动时 shell 和首页会各查一次，第二下就把宽限期绕过去了（实测）。
+       只有复查也修不好（opt.now）或者已经报过（settled）才真的挂页眉。 */
+    if(!opt.now&&!FF_G.settled){
+      if(!FF_G.pending){
+        FF_G.pending=true;
+        setTimeout(function(){
+          window.api('/api/ffmpeg',{heal:1}).then(function(r){
+            var d=(r&&r.data)||r||{};
+            if(d.ok){ window.checkFfmpeg(d); return }
+            window.checkFfmpeg(d,{now:true});   // 自己修不好，这才报
+          }).catch(function(){ /* 服务没起来由 showServiceDown 那条管，这里不重复报 */ });
+        },4000);
+      }
+      return false;
+    }
+    FF_G.pending=false;FF_G.settled=true;
+    window.sysAlert.set(p.key,p.text,{
+      title:p.title,detail:p.detail,retryText:'重新检测',
+      retry:function(){
+        return window.api('/api/ffmpeg',{heal:1}).then(function(r){
+          var d=(r&&r.data)||r||{};
+          var ok=!!d.ok;
+          if(ok){ if(window.sysAlert)window.sysAlert.clear('ffmpeg') }
+          else { window.checkFfmpeg(d,{now:true}) }
+          return ok;
+        });
+      }
+    });
+    return false;
+  };
+  window.showServiceDown=showServiceDown;
+  function showServiceDown(e){
+    if(!window.sysAlert){ window.say('本机服务没起来，界面为只读预览（请重新打开应用）'); return }
+    /* 已经挂在页眉上了就别每 3 秒重设一次：重设会把用户收起的红点又弹开 */
+    if(window.sysAlert.has('service'))return;
+    window.sysAlert.set('service','本机服务没连上，软件现在只能看不能用',{
+      title:'本机服务没连上',
+      detail:'界面的每个按钮都要经过本机服务，它没起来就只能看、不能干活。'
+        +'<br><br>软件会在后台每 3 秒自动重连一次，连上就自动恢复，不用你管。'
+        +'<br><br>超过半分钟还不行，把 RiffCut 影创 退出（⌘Q）再打开一次。'
+        +((e&&e.message)?('<br><br><span style="color:#8A92A2">技术细节：'+e.message+'</span>'):''),
+      retryText:'马上重连',
+      retry:function(){
+        return window.api('/api/bootstrap').then(function(){ bootOnce(); return true })
+          .catch(function(){ return false });
+      }
+    });
+  }
+  function bootOnce(){
+    return window.api('/api/bootstrap').then(function(d){
+    window.RiffCut=d;
+    if(window.sysAlert)window.sysAlert.clear('service');
+    window.checkFfmpeg(d.ffmpeg);
+    var remembered='';try{remembered=localStorage.getItem('riffcut.currentModel')||''}catch(e){}
+    var list=d.chat_models||[];
+    /* 优先级：设置里记着的「上次手动选的」> 浏览器里的旧快照 > 默认模型 > is_default > 第一个可用。
+       第一档是这次新加的：用户在首页下拉里选过，就一直用它，除非他自己再换。 */
+    var want=d.current_model||remembered;
+    var hit=list.filter(function(m){return m.id===want})[0]
+      || list.filter(function(m){return m.id===d.default_model})[0]
+      || list.filter(function(m){return m.is_default})[0]
+      || list[0];
+    window.RiffCut.currentModelId=(hit||{}).id||'';
+    window.RiffCut.defaultModelId=d.default_model||'';
+    /* 只在第一次成功时派事件；重连成功只补数据，不重跑各页初始化 */
+    if(!READY_FIRED){READY_FIRED=true;
+      document.dispatchEvent(new CustomEvent('riffcut-ready',{detail:d}))}
+    return true;
+    }).catch(function(e){
+      showServiceDown(e);
+      /* 自动重连：服务是被 App 拉起来的，慢一两秒很正常；
+         连上就把告警撤掉，用户什么都不用做。 */
+      if(BOOT_TRY<12){BOOT_TRY++;setTimeout(bootOnce,3000)}
+      return false;
+    });
+  }
+  bootOnce();
+
+  /* 页面切换：左侧固定项真正切屏 */
+  var pages=document.querySelectorAll('.page');
+
+  window.goPage=function(name){
+    // 浮层里内嵌着某个页面时，点侧栏就等于「先退出内嵌、再切页」，
+    // 否则那个页面被留在浮层里，主区切过去是空的。
+    if(document.getElementById('setMask')?.classList.contains('on')){
+      document.getElementById('setClose')?.click();
+    }
+    var ok=false;
+    pages.forEach(function(p){var on=p.dataset.page===name;p.classList.toggle('on',on);if(on)ok=true;});
+    // 高亮交给侧栏模块（钉哪几项是可变的，所以不能在这里写死 querySelectorAll('.nav a')）
+    var _hit = window.__markNav ? window.__markNav(name) : false;
+    // 没钉到侧栏上的模块（配音·语音 / 热点雷达 …）跳过去时侧栏没有对应行，
+    // 就把高亮落在「更多」上，否则侧栏会出现「哪一项都没亮」的空白态。
+    var _set = document.getElementById('sideSet');
+    if(_set)_set.classList.toggle('on',!_hit);
+    var _sub = document.getElementById('sideSetSub');
+    if(_sub)_sub.textContent = (!_hit && window.__SET_NAME && window.__SET_NAME[name]) || '';
+    if(ok){
+      var t=(window.__SET_NAME&&window.__SET_NAME[name])||name;
+      say('已切到「'+t+'」');
+    }
+    return ok;
+  };
+
+  /* ── 侧栏：固定项 + 「更多」浮层 + 会话列表 ──────────────
+     三块共用一套模块表 MODS，避免「浮层里有、侧栏里没有」这种对不上的情况。
+
+     固定项是可自定义的：上方那排不是写死的四项，用户钉了谁就是谁，
+     存在 localStorage('riffcut.nav.pinned')，重开还是他自己的排列。
+     默认钉 home/edit/assets/publish —— 做一条片真正会走到的顺序。 */
+  (function(){
+    var MODS={
+      home:     {t:'首页',    ic:'i-home',     d:'一句话说需求，AI 直接接着干。做片的主入口，也是所有对话开始的地方。'},
+      edit:     {t:'专业剪辑', ic:'i-clap',     d:'轨道式剪辑台：素材、模板、字幕、配音四条轨，装模板和出片都在这里。'},
+      assets:   {t:'素材库',   ic:'i-folder',   d:'按客户归类的图片、视频、音频、Logo。剪片时从这里往里拖。'},
+      publish:  {t:'发布中心', ic:'i-send',     d:'成片按平台导出、写标题标签、排发布时间。发出去之后的回执也在这里。'},
+      voice:    {t:'配音·语音', ic:'i-mic',      d:'选音色、调语速、试听，把文案直接转成配音轨。本地模型离线可用，不用等云端排队。'},
+      hotspot:  {t:'热点雷达', ic:'i-chart',    d:'按平台和赛道拉当天话题榜，挑一条就能丢给 AI 写口播。选题不用自己想。'},
+      tasks:    {t:'任务中心', ic:'i-task',     d:'渲染、转码、批量处理都在这里排队。合上页面也会继续跑，回来能看到进度和产物。'},
+      skill:    {t:'技能中心', ic:'i-cube',     d:'软件的技能清单：每个技能是一段可复用的流程，装了什么就能直接调。'},
+      kb:       {t:'知识库',   ic:'i-book',     d:'你自己的规则和经验库。问什么先查这里，查到就照它做，不用每次重讲一遍。'},
+      /* 品牌资产以前挂在「客户与素材库」页的页签里，那页改成纯素材库后
+         这个页面就没有入口了 —— 12 个 data-page 里有 brand，MODS 里却没有，
+         等于整页消失（2026-11-18 逐个点浮层时才发现）。 */
+      brand:    {t:'品牌资产', ic:'i-image',      d:'按客户存的 Logo、配色、片头片尾、口号。出片时自动套用，不用每次重设。'},
+      models:   {t:'模型管理', ic:'i-sliders',  d:'配置文本、视觉、语音各路模型的地址和密钥。本地模型和云端都能挂。'},
+      settings: {t:'系统设置', ic:'i-gear',     d:'账号、存储位置、默认画幅、快捷键、权限这一类软件本身的设置。'},
+      /* 插件市场装的是 DSH 生态里别人做的扩展（6100+ 个），和「技能中心」
+         那 41 条我们自己写的流程是两回事，所以单独一项。 */
+      plugins:  {t:'插件市场', ic:'i-grid',     d:'DSH 生态的扩展插件：装了就有新能力。装完重启软件生效。'},
+      /* 「内核能力」是给用户核对用的：工具 / 技能 / 档位一次列全，
+         点一下能把工具名复制到对话里。不放进默认钉的 4 项（默认是主路径）。 */
+      abilities:{t:'内核能力', ic:'i-cube',     d:'软件到底能干什么：90 个工具、41 条技能、当前档位，一处看全。'},
+      /* 把 DSH 内核「本来就有、但用户看不见」的东西翻开：
+         任务与子智能体 —— 内核能并行开多个自己。
+         原「会话历史」一项已删（2026-11-19）：首页左侧会话列表已覆盖对话回看，
+         这项重复且入口靠 nesting 显示不全。页面文件保留，只是不再列表/钉选。 */
+      agents:   {t:'任务与智能体', ic:'i-grid', d:'内核能同时开多个子智能体并行干活。这里看它们跑到哪了。'}
+    };
+    var DEF=['home','edit','assets','publish'];
+    var KEY='riffcut.nav.pinned';
+    var MAX=6;                       // 主栏最多 6 项：再多侧栏就成竖排长列表了
+    var SET_NAME={};
+    Object.keys(MODS).forEach(function(k){SET_NAME[k]=MODS[k].t});
+    window.__SET_NAME=SET_NAME;
+
+    var navList=document.getElementById('navList');
+    var op=document.getElementById('sideSet');
+    var mask=document.getElementById('setMask'),list=document.getElementById('setList'),
+        body=document.getElementById('setBody'),bt=document.getElementById('setTitle'),
+        bd=document.getElementById('setDesc'),cl=document.getElementById('setClose');
+    var embBar=document.getElementById('setEmbBar'),embName=document.getElementById('setEmbName'),
+        stage=document.getElementById('setStage'),back=document.getElementById('setBack');
+    if(!navList||!op||!mask)return;
+
+    /* ── 钉了哪些：读写 localStorage ──
+       只存 key 数组；不认识的 key 直接丢掉（模块改名/删掉后老配置不会留一堆幽灵项）。 */
+    var pinned=DEF.slice();
+    /* 钉的项存服务端（/api/ui），不再存 localStorage：
+       端口每次启动都变，localStorage 按 origin 隔离，换端口 = 换存储空间，
+       用户钉好的导航一重启就回到默认 —— 这是实测报过的 bug。
+       本地 localStorage 只当「这一进程内的缓存」，下次启动仍以服务端为准。 */
+    function normalizePinned(raw){
+      if(!Array.isArray(raw))return DEF.slice();
+      raw=raw.filter(function(k){return MODS[k]});
+      return (raw.length?raw:DEF.slice()).slice(0,MAX);
+    }
+    function loadPinned(){
+      try{
+        var cached=JSON.parse(localStorage.getItem(KEY)||'null');
+        if(Array.isArray(cached))pinned=normalizePinned(cached);
+      }catch(e){}
+      try{
+        api('/api/ui',{action:'get'}).then(function(d){
+          var v=d&&d.pinned;
+          if(Array.isArray(v)){
+            pinned=normalizePinned(v);
+            try{localStorage.setItem(KEY,JSON.stringify(pinned))}catch(e){}
+            paintNav();
+          }
+        }).catch(function(){});
+      }catch(e){}
+    }
+    function savePinned(){
+      try{localStorage.setItem(KEY,JSON.stringify(pinned))}catch(e){}
+      try{api('/api/ui',{action:'set',patch:{pinned:pinned}}).catch(function(){})}catch(e){}
+    }
+
+    /* ── 画上方固定项 ──
+       用 <a> 保持和原来一样的结构与样式（.nav a.on 那套高亮完全复用），
+       不新造类名 —— 否则折叠态、ed-zone 那几条 body 级规则都要跟着再写一遍。 */
+    function paintNav(){
+      navList.innerHTML='';
+      pinned.forEach(function(k){
+        var m=MODS[k];
+        var a=document.createElement('a');
+        a.href='#'; a.dataset.page=k;
+        a.innerHTML='<svg class="ic"><use href="#'+m.ic+'"/></svg>'+m.t;
+        a.addEventListener('click',function(e){e.preventDefault();window.goPage(k)});
+        navList.appendChild(a);
+      });
+      var cur=document.querySelector('.pages > .page.on');
+      if(cur)markNav(cur.dataset.page);
+    }
+    function markNav(name){
+      var hl=(name==='brand')?'assets':name;
+      var hit=false;
+      navList.querySelectorAll('a').forEach(function(a){
+        var on=a.dataset.page===hl; a.classList.toggle('on',on); if(on)hit=true;
+      });
+      return hit;
+    }
+
+    /* 浮层里不列的页面：首页和专业剪辑。
+       这两页在浮层窄框里渲染不全（剪辑台尤其会挤成乱码/竖排），
+       它们本来就默认钉在侧栏、也有各自完整页面，不需要在浮层里再开一遍。
+       只从「更多」列表隐藏，MODS / 侧栏 / goPage 全部照旧，入口不受影响。
+       以后还有别的页面在浮层里显示不全，往这个表加 key 即可。 */
+    var MORE_HIDE={home:1,edit:1};
+
+    /* ── 浮层左列：全部模块（减去 MORE_HIDE） + 图钉 ──
+       一行两个点击目标：名称区在浮层里直接打开该页面，图钉区只切换钉不钉。
+       不用整行 <button>（嵌套按钮非法），所以用 div 包两个 button。 */
+    function paintList(){
+      list.innerHTML='';
+      Object.keys(MODS).forEach(function(k){
+        if(MORE_HIDE[k])return;                 /* 浮层不列这两页，侧栏照常进 */
+        var m=MODS[k], on=pinned.indexOf(k)>=0;
+        var row=document.createElement('div');
+        row.className='set-item'+(on?' on':'');
+        row.dataset.k=k;
+        var full=(!on&&pinned.length>=MAX);
+        row.innerHTML=
+          '<button class="set-go" type="button">'+
+            '<svg class="ic"><use href="#'+m.ic+'"/></svg><span>'+m.t+'</span></button>'+
+          '<button class="set-pin'+(on?' on':'')+(full?' full':'')+'" type="button" '+
+            'title="'+(full?'上面最多钉 '+MAX+' 项，先取消一个再钉':'钉到侧栏上面')+'">'+
+            '<svg viewBox="0 0 24 24" fill="none">'+
+              '<path d="M9.5 3.5h5l-.6 5.2 3.1 3.1H6.9l3.1-3.1z" '+
+                'stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>'+
+              '<path d="M12 11.8V20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>'+
+            '</svg></button>';
+        list.appendChild(row);
+      });
+    }
+
+    function showInfo(k){
+      var m=MODS[k]||{t:k,d:''};
+      bt.textContent=m.t; bd.textContent=m.d;
+      list.querySelectorAll('.set-item').forEach(function(r){
+        r.classList.toggle('cur',r.dataset.k===k)});
+    }
+
+    /* ── 内嵌：把那个页面真的挂进来 ──
+       为什么不复制 HTML：每个页面里都绑着自己的 JS 状态（选中素材、播放进度、
+       表单草稿、已加载的轨道数据）。复制一份等于两套状态并存，改一边另一边不动。
+       所以直接把 .page 节点搬过来，关浮层时原样搬回去 —— 它从头到尾只有一个实例。
+
+       搬的时机也要注意：先搬进可见容器再让它 on，否则页面里那些靠 getBoundingClientRect
+       算的尺寸（画布、时间轴像素宽）会拿到 0，进去就是空白。 */
+    var embKey='', embNode=null, embHome=null, embNext=null;
+    function embed(k){
+      var pg=document.querySelector('.pages > .page[data-page="'+k+'"]');
+      if(!pg)return false;
+      if(embNode)unembed(true);
+      embKey=k; embNode=pg;
+      embHome=pg.parentNode; embNext=pg.nextSibling;
+      body.classList.add('is-embed');
+      stage.classList.add('on');
+      stage.appendChild(pg);          // 先入场
+      embBar.classList.add('on');
+      embName.textContent=(MODS[k]&&MODS[k].t)||k;
+      // 入场后再点亮，页面里的尺寸计算才有真实宽高
+      requestAnimationFrame(function(){
+        pg.classList.add('on');
+        document.dispatchEvent(new CustomEvent('riffcut-embed-open',{detail:{page:k}}));
+      });
+      return true;
+    }
+    function unembed(silent){
+      if(!embNode)return;
+      var pg=embNode, k=embKey;
+      pg.classList.remove('on');
+      // 搬回原位（用 nextSibling 保住原来的 DOM 顺序，某些页面靠顺序取同级）
+      if(embHome)embHome.insertBefore(pg,embNext||null);
+      embNode=null; embKey=''; embHome=null; embNext=null;
+      stage.classList.remove('on');
+      embBar.classList.remove('on');
+      body.classList.remove('is-embed');
+      if(!silent)document.dispatchEvent(new CustomEvent('riffcut-embed-close',{detail:{page:k}}));
+    }
+
+    function openMask(){
+      paintList();
+      var cur=document.querySelector('.pages > .page.on');
+      var k=cur&&MODS[cur.dataset.page]?cur.dataset.page:'';
+      /* 当前页若是浮层隐藏的那两页（或没当前页），默认落到列表第一项，
+         别让说明区显示一个列表里根本没有的条目。 */
+      if(!k||MORE_HIDE[k]){
+        var first=list.querySelector('.set-item');
+        k=first?first.dataset.k:'';
+      }
+      if(k)showInfo(k);
+      mask.classList.add('on');
+    }
+    function closeMask(){
+      unembed();
+      mask.classList.remove('on');
+    }
+
+    op.addEventListener('click',function(e){e.preventDefault();openMask()});
+
+    list.addEventListener('click',function(e){
+      // 图钉：只切换钉不钉，不动右边
+      var pin=e.target.closest('.set-pin');
+      if(pin){
+        var row=pin.closest('.set-item'), k=row.dataset.k;
+        var i=pinned.indexOf(k);
+        if(i>=0){
+          pinned.splice(i,1);
+          if(!pinned.length)pinned=[k];     // 至少留一项，否则侧栏头上空一排像坏了
+        }else{
+          if(pinned.length>=MAX){say('侧栏最多钉 '+MAX+' 项，先取消一个');return}
+          pinned.push(k);
+        }
+        savePinned(); paintNav(); paintList(); showInfo(k);
+        say(pinned.indexOf(k)>=0?('已把「'+MODS[k].t+'」钉到侧栏'):('已从侧栏移除「'+MODS[k].t+'」'));
+        return;
+      }
+      // 名称：在浮层里直接打开这一页，不跳转、不离开浮层
+      var go=e.target.closest('.set-go');
+      if(!go)return;
+      var k2=go.closest('.set-item').dataset.k;
+      showInfo(k2);
+      embed(k2);
+    });
+    list.addEventListener('mouseover',function(e){
+      var row=e.target.closest('.set-item'); if(!row)return;
+      if(!embNode&&row.dataset.k)showInfo(row.dataset.k);   // 内嵌时不要被 hover 冲掉说明区
+    });
+
+    back.addEventListener('click',function(){unembed()});
+    cl.addEventListener('click',closeMask);
+    mask.addEventListener('click',function(e){if(e.target===mask)closeMask()});
+    document.addEventListener('keydown',function(e){
+      if(e.key!=='Escape'||!mask.classList.contains('on'))return;
+      // Esc 先退内嵌，再按一次才关浮层 —— 否则一按就把整个浮层带走了
+      if(embNode)unembed(); else closeMask();
+    });
+    window.__openSettings=openMask;
+
+    /* ── 会话列表（照 DSH：常驻、可滚动、标题是主角）──
+       数据来自 /api/conversations?action=list，后端已按客户分组。
+       侧栏窄，不显示分组标题；切客户在顶栏那条，不在这里。 */
+    var scList=document.getElementById('scList');
+    var scSearch=document.getElementById('scSearch');
+    var scInput=document.getElementById('scSearchInput');
+    var scSearchBtn=document.getElementById('scSearchBtn');
+    var scFilterBtn=document.getElementById('scFilterBtn');
+    var scNewBtn=document.getElementById('scNewBtn');
+    var scArchBtn=document.getElementById('scArchBtn');
+    var archView=false;      // true=看归档，false=看正常列表
+    var CONV_ALL=[], CUR_CID='', onlyFilled=false;
+    /* ── 会话列表的三档设置（照 DSH）──
+       group: ws=按工作区分组 / flat=单列表
+       sort : manual=手动排序（置顶优先、其余保持后端顺序）/ updated=最近更新
+       view : hide=隐藏已归档 / all=全部 / only=仅已归档
+       这三档存在服务端（/api/ui 的 conv_pref），跟 pinned 一样 —— 端口一变
+       localStorage 就换库，存在本地的设置一重启就回默认。 */
+    var CPREF={group:'ws',sort:'updated',view:'hide'};
+    var COLLAPSED={};    /* 哪些工作区被折叠了，存服务端 */
+
+    function fmtWhen(ts){
+      if(!ts)return '';
+      var d=new Date(String(ts).replace(' ','T'));
+      if(isNaN(d))return '';
+      var now=new Date(), diff=(now-d)/1000;
+      if(diff<60)return '刚刚';
+      if(diff<3600)return Math.floor(diff/60)+' 分钟前';
+      if(d.toDateString()===now.toDateString())
+        return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      if(diff<86400*2)return '昨天';
+      if(diff<86400*7)return Math.floor(diff/86400)+' 天前';
+      return (d.getMonth()+1)+'/'+d.getDate();
+    }
+    /* 把会话按「工作区」分组。工作区就是客户 —— 后端 conversation_groups 本来就是
+       按客户分的，这里沿用同一口径，不另造一层概念。
+       为什么要在侧栏做分组：DSH 的侧栏是「工作区 → 会话」两层，我们之前抄了外观
+       却没抄这层结构，会话平铺一长串，用户找三天前那条只能靠搜。 */
+    function groupOf(c){
+      var n=c.workspace||c.customer||'默认';
+      return String(n||'默认');
+    }
+    function sortIn(a,b){
+      /* 置顶优先，两种排序都成立 —— 只按时间排会把刚钉的那条被新消息挤到下面，
+         用户看着就像「置顶没生效」。 */
+      if(!!b.pinned_at!==!!a.pinned_at) return b.pinned_at?1:-1;
+      if(CPREF.sort==='updated')
+        return String(b.updated||'').localeCompare(String(a.updated||''));
+      /* 手动排序：其余保持后端给的顺序（后端已按置顶+更新时间排） */
+      return 0;
+    }
+    function paintConv(){
+      if(!scList)return;
+      var q=(scInput&&scInput.value||'').trim().toLowerCase();
+      var arr=CONV_ALL.filter(function(c){
+        if(onlyFilled && !(c.msg_count>0))return false;
+        if(q && String(c.title||'').toLowerCase().indexOf(q)<0)return false;
+        return true;
+      }).slice().sort(sortIn);
+      scList.innerHTML='';
+      if(arr.length && CPREF.group==='ws'){
+        var order=[], bucket={};
+        arr.forEach(function(c){
+          var g=groupOf(c);
+          if(!bucket[g]){bucket[g]=[];order.push(g)}
+          bucket[g].push(c);
+        });
+        order.forEach(function(g){
+          var wrap=document.createElement('div');
+          var shut=!!COLLAPSED[g];
+          wrap.className='sc-grp'+(shut?' closed':'');
+          /* 分组标题用文件夹图标而不是三角箭头 —— 这里装的是「工作区」，
+             文件夹是它的实体形状；展开/收起靠图标本身的开合区分，不再另加箭头。 */
+          wrap.innerHTML='<button class="sc-gt'+(shut?' closed':'')+'" data-g="'+esc(g)+'">'+
+            '<svg class="ws" viewBox="0 0 24 24" fill="none">'+
+              '<path d="M3.6 7.4A1.6 1.6 0 0 1 5.2 5.8h3.4l1.7 2h8.5a1.6 1.6 0 0 1 1.6 1.6v7.8a1.6 1.6 0 0 1-1.6 1.6H5.2a1.6 1.6 0 0 1-1.6-1.6z" '+
+                'stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'+
+              (shut?'':'<path class="op" d="M3.6 11h16.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>')+
+            '</svg>'+
+            '<span class="nm2">'+esc(g)+'</span><span class="n2">'+bucket[g].length+'</span></button>'+
+            '<div class="bd"></div>';
+          var bd=wrap.querySelector('.bd');
+          bucket[g].forEach(function(c){bd.appendChild(convItem(c))});
+          scList.appendChild(wrap);
+        });
+        return;
+      }
+      if(!arr.length){
+        // 空态必须说清「为什么空」和「怎么办」：库里本来就没几条，空列表很像加载失败
+        var e=document.createElement('div');
+        e.className=(CONV_ALL.length?'sc-none':'sc-empty');
+        e.innerHTML=CONV_ALL.length
+          ? '没有匹配的会话'
+          : '<b>还没有会话</b>在首页输入框里说一句，这里就会多一条。';
+        scList.appendChild(e);
+        return;
+      }
+      arr.forEach(function(c){ scList.appendChild(convItem(c)); });
+    }
+    /* 单条会话：分组里和无分组列表里用的是同一个函数，
+       否则两处各写一遍，改一次样式要改两处（以前就是这么漏的）。 */
+    function convItem(c){
+        var b=document.createElement('button');
+        b.className='sc-item'+(c.id===CUR_CID?' on':'')+(archView?' arch':'')+(c.pinned_at?' tp':'');
+        b.dataset.cid=c.id;
+        /* 时间放标题右边同一行（原来另起一行，两行字占掉侧栏太多高度）。
+           删除/置顶/导出收进标题后的「⋯」，不再挤在行内。 */
+        b.innerHTML='<span class="row">'+
+            '<b>'+esc(c.title||'未命名对话')+'</b>'+
+            '<span class="when">'+fmtWhen(c.updated)+'</span>'+
+            /* 图钉放标题后面、紧挨时间左侧；斜插的实心钉，灰色 ——
+               线框竖钉在 12px 以下会被看成一个小圆点，认不出是图钉。 */
+            (c.pinned_at?'<svg class="pin" viewBox="0 0 24 24" aria-label="已置顶">'+
+              '<path d="M15.1 2.9a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1-1.2 1.6l-3.2 3.2-2.1 4.3a1 1 0 0 1-1.5.3L10 15.4l-4.3 4.3a1 1 0 0 1-1.4-1.4L8.6 14l-2.7-2.7a1 1 0 0 1 .3-1.5l4.3-2.1 3.2-3.2a1 1 0 0 1 1.4-1.6z" '+
+                'fill="currentColor"/></svg>':'')+
+            '<button class="more" title="更多操作"><svg viewBox="0 0 24 24" fill="none">'+
+              '<circle cx="5" cy="12" r="1.6" fill="currentColor"/>'+
+              '<circle cx="12" cy="12" r="1.6" fill="currentColor"/>'+
+              '<circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></button>'+
+          '</span>';
+        return b;
+    }
+    function esc(s){return String(s).replace(/[&<>"]/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+    /* 后端 list 有两种返回形态，必须都认：
+       - 新后端（lib/convo.js）直接给扁平数组 [{id,title,customer,msg_count,...}]
+       - 旧后端给 {groups:[{convs:[...]}]}（按客户分组）
+       以前只读 d.groups，扁平数组时 CONV_ALL 永远为空 —— 侧栏一直显示「还没有会话」，
+       其实库里几十条。这里统一收拢成扁平数组，分组交给前端 groupOf() 做。 */
+    function pickConvs(d){
+      if(!d)return [];
+      if(Array.isArray(d))return d;
+      if(Array.isArray(d.items))return d.items;
+      if(Array.isArray(d.groups)){
+        var out=[];
+        d.groups.forEach(function(g){(g.convs||[]).forEach(function(c){out.push(c)})});
+        return out;
+      }
+      return [];
+    }
+    function loadConv(){
+      if(!window.api||!scList)return;
+      api('/api/conversations',archView?{action:'list',archived:1}:{action:'list'}).then(function(d){
+        CONV_ALL=pickConvs(d);
+        CONV_ALL.sort(function(a,b){
+          return String(b.updated||'').localeCompare(String(a.updated||''))});
+        paintConv();
+      }).catch(function(e){
+        if(scList)scList.innerHTML='<div class="sc-none">会话读取失败</div>';
+      });
+    }
+
+    /* 「全部」视图：正常 + 归档两份都要，合流后统一按 CPREF 排序分组。 */
+    function loadConvAll(){
+      if(!window.api||!scList)return;
+      var one=function(p){return window.api('/api/conversations',p).catch(function(){return null})};
+      Promise.all([one({action:'list'}),
+                   one({action:'list',archived:1})]).then(function(rs){
+        CONV_ALL=[];
+        rs.forEach(function(d){ pickConvs(d).forEach(function(c){CONV_ALL.push(c)}) });
+        CONV_ALL.sort(function(a,b){return String(b.updated||'').localeCompare(String(a.updated||''))});
+        paintConv();
+      });
+    }
+
+    if(scList){
+      scList.addEventListener('click',function(e){
+        var moreBtn=e.target.closest('.more');
+        var item0=e.target.closest('.sc-item');
+        if(moreBtn&&item0){
+          e.stopPropagation();
+          openConvMenu(item0,moreBtn);
+          return;
+        }
+        var del=e.target.closest('.del');
+        var exp=e.target.closest('.exp');
+        var item=e.target.closest('.sc-item');
+        if(!item)return;
+        var cid=item.dataset.cid;
+        /* 导出：AI 导演页删了以后这一项没地方可放，挂到会话条目上更顺手
+           —— 想导出哪条就在哪条上点，不用先切过去再找按钮。 */
+        if(exp){
+          e.stopPropagation();
+          api('/api/conversations',{action:'export',id:cid}).then(function(d){
+            say(d&&d.path?('已导出到 '+d.path):'已导出对话记录');
+          }).catch(function(){say('导出失败')});
+          return;
+        }
+        if(del){
+          e.stopPropagation();
+          var t=(CONV_ALL.filter(function(c){return c.id===cid})[0]||{}).title||'这条会话';
+          window.__confirmAsk&&window.__confirmAsk('删除「'+t+'」？',function(){
+            api('/api/conversations',{action:'delete',id:cid})
+              .then(function(){loadConv()}).catch(function(){say('删除失败')});
+          },{danger:true,ok:'删除'});
+          return;
+        }
+        if(archView){
+          /* 归档视图里单击不切会话：这条不在正常列表里，切过去首页会以为它没了 */
+          return;
+        }
+        CUR_CID=cid; paintConv();
+        window.goPage('home');   // 首页是唯一有完整对话框的地方，点会话先回去再载入
+        document.dispatchEvent(new CustomEvent('riffcut-open-conv',{detail:{id:cid}}));
+      });
+    }
+    /* ── 会话「⋯」菜单：置顶 / 重命名 / 导出 / 删除 ──
+       挂在 body 上而不是条目里 —— 条目本身 overflow:hidden，
+       放进去会被裁掉，而且滚动时会跟着跑。 */
+    var convMenu=null;
+    function closeConvMenu(){
+      if(convMenu&&convMenu.parentNode)convMenu.parentNode.removeChild(convMenu);
+      convMenu=null;
+    }
+    function openConvMenu(item,btn){
+      closeConvMenu();
+      var cid=item.dataset.cid;
+      var c=(CONV_ALL.filter(function(x){return x.id===cid})[0]||{});
+      var m=document.createElement('div');
+      m.className='conv-menu';
+      if(archView){
+        m.innerHTML=
+          '<button data-a="unarch"><svg viewBox="0 0 24 24" fill="none"><path d="M12 19V6m0 0-4.4 4.4M12 6l4.4 4.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>恢复到列表</button>'+
+          '<button data-a="del" class="danger"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M10 7V5h4v2M8 7l.7 12h6.6L16 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>彻底删除</button>';
+      }else{
+      m.innerHTML=
+        '<button data-a="top"><svg viewBox="0 0 24 24" fill="none"><path d="M12 19V5m0 0-5 5m5-5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
+          (c.pinned_at?'取消置顶':'置顶')+'</button>'+
+        '<button data-a="rename"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20h4l10-10-4-4L4 16v4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>重命名</button>'+
+        '<button data-a="export"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4v10m0 0 3.4-3.4M12 14l-3.4-3.4M5 17.5V19h14v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>导出记录</button>'+
+        '<button data-a="archive"><svg viewBox="0 0 24 24" fill="none"><path d="M4 8h16v11H4V8zm1-3h14v3H5V5zm5 6h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>归档</button>'+
+        '<button data-a="del" class="danger"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M10 7V5h4v2M8 7l.7 12h6.6L16 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>删除</button>';
+      }
+      document.body.appendChild(m);
+      convMenu=m;
+      m.classList.add('on');
+      btn.classList.add('on');
+      var r=btn.getBoundingClientRect(), mw=Math.round(m.getBoundingClientRect().width),
+          mh=Math.round(m.getBoundingClientRect().height);
+      /* 左边超出就贴左边，下边超出就往上翻 */
+      var L=Math.max(8,Math.min(r.right-mw,window.innerWidth-mw-8));
+      var T=(r.bottom+mh+10>window.innerHeight)?(r.top-mh-4):(r.bottom+4);
+      m.style.left=L+'px'; m.style.top=Math.max(8,T)+'px';
+
+      m.addEventListener('click',function(ev){
+        var b2=ev.target.closest('button'); if(!b2)return;
+        var a=b2.dataset.a;
+        closeConvMenu(); btn.classList.remove('on');
+        if(a==='del'){
+          var t=c.title||'这条会话';
+          /* 这处要带一点排版（红字警告 + 换行），所以走 opt.html 通道，
+             但标题 t 是用户可改的数据，必须在这里自己 esc ——
+             __confirmAsk 只对纯文本参数做转义，不会动 opt.html。 */
+          window.__confirmAsk('', function(){
+              api('/api/conversations',{action:'delete',id:cid})
+                .then(function(d){
+                  var n=(d&&d.files&&d.files.removed)||0;
+                  loadConv();
+                  say(n?('已删除，连带清掉 '+n+' 个记录文件'):'已删除');
+                }).catch(function(){say('删除失败')});
+            },{danger:true,ok:'删除',title:'彻底删除',
+               html:'删除「'+esc(t)+'」？<br>'
+                   +'<span style="color:#B4453C">对话内容和它导出过的记录文件都会一起清掉，删了找不回来。</span><br>'
+                   +'只想从列表里收起来、留着以后看 → 用「归档」。'});
+          return;
+        }
+        if(a==='unarch'){
+          api('/api/conversations',{action:'unarchive',id:cid})
+            .then(function(){loadConv();say('已恢复到会话列表')})
+            .catch(function(){say('恢复失败')});
+          return;
+        }
+        if(a==='archive'){
+          api('/api/conversations',{action:'archive',id:cid})
+            .then(function(){loadConv();say('已归档 —— 内容还在电脑上，在「归档」里能找回来')})
+            .catch(function(){say('归档失败')});
+          return;
+        }
+        if(a==='export'){
+          api('/api/conversations',{action:'export',id:cid}).then(function(d){
+            say(d&&d.path?('已导出到 '+d.path):'已导出对话记录');
+          }).catch(function(){say('导出失败')});
+          return;
+        }
+        if(a==='top'){
+          api('/api/conversations',{action:'pin',id:cid,pin:!c.pinned_at})
+            .then(function(){loadConv()})
+            .catch(function(){
+              /* 后端还没 pin 动作时先本地顶上，至少当前这次管用 */
+              c.pinned_at=c.pinned_at?'':new Date().toISOString().slice(0,19).replace('T',' ');
+              CONV_ALL.sort(function(x,y){
+                if(!!y.pinned_at!==!!x.pinned_at)return (y.pinned_at?1:0)-(x.pinned_at?1:0);
+                return String(y.updated||'').localeCompare(String(x.updated||''))});
+              paintConv(); say(c.pinned_at?'已置顶':'已取消置顶');
+            });
+          return;
+        }
+        if(a==='rename'){
+          var nt=window.prompt('新标题',c.title||'');
+          if(nt==null)return;
+          nt=String(nt).trim(); if(!nt)return;
+          api('/api/conversations',{action:'save',id:cid,title:nt})
+            .then(function(){loadConv()}).catch(function(){say('改名失败')});
+          return;
+        }
+      });
+      setTimeout(function(){
+        document.addEventListener('click',function once(){
+          closeConvMenu(); btn.classList.remove('on');
+          document.removeEventListener('click',once);
+        });
+      },0);
+    }
+    document.addEventListener('keydown',function(e){
+      if(e.key==='Escape')closeConvMenu();
+    });
+
+    if(scSearchBtn&&scSearch){
+      scSearchBtn.addEventListener('click',function(){
+        var on=scSearch.hasAttribute('hidden');
+        if(on){scSearch.removeAttribute('hidden');scInput&&scInput.focus()}
+        else{scSearch.setAttribute('hidden','');if(scInput)scInput.value='';paintConv()}
+        scSearchBtn.classList.toggle('on',on);
+      });
+      scInput&&scInput.addEventListener('input',paintConv);
+      scInput&&scInput.addEventListener('keydown',function(e){
+        if(e.key==='Escape'){scInput.value='';paintConv()}
+      });
+    }
+    if(scArchBtn){
+      scArchBtn.addEventListener('click',function(){
+        /* 点归档图标 = 在「隐藏已归档 / 仅显示已归档」之间来回切，
+           跟菜单里的「筛选会话」是同一个状态，不另存一份。 */
+        CPREF.view=(CPREF.view==='only')?'hide':'only';
+        syncViewFromPref(); saveCPref(); applyView();
+      });
+    }
+    /* ── 分组折叠：点标题行开合，状态存服务端 ── */
+    if(scList){
+      scList.addEventListener('click',function(e){
+        var gt=e.target.closest('.sc-gt');
+        if(!gt)return;
+        e.stopPropagation();
+        var g=gt.getAttribute('data-g');
+        COLLAPSED[g]=!COLLAPSED[g];
+        if(!COLLAPSED[g])delete COLLAPSED[g];
+        var wrap=gt.parentNode;
+        wrap.classList.toggle('closed',!!COLLAPSED[g]);
+        gt.classList.toggle('closed',!!COLLAPSED[g]);
+        saveCPref();
+      },true);
+    }
+
+    /* ── 三段式菜单：分组方式 / 排序方式 / 筛选会话 ──
+       照 DSH 那张菜单搬的。为什么要三段而不是三个独立开关：
+       分组和筛选会互相影响（比如「仅显示已归档」同时改了分组内容），
+       拆成三个按钮用户要在三个地方来回切，放在一张菜单里一眼能看全当前口径。 */
+    var cfMenu=null;
+    function closeCf(){if(cfMenu){cfMenu.remove();cfMenu=null}
+      if(scFilterBtn)scFilterBtn.classList.remove('on')}
+    function cfRow(k,label,ic,on){
+      return '<button class="cf-it'+(on?' on':'')+'" data-k="'+k+'">'+
+        ic+'<span class="lb">'+label+'</span>'+
+        '<svg class="ck" viewBox="0 0 24 24" fill="none"><path d="m5 12.5 4.5 4.5L19 7.5" '+
+          'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
+    }
+    var ICO={
+      ws:'<svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M3.6 7.4A1.6 1.6 0 0 1 5.2 5.8h3.4l1.7 2h8.5a1.6 1.6 0 0 1 1.6 1.6v7.8a1.6 1.6 0 0 1-1.6 1.6H5.2a1.6 1.6 0 0 1-1.6-1.6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+      tree:'<svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M4 6h4v5h4m-4 0v7h4M14 6h6M14 11h6M14 18h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+      flat:'<svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+      manual:'<svg class="ic" viewBox="0 0 24 24" fill="none"><path d="m8 9 4-4 4 4M8 15l4 4 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      clock:'<svg class="ic" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.5V12l3 1.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+      hide:'<svg class="ic" viewBox="0 0 24 24" fill="none"><path d="m4 4 16 16M9.5 9.7A3 3 0 0 0 12 15a3 3 0 0 0 2.3-1.1M6.3 7.2A11 11 0 0 0 2.5 12S6 18 12 18a9 9 0 0 0 3.2-.6M17.7 16.8A11 11 0 0 0 21.5 12S18 6 12 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+      all:'<svg class="ic" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+      only:'<svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M4 8h16v10.4A1.6 1.6 0 0 1 18.4 20H5.6A1.6 1.6 0 0 1 4 18.4V8zm1.2-4h13.6A1.2 1.2 0 0 1 20 5.2V7H4V5.2A1.2 1.2 0 0 1 5.2 4zM9.6 12h4.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      pin:'<svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M9.2 3.6h5.6l-1 5 3 3.4h-9.6l3-3.4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 12v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+    };
+    function openCf(btn){
+      closeCf();
+      var r=btn.getBoundingClientRect();
+      cfMenu=document.createElement('div');
+      cfMenu.className='cf-menu';
+      cfMenu.innerHTML=
+        '<div class="cf-h">分组方式</div>'+
+        cfRow('group:ws','按工作区',ICO.ws,CPREF.group==='ws')+
+        cfRow('group:flat','单列表',ICO.flat,CPREF.group==='flat')+
+        '<div class="cf-sep"></div><div class="cf-h">排序方式</div>'+
+        cfRow('sort:manual','手动排序',ICO.manual,CPREF.sort==='manual')+
+        cfRow('sort:updated','最近更新',ICO.clock,CPREF.sort==='updated')+
+        '<div class="cf-sep"></div><div class="cf-h">筛选会话</div>'+
+        cfRow('view:hide','隐藏已归档',ICO.hide,CPREF.view==='hide')+
+        cfRow('view:all','全部对话（显示已归档）',ICO.all,CPREF.view==='all')+
+        cfRow('view:only','仅显示已归档',ICO.only,CPREF.view==='only')+
+        cfRow('only:pinned','只看置顶',ICO.pin,onlyFilled);
+      document.body.appendChild(cfMenu);
+      var mw=cfMenu.offsetWidth,mh=cfMenu.offsetHeight;
+      var L=Math.max(8,Math.min(r.left,mw,window.innerWidth-mw-8));
+      var T=(r.bottom+mh+10>window.innerHeight)?Math.max(8,r.top-mh-4):(r.bottom+4);
+      cfMenu.style.left=Math.max(8,L)+'px';cfMenu.style.top=T+'px';
+      requestAnimationFrame(function(){cfMenu&&cfMenu.classList.add('on')});
+      btn.classList.add('on');
+      cfMenu.addEventListener('click',function(e){
+        var it=e.target.closest('.cf-it');
+        if(!it)return;
+        e.stopPropagation();
+        var k=it.getAttribute('data-k'),a=k.split(':');
+        if(a[0]==='group')CPREF.group=a[1];
+        else if(a[0]==='sort')CPREF.sort=a[1];
+        else if(a[0]==='view'){
+          CPREF.view=a[1];
+          /* 选「仅显示已归档」等价于切到归档视图；选另两个就退出归档视图。
+             不这么做的话，用户在归档视图里选「隐藏已归档」会看到一片空。 */
+          syncViewFromPref();
+        }else if(a[0]==='only'){
+          onlyFilled=!onlyFilled;
+          paintConv(); saveCPref(); return;
+        }
+        /* 这三段都是单选：分组方式选完列表就换了，排序/筛选选完列表也重排了。
+           菜单本身要跟着收掉 —— 留在原地的话勾还停在旧项上，用户会以为没点上，
+           得关掉再重开才看到勾挪过来（实测就是这么被报的）。 */
+        saveCPref(); applyView(); paintConv(); closeCf();
+      });
+      setTimeout(function(){
+        document.addEventListener('click',function once(){
+          closeCf(); document.removeEventListener('click',once);
+        });
+      },0);
+    }
+    /* 归档视图与 CPREF.view 双向同步：两者只能有一个说法，否则列表显示的内容
+       和标题上的「归档」二字会对不上。 */
+    function syncViewFromPref(){
+      archView=(CPREF.view==='only');
+      if(scArchBtn)scArchBtn.classList.toggle('on',archView);
+      var tt=document.querySelector('.sc-t');
+      if(tt)tt.textContent=archView?'归档':'会话';
+    }
+    function applyView(){
+      if(CPREF.view==='all'){
+        /* 全部：把归档的也拉回来，不再走 archived:1 那条路 */
+        loadConvAll();
+        return;
+      }
+      loadConv();
+    }
+    function saveCPref(){
+      try{window.api('/api/ui',{action:'set',
+        patch:{conv_pref:CPREF,collapsed:COLLAPSED}}).catch(function(){})}catch(e){}
+    }
+    if(scFilterBtn){
+      scFilterBtn.addEventListener('click',function(e){
+        e.stopPropagation();
+        if(cfMenu){closeCf();return}
+        openCf(scFilterBtn);
+      });
+    }
+    document.addEventListener('keydown',function(e){
+      if(e.key==='Escape')closeCf();
+    });
+    if(scNewBtn){
+      scNewBtn.addEventListener('click',function(){
+        window.goPage('home');
+        document.dispatchEvent(new CustomEvent('riffcut-new-conv'));
+      });
+    }
+
+    window.__markNav=markNav;
+    window.__convReload=loadConv;
+    window.__convSetCurrent=function(cid){CUR_CID=cid||'';paintConv()};
+
+    /* 服务端读回三档设置与折叠状态，再决定拉哪一份列表 */
+    try{
+      window.api('/api/ui',{action:'get'}).then(function(d){
+        if(!d)return;
+        if(d.conv_pref&&typeof d.conv_pref==='object'){
+          ['group','sort','view'].forEach(function(k){
+            if(typeof d.conv_pref[k]==='string')CPREF[k]=d.conv_pref[k];
+          });
+        }
+        if(d.collapsed&&typeof d.collapsed==='object')COLLAPSED=d.collapsed;
+        syncViewFromPref();
+        applyView();
+      }).catch(function(){});
+    }catch(e){}
+
+    loadPinned(); paintNav();
+    loadConv();
+    // 首页每存一次对话都会广播，这里跟着刷新
+    document.addEventListener('riffcut-conv-saved',function(){loadConv()});
+  })();
+
+  /* 页签跳转：「客户与素材」「品牌资产」现在是同一处的两个页签。
+     两个页面各有一条 .u-tabs，都在这里统一接管，点哪个都调 goPage。 */
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('.u-tabs button[data-goto]');
+    if(!b)return;
+    e.preventDefault();
+    window.goPage(b.getAttribute('data-goto'));
+  });
+
+  /* 通用：没被真实功能接管（data-live）的元素才给占位反馈 */
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('[data-demo]');
+    if(t&&!t.hasAttribute('data-live')){window.say(t.getAttribute('data-demo')||'功能待接入');}
+    /* ★ 带 data-live 的开关由页面自己的逻辑管状态，这里不能再翻一次。
+       以前 #kSwitch 就是这么坏的：页面按服务端值设好「开」，这段委托
+       又无脑 toggle 一遍 → 显示关、实际开，视觉和真实状态永远对不上。 */
+    var s=e.target.closest('.u-switch');
+    if(s&&!s.hasAttribute('data-live')){s.classList.toggle('on');}
+  });
+  /* 标记某元素已被真实功能接管，避免再弹占位提示 */
+  window.live=function(selector,root){
+    (root||document).querySelectorAll(selector).forEach(function(x){x.setAttribute('data-live','1')});
+    return (root||document).querySelectorAll(selector);
+  };
+
+  /* ── 选择文件夹：真实读取目录内视频/图片/音频素材 ── */
+  window.__folderFiles=[];
+  var picker=document.getElementById('folderPicker');
+  var VID=/\.(mp4|mov|m4v|avi|mkv|webm|mts|mxf|wmv|flv)$/i;
+  var IMG=/\.(jpg|jpeg|png|heic|webp|tif|tiff|gif|bmp|raw)$/i;
+  var AUD=/\.(mp3|wav|aac|m4a|flac|aiff|ogg)$/i;
+  function kind(n){return VID.test(n)?'视频':IMG.test(n)?'图片':AUD.test(n)?'音频':'其他'}
+  function fmtSize(b){if(!b&&b!==0)return '—';if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(1)+' KB';return (b/1048576).toFixed(1)+' MB'}
+
+  window.onFolderPicked=function(arg){
+    /* .app 原生选目录：拿到绝对路径 → 本机服务真实扫描（ffprobe 元数据 + 缩略图）
+       扫描期间只挂一个右下角进度，不锁界面：用户可以接着切页、点别的按钮。 */
+    if(arg&&!Array.isArray(arg)&&arg.root){
+      /* 首页「工作空间」按钮复用了这个桥：它先置 __wsPicking，
+         这里就把这个目录设成工作空间，而不是当素材夹扫一遍。 */
+      if(window.__wsPicking){
+        window.__wsPicking=false;
+        if(window.riffcutSetWorkspace){window.riffcutSetWorkspace(arg.root);return}
+      }
+      window.say('已选择文件夹，后台开始读取…');
+      var t0=Date.now();
+      if(window.taskUI)window.taskUI.start('正在读取素材文件夹…','读取文件列表');
+      var tick=setInterval(function(){
+        if(!window.taskUI)return;
+        var t=(Date.now()-t0)/1000;
+        taskUI.stage(t<2?'读取文件列表':t<6?'读取分辨率 / 时长 / 大小'
+          :t<14?'生成缩略图':'去重与素材归类');
+      },400);
+      window.api('/api/scan',{root:arg.root,customer:window.RiffCut.customer}).then(function(d){
+        window.RiffCut.library=d;
+        document.dispatchEvent(new CustomEvent('folderchange',{
+          detail:{files:d.items||[],stats:d.stats||{},root:d.root,
+                  scanned:d.scanned,index:d.index||null}}));
+        window.say('读取完成：'+(d.stats?d.stats['总数']:0)+' 个文件，可以继续操作');
+      }).catch(function(e){window.say('读取失败：'+e.message)})
+        .then(function(){
+          clearInterval(tick);
+          if(window.taskUI)window.taskUI.done();
+        });
+      return;
+    }
+    /* 浏览器兜底：只有相对文件名，仍列出清单 */
+    var list=arg||[];
+    window.__folderFiles=list;
+    var n={视频:0,图片:0,音频:0,其他:0};
+    list.forEach(function(f){n[kind(f.name)]++});
+    window.__folderStats=n;
+    document.dispatchEvent(new CustomEvent('folderchange',{detail:{files:list,stats:n}}));
+    window.say('已读取 '+list.length+' 个文件（浏览器预览模式，元数据需在本机应用里扫描）');
+  };
+
+  window.pickFolder=function(){
+    if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.folder){
+      window.webkit.messageHandlers.folder.postMessage('pick');
+    }else{
+      picker.value='';picker.click();
+    }
+  };
+  picker.addEventListener('change',function(){
+    var list=[].map.call(this.files,function(f){
+      return {name:f.name,path:f.webkitRelativePath||f.name,size:f.size,kind:kind(f.name)};
+    });
+    if(list.length)window.onFolderPicked(list);
+  });
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('[data-pickfolder]');
+    if(b){e.preventDefault();window.pickFolder();}
+  });
+
+  /* 交通灯 & 标题栏 */
+  document.querySelectorAll('.tb-actions button').forEach(function(b){
+    if(b.id==='tbBell')return;  /* 通知按钮由 live.js 接管 */
+    if(b.id==='tbFeedback')return;  /* 反馈按钮下面单独绑 */
+    b.addEventListener('click',function(){window.say(b.title+' · 系统能力待接入');});
+  });
+
+  /* 反馈：唤起系统邮件客户端，预填版本与系统信息。
+     为什么走邮件而不是内置表单：本机软件没有服务端，收反馈最省事就是邮件；
+     预填诊断信息是为了省掉「你用的什么版本」这一轮来回。 */
+  (function(){
+    var fb=document.getElementById('tbFeedback');
+    if(!fb)return;
+    fb.addEventListener('click',function(){
+      if(!(window.riffcut&&window.riffcut.feedbackMail)){
+        window.say('反馈通道未接通 · 请发邮件到 China@cyanweb.cn');
+        return;
+      }
+      window.riffcut.feedbackMail({kind:'反馈'}).then(function(r){
+        if(!r||!r.ok)window.say('没能唤起邮件客户端 · 请手动发到 China@cyanweb.cn');
+      });
+    });
+  })();
+  document.querySelectorAll('[data-win]').forEach(function(b){
+    b.addEventListener('click',function(e){
+      e.stopPropagation();
+      var act=b.dataset.win;
+      /* Electron 里走 preload 暴露的 winAction。
+         旧版是 window.webkit.messageHandlers（WKWebView 通道），
+         Electron 没有这个东西 —— 之前的症状是点红绿灯只弹「系统能力待接入」。 */
+      if(window.riffcut&&window.riffcut.winAction){ window.riffcut.winAction(act); return; }
+      window.say((b.title||'窗口操作')+' · 系统能力待接入');
+    });
+  });
+})();
+</script>
+<!--LIVE-->
+</body>
+</html>

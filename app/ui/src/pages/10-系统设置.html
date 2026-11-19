@@ -1,0 +1,679 @@
+<style>
+/* ══ 系统设置：全部读本机真实数据，不写死硬件参数 ══ */
+.g-body{flex:1;min-height:0;display:grid;grid-template-columns:clamp(170px,18%,220px) minmax(0,1fr);gap:clamp(8px,1%,14px)}
+.g-nav{padding:12px;display:flex;flex-direction:column;min-height:0}
+.g-nav button{display:flex;align-items:center;gap:9px;height:36px;padding:0 11px;border-radius:var(--r-sm);
+  font-size:var(--f4);color:#4A5262;text-align:left;width:100%}
+.g-nav button:hover{background:#F7F9FC}
+.g-nav button.on{background:#EAF5F3;color:#33405A;font-weight:600}
+.g-nav button .ic{width:15px;height:15px}
+.g-main{display:flex;flex-direction:column;min-height:0;overflow:auto;scrollbar-width:none;padding-right:2px}
+.g-main::-webkit-scrollbar{display:none}
+.g-card{padding:13px 15px;margin-bottom:11px;flex:0 0 auto}
+.g-card h4{font-size:var(--f3);font-weight:600;margin:0 0 11px;display:flex;align-items:center;gap:8px}
+.g-card h4 .u-tag{margin-left:auto}
+.g-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px dashed #EEF1F5}
+.g-row:last-child{border-bottom:0}
+.g-row .lab{flex:1;min-width:0}
+.g-row .lab b{font-size:var(--f4);font-weight:600;display:block}
+.g-row .lab span{font-size:var(--f5);color:var(--ink3);display:block;margin-top:2px}
+.g-row .u-input,.g-row .u-select{width:230px;flex:0 0 auto}
+.g-row .u-input input{font-size:var(--f5)}
+.g-hw{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.g-hw .u-card{padding:12px 14px}
+.g-hw b{font-size:var(--f3);display:block}
+.g-hw span{font-size:var(--f5);color:var(--ink3)}
+.g-note{font-size:var(--f5);color:var(--ink3);line-height:1.75;background:#F7F9FC;border-radius:var(--r-sm);padding:10px 12px;margin-top:10px}
+.g-sw{position:relative;display:inline-block;width:38px;height:21px;flex:0 0 auto}
+.g-sw input{opacity:0;width:0;height:0}
+.g-sw i{position:absolute;inset:0;border-radius:12px;background:#DDE2EA;transition:.15s;cursor:pointer}
+.g-sw i:after{content:'';position:absolute;left:2px;top:2px;width:17px;height:17px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.15s}
+.g-sw input:checked+i{background:#1B8B7E}
+.g-sw input:checked+i:after{transform:translateX(17px)}
+.lg-docs{display:flex;flex-direction:column;gap:6px}
+.lg-doc{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:var(--f5)}
+.lg-doc .nm{flex:1;min-width:0}
+.lg-doc .nm b{display:block;font-weight:600}
+.lg-doc .nm span{color:var(--ink3);font-size:10.5px}
+.lg-stat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.lg-stat .u-card{padding:9px 11px;font-size:var(--f5)}
+.lg-stat b{display:block;font-size:var(--f4);margin-bottom:3px}
+.lg-todo{margin:6px 0 0;padding-left:18px;font-size:var(--f5);color:var(--ink2);line-height:1.9}
+.lg-pre{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,monospace;
+  font-size:10.5px;line-height:1.75;color:#3E4655;background:#F8FAFD;border:1px solid var(--line);
+  border-radius:8px;padding:12px;margin:0;max-height:52vh;overflow:auto}
+/* 协议全文：Markdown 渲染后的排版（不再显示 ## 与 ** 原始符号） */
+.lg-pre.g-doc{font-family:inherit;font-size:var(--f4);line-height:1.9;white-space:normal}
+.g-doc p{margin:0 0 10px}
+.g-doc h3,.g-doc h4,.g-doc h5,.g-doc h6{margin:16px 0 7px;color:#262B33;line-height:1.5}
+.g-doc h3{font-size:15px}
+.g-doc h4{font-size:12px}
+.g-doc h5,.g-doc h6{font-size:12px}
+.g-doc h3:first-child,.g-doc h4:first-child{margin-top:0}
+.g-doc ul.g-md-ul{margin:0 0 10px;padding-left:18px}
+.g-doc ul.g-md-ul li{margin:3px 0}
+.g-doc b{color:#262B33}
+.g-doc code{background:#EEF1F7;border-radius:4px;padding:1px 4px;font-size:10.5px}
+.g-doc .g-md-quote{margin:0 0 10px;padding:8px 11px;border-left:3px solid #BFE0DA;
+  background:#FFFBF2;border-radius:0 6px 6px 0;color:#5A6272;font-size:var(--f5);line-height:1.8}
+.lg-warn{font-size:var(--f5);line-height:1.8;color:#33405A;background:#FFF8E9;
+  border:1px solid #BFE0DA;border-radius:8px;padding:10px 12px}
+.tiny .g-body{grid-template-columns:1fr}
+.tiny .g-nav{display:none}
+.tiny .g-hw{grid-template-columns:repeat(2,1fr)}
+</style>
+
+<section class="page" data-page="settings">
+  <div class="u-head">
+    <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-gear"/></svg>系统设置</div>
+      <div class="u-sub">存储位置 · 硬件 · FFmpeg · 数据与隐私 · 法律与授权（全部读本机真实状态）</div></div>
+    <div class="u-actions">
+      <button class="u-btn" id="gOpenData">打开数据文件夹</button>
+      <button class="u-btn gold" id="gVerify"><svg class="ic"><use href="#i-shield"/></svg>校验完整性</button>
+    </div>
+  </div>
+
+  <div class="g-body">
+    <div class="u-card g-nav">
+      <div class="u-head" style="flex:0 0 auto"><div class="txt"><div class="u-title" style="font-size:var(--f3)">设置分类</div></div></div>
+      <div style="margin-top:10px" id="gNav">
+        <button class="on" data-g="storage"><svg class="ic"><use href="#i-folder"/></svg>存储位置</button>
+        <button data-g="perf"><svg class="ic"><use href="#i-sliders"/></svg>性能与硬件</button>
+        <button data-g="media"><svg class="ic"><use href="#i-film"/></svg>媒体与 FFmpeg</button>
+        <button data-g="model"><svg class="ic"><use href="#i-cloud"/></svg>模型与密钥</button>
+        <button data-g="ui"><svg class="ic"><use href="#i-eye"/></svg>界面与主题</button>
+        <button data-g="privacy"><svg class="ic"><use href="#i-lock"/></svg>数据与隐私</button>
+        <button data-g="legal"><svg class="ic"><use href="#i-shield"/></svg>法律与授权</button>
+        <button data-g="openapi"><svg class="ic"><use href="#i-cloud"/></svg>开放接口</button>
+        <button data-g="keys"><svg class="ic"><use href="#i-board"/></svg>快捷键</button>
+      </div>
+      <div class="u-divider" style="margin-top:auto"></div>
+      <div class="g-note" style="margin-top:10px">设置改动即时写本机，不随工程导出。协议文本与授权记录都在软件自己的「数据」文件夹内。</div>
+    </div>
+
+    <div class="g-main">
+      <div class="u-card g-card" data-sec="storage">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-folder"/></svg>存储位置 <span class="u-tag">软件统一管理</span></h4>
+        <div class="g-row"><div class="lab"><b>软件数据根目录</b><span>App 同级的「数据」文件夹，整包复制即可用</span></div><div class="u-input"><input id="gPathHome" value="读取中…" readonly></div></div>
+        <div class="g-row"><div class="lab"><b>配置与素材夹</b><span>所有 json 配置、技能、模板、品牌库、音乐、片尾（会增删的东西）</span></div><div class="u-input"><input id="gPathCfg" value="读取中…" readonly></div></div>
+        <div class="g-row"><div class="lab"><b>当前客户目录</b><span>工程、版本、缩略图、缓存与素材索引</span></div><div class="u-input"><input id="gPathCus" value="读取中…" readonly></div></div>
+        <div class="g-row"><div class="lab"><b>生成内容（按客户隔离）</b><span>成片 / 图片 / 配音，绝不混在一起</span></div><div class="u-input"><input id="gPathOut" value="读取中…" readonly></div></div>
+        <div class="g-note">客户原始素材可由你选在电脑任意位置，软件只读、不复制、不改动；所有生成内容一律保存在软件的「数据」文件夹内并按客户单独归档。这是为整包出售设计的自包含结构，路径由软件统一管理。</div>
+      </div>
+
+      <div class="u-card g-card" data-sec="perf">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-sliders"/></svg>硬件检测 <span class="u-tag" id="gHwTag">读取中</span></h4>
+        <div class="g-hw" id="gHwGrid"></div>
+        <div class="g-row" style="margin-top:10px"><div class="lab"><b>硬件编码加速</b><span>读本机 FFmpeg 编码器列表，不编造 VideoToolbox</span></div><span class="u-tag" id="gHwEnc">读取中</span></div>
+        <div class="g-row"><div class="lab"><b>可用编码器</b><span>只有这里列出的编码，剪辑台才会让你选</span></div><span class="u-tag blue" id="gEncoders">读取中</span></div>
+      </div>
+
+      <div class="u-card g-card" data-sec="media">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-film"/></svg>媒体与 FFmpeg <span class="u-tag" id="gFfTag">读取中</span></h4>
+        <div class="g-row"><div class="lab"><b>FFmpeg 可执行文件</b><span id="gFfPath">读取中…</span></div><button class="u-btn sm" id="gFfBtn">重新校验</button></div>
+        <div class="g-row"><div class="lab"><b>版本信息</b><span id="gFfVer">读取中…</span></div><span class="u-tag" id="gFfProbe">—</span></div>
+        <div class="g-row"><div class="lab"><b>默认导出编码</b><span>确定性转码由 FFmpeg 执行；编码器在「专业剪辑台」里选</span></div><span class="u-tag" id="gCodec">libx264</span></div>
+        <div class="g-row"><div class="lab"><b>中文字幕字体</b><span>libass 用系统已安装字体，不随软件分发字体文件</span></div><div class="u-input"><input id="gFont" value="读取中…" readonly></div></div>
+        <div class="g-note">AI 只输出结构化剪辑方案；底层转码、拼接、字幕烧录、音轨混合全部由本机 FFmpeg 执行，不交给大模型。</div>
+      </div>
+
+      <div class="u-card g-card" data-sec="model">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-cloud"/></svg>模型与密钥</h4>
+        <div class="g-row"><div class="lab"><b>云端模型调用方式</b><span>由你自己填 OpenAI 兼容接口地址与密钥；软件也自带一个可直接使用的中转模型</span></div><span class="u-tag blue">自行配置</span></div>
+        <div class="g-row"><div class="lab"><b>密钥保存位置</b><span>只存在本机，不会上传；换电脑需要重新填写你自己的密钥</span></div><div class="u-input"><input id="gKeyPath" value="读取中…" readonly></div></div>
+        <div class="g-row"><div class="lab"><b>本地模型放置目录</b><span>在「系统/本地模型」下，体积大、不跟素材混放，走国内镜像安装</span></div><div class="u-input"><input id="gPathModels" value="读取中…" readonly></div></div>
+        <div class="g-note">账号可注册在本机，也可接入你自己的 SaaS 网站；软件不内置遥测。你填写的 API 地址与密钥只在本机，调用时直接发往你填写的服务商；可在「数据与隐私」里一键关闭全部云端调用，纯本地出片。</div>
+      </div>
+
+      <div class="u-card g-card" data-sec="agent">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-cube"/></svg>AI 权限 <span class="u-tag gold" id="gAgentNow">建议</span></h4>
+        <div class="g-row" style="align-items:flex-start">
+          <div class="lab"><b>AI 能碰多大一块地方</b>
+            <span>这是「看得见多大」，跟下面的档位（能不能动手写）是两件事。默认「影创」：整个项目目录它都能自己去看，参考库、开发目录、全部客户都在里面。</span></div>
+        </div>
+        <div id="gScopeList" style="display:flex;flex-direction:column;gap:7px;margin:2px 0 8px"></div>
+        <div class="g-row" style="align-items:flex-start">
+          <div class="lab"><b>AI 能在这两个目录里干什么</b>
+            <span>在上面的范围之内，它能不能直接写文件、能不能挪你的素材。档位越高，它越能自己动手。</span></div>
+        </div>
+        <div id="gAgentList" style="display:flex;flex-direction:column;gap:7px;margin:2px 0 4px"></div>
+        <div class="g-row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:9px">
+          <div class="lab"><b>联网搜索</b>
+            <span>内置必应 / DuckDuckGo，零配置、不用 Key。碰到会变的外部事实（平台尺寸、价格、版本、教程）它自己先搜再答，回答里带来源链接；读网页只抽正文，不碰本机 / 内网地址。</span></div>
+          <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+            <span class="u-tag green" id="gNetTag">已开通</span>
+            <button class="u-btn sm" id="gNetTest">测一下</button>
+          </div>
+        </div>
+        <div class="g-note" style="margin-top:8px">
+          AI 每次动手都会记一笔，在「知识库 → AI 最近做了什么」里能一条条回看；
+          写文件、复制素材这类操作会先排队等你点同意，不会悄悄改你的东西。
+        </div>
+      </div>
+
+      <div class="u-card g-card" data-sec="ui">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-eye"/></svg>界面与主题 <span class="u-tag gold">规范已冻结</span></h4>
+        <div class="g-row"><div class="lab"><b>主题</b><span>纯白背景、浅灰细边框、深色文字、少量香槟金</span></div><span class="u-tag">纯白（锁定）</span></div>
+        <div class="g-row"><div class="lab"><b>品牌 Logo</b><span>使用你提供的原始标识文件，不重绘 / 不变形</span></div><span class="u-tag green">原图已用</span></div>
+        <div class="g-row"><div class="lab"><b>深色模式</b><span>按设计文档不提供，避免破坏成品一致性</span></div><span class="u-tag gray">未提供</span></div>
+        <div class="g-row"><div class="lab"><b>时间线缩放</b><span>首页与专业剪辑台的时间线滑块可实时调</span></div><span class="u-tag">可用</span></div>
+      </div>
+
+      <div class="u-card g-card" data-sec="privacy">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-lock"/></svg>数据与隐私 <span class="u-tag green">开关真拦截后端</span></h4>
+        <div class="g-row"><div class="lab"><b>纯本地模式</b><span>关闭全部云端模型调用，只用本地规则出片；开启后模型相关按钮会明确报错</span></div>
+          <label class="g-sw"><input type="checkbox" id="gPrivLocal"><i></i></label></div>
+        <div class="g-row"><div class="lab"><b>敏感素材不参与云端调用</b><span>禁止把抽帧图片发给云端模型做画面分析</span></div>
+          <label class="g-sw"><input type="checkbox" id="gPrivCloud"><i></i></label></div>
+        <div class="g-row"><div class="lab"><b>声音克隆授权确认</b><span>关闭后禁止录制 / 导入音色样本；仅限本人或已获明确授权的声音</span></div>
+          <label class="g-sw"><input type="checkbox" id="gPrivVoice"><i></i></label></div>
+        <div class="g-row"><div class="lab"><b>客户素材隔离</b><span>硬约束：生成内容按客户目录隔离，跨客户复用需自行取得授权</span></div>
+          <label class="g-sw"><input type="checkbox" id="gPrivCust"><i></i></label></div>
+        <div class="g-note">这四个开关会真的拦住对应后端动作，不是装饰。默认不拦截云端调用，避免你配好模型却用不了；只有你主动打开才生效。</div>
+      </div>
+
+      <div class="u-card g-card" data-sec="openapi">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-cloud"/></svg>开放接口 <span class="u-tag" id="gOpenTag">读取中</span></h4>
+        <div class="g-row"><div class="lab"><b>让别的 AI 也能用影创</b>
+          <span>打开后另起一个端口，把这里的全部能力开放成 HTTP 接口。你把自己的 Claude / GPT / 任何支持自定义 API 的 AI 接过来，它就能直接剪片、出图、查素材，和影创自己的 AI 用同一套工具。</span></div>
+          <button class="u-btn sm" id="gOpenToggle">打开</button></div>
+        <div class="g-row"><div class="lab"><b>地址</b><span>对方 AI 填这个当 Base URL</span></div>
+          <div class="u-input"><input id="gOpenUrl" value="未启动" readonly></div></div>
+        <div class="g-row"><div class="lab"><b>密钥</b><span>填进对方的 Authorization: Bearer。只存在本机。</span></div>
+          <div class="u-input"><input id="gOpenKey" value="读取中…" readonly></div>
+          <button class="u-btn sm" id="gOpenRotate">换一个</button></div>
+        <div class="g-row"><div class="lab"><b>监听地址</b><span>127.0.0.1 只本机能连；换成 0.0.0.0 才能让局域网或外面的 AI 连进来</span></div>
+          <div class="u-input"><input id="gOpenHost" value="127.0.0.1"></div></div>
+        <div class="g-row"><div class="lab"><b>端口</b><span>默认 8787</span></div>
+          <div class="u-input"><input id="gOpenPort" value="8787"></div></div>
+        <div class="g-row"><div class="lab"><b>写操作</b><span>默认只出提案，调用方要显式 approve 才落地。打开这个开关等于把它当完全托管。</span></div>
+          <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+            <span class="u-tag" id="gOpenAutoTag">需确认</span>
+            <button class="u-btn sm" id="gOpenAuto">改成自动放行</button></div></div>
+        <div class="g-row"><div class="lab"><b>接口说明</b><span>OpenAPI 3 描述，任何支持 function calling 的 SDK 直接吃</span></div>
+          <div style="display:flex;gap:8px;flex:0 0 auto">
+            <button class="u-btn sm" id="gOpenDocs">看描述</button></div></div>
+        <div class="g-note">对方 AI 的接法：先 GET /v1/tools 看有哪些能力（含每个参数怎么填），再 POST /v1/call 挑一个用。要让它整段活自己干就 POST /v1/agent 派任务，拿任务 id 去 /v1/tasks/&lt;id&gt; 看进度和产物。</div>
+      </div>
+
+      <div class="u-card g-card" data-sec="legal">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-shield"/></svg>法律与授权 <span class="u-tag" id="gConsentTag">读取中</span></h4>
+        <div class="lg-warn" id="gConsentWarn">读取中…</div>
+        <div class="v-row" style="margin:10px 0 4px;gap:7px;flex-wrap:wrap">
+          <button class="u-btn gold" id="gAgreeBtn">同意并继续</button>
+          <button class="u-btn" id="gRevokeBtn" disabled>撤回同意</button>
+          <button class="u-btn" id="gOpenLegal">打开协议文件夹</button>
+          <button class="u-btn" id="gAuditBtn">查看审计记录</button>
+        </div>
+        <div class="g-row" style="margin-top:6px"><div class="lab"><b>软件版本 / 协议版本</b><span id="gVer">读取中…</span></div></div>
+        <div class="g-row"><div class="lab"><b>同意时间 / 设备指纹</b><span id="gConsentInfo">读取中…</span></div></div>
+        <div class="u-divider" style="margin:11px 0"></div>
+        <div class="g-card" style="padding:0;border:0;margin:0 0 10px">
+          <h4 style="font-size:var(--f4)">内置协议（点「查看」读全文）</h4>
+          <div class="lg-docs" id="gDocs"></div>
+        </div>
+        <div class="u-divider" style="margin:11px 0"></div>
+        <h4 style="font-size:var(--f4);margin:0 0 8px">防护与取证状态 <span class="u-tag" id="gGuardTag">读取中</span></h4>
+        <div class="lg-stat" id="gGuard"></div>
+        <div class="g-note" id="gPolicyNote">读取中…</div>
+        <div class="u-divider" style="margin:11px 0"></div>
+        <h4 style="font-size:var(--f4);margin:0 0 6px">正式发布前待办（协议模板里带【】占位）</h4>
+        <ul class="lg-todo" id="gTodo"></ul>
+      </div>
+
+      <div class="u-card g-card" data-sec="keys">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-board"/></svg>快捷键 <span class="u-tag gray">系统默认</span></h4>
+        <div class="g-row"><div class="lab"><b>新建项目</b><span>⌘ N</span></div><span class="u-tag">系统默认</span></div>
+        <div class="g-row"><div class="lab"><b>导出成片</b><span>⌘ E</span></div><span class="u-tag">系统默认</span></div>
+        <div class="g-row"><div class="lab"><b>撤销 / 重做</b><span>⌘ Z / ⇧⌘ Z</span></div><span class="u-tag">系统默认</span></div>
+        <div class="g-row"><div class="lab"><b>打开 AI 导演</b><span>⌘ K</span></div><span class="u-tag">系统默认</span></div>
+        <div class="g-row"><div class="lab"><b>粘贴</b><span>⌘ V · 由原生菜单栏桥接，悬浮框里一定能用</span></div><span class="u-tag green">已桥接</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 悬浮框：协议全文 ══ -->
+<div class="v-modal" id="gDocModal" role="dialog" aria-modal="true" aria-label="协议全文">
+  <div class="v-shade" data-close="gDocModal"></div>
+  <div class="v-dialog v-dialog-wide">
+    <div class="v-dhd"><b id="gDocTitle">协议全文</b><button class="v-x" data-close="gDocModal">×</button></div>
+    <div class="v-dbd"><pre class="lg-pre g-doc" id="gDocText">读取中…</pre></div>
+    <div class="v-dft"><span class="g-note" id="gDocMeta" style="flex:1;background:none;padding:0;margin:0"></span>
+      <button class="u-btn" data-close="gDocModal">关闭</button></div>
+  </div>
+</div>
+
+<!-- ══ 悬浮框：审计记录 ══ -->
+<div class="v-modal" id="gAuditModal" role="dialog" aria-modal="true" aria-label="授权审计记录">
+  <div class="v-shade" data-close="gAuditModal"></div>
+  <div class="v-dialog v-dialog-wide">
+    <div class="v-dhd"><b>授权与完整性审计记录</b><button class="v-x" data-close="gAuditModal">×</button></div>
+    <div class="v-dbd"><pre class="lg-pre" id="gAuditText">读取中…</pre>
+      <div class="g-note" id="gAuditCheck">读取中…</div></div>
+    <div class="v-dft"><span class="g-note" style="flex:1;background:none;padding:0;margin:0">只记录时间、版本、事件与校验结果，不含素材、对话、密钥或成片；只在本机，不上传。</span>
+      <button class="u-btn" data-close="gAuditModal">关闭</button></div>
+  </div>
+</div>
+
+<!-- ══ 悬浮框：首次启动同意协议 ══ -->
+<div class="v-modal" id="gConsentModal" role="dialog" aria-modal="true" aria-label="使用协议">
+  <div class="v-shade"></div>
+  <div class="v-dialog">
+    <div class="v-dhd"><b>使用前请阅读并同意协议</b></div>
+    <div class="v-dbd">
+      <div class="v-tip">本软件<b>禁止逆向工程、反编译、脱壳、破解、绕过授权校验与二次分发</b>。
+        使用即表示你已阅读并同意下面 5 份协议；不同意请停止使用并删除软件。</div>
+      <div class="lg-docs" id="gConsentDocs"></div>
+      <div class="g-note">点击任意协议可查看全文。同意记录只写在本机，包含时间、软件版本、协议版本与不可逆的设备指纹摘要，不含你的素材与成片。</div>
+      <label class="v-chk"><input type="checkbox" id="gConsentChk"> 我已阅读并同意上述全部协议</label>
+    </div>
+    <div class="v-dft"><span class="g-note" style="flex:1;background:none;padding:0;margin:0" id="gConsentVer"></span>
+      <button class="u-btn" id="gConsentLater">稍后</button>
+      <button class="u-btn gold" id="gConsentOk" disabled>同意并继续使用</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)},$$=function(s){return [].slice.call(document.querySelectorAll(s))};
+  var L={d:null,consentShown:false};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function say(m){window.say(m)}
+  /* 弹窗层级：后打开的必须压住先打开的。
+     .v-modal 都写死 z-index:340，首启的「使用协议」弹窗在 DOM 里排在「协议全文」之后，
+     结果点「查看」时正文被协议弹窗盖住。这里按打开顺序动态抬升。 */
+  var MZ=340;
+  function openM(id){var m=$('#'+id);if(m){MZ++;m.style.zIndex=String(MZ);
+    m.classList.add('open');document.body.classList.add('modal-open')}}
+  function closeM(id){var m=$('#'+id);if(m){m.classList.remove('open');
+    if(!document.querySelector('.v-modal.open'))document.body.classList.remove('modal-open')}}
+  $$('#gDocModal [data-close],#gAuditModal [data-close]').forEach(function(b){
+    b.addEventListener('click',function(){closeM(b.getAttribute('data-close'))});
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){closeM('gDocModal');closeM('gAuditModal')}
+  });
+  $$('#gNav button').forEach(function(b){b.addEventListener('click',function(){
+    $$('#gNav button').forEach(function(x){x.classList.remove('on')});b.classList.add('on');
+    var el=document.querySelector('.g-card[data-sec="'+b.dataset.g+'"]');
+    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  })});
+
+  function fillPaths(){
+    var V=(window.RiffCut||{}).layout||{};
+    var map={gPathHome:'数据根目录',gPathCfg:'配置',gPathCus:'客户目录',
+             gPathOut:'产出视频',gPathModels:'本地模型'};
+    Object.keys(map).forEach(function(id){var el=document.getElementById(id);if(el&&V[map[id]])el.value=V[map[id]]});
+    var k=$('#gKeyPath');if(k&&V['配置'])k.value=V['配置']+'/模型.json';
+    var f=$('#gFont');if(f&&V['中文字体'])f.value=V['中文字体'];
+  }
+  function fillHw(h){
+    if(!h)return;
+    $('#gHwTag').textContent='已检测';$('#gHwTag').className='u-tag green';
+    var cards=[
+      ['处理器',esc(h.cpu||h.arch||'未知')],
+      ['架构',esc(h.arch||'未知')],
+      ['统一内存',h.memory_gb!=null?h.memory_gb+' GB':'未知'],
+      ['可用磁盘',h.disk_free_gb!=null?h.disk_free_gb+' GB':'未知']];
+    $('#gHwGrid').innerHTML=cards.map(function(c){
+      return '<div class="u-card"><b>'+c[0]+'</b><span>'+c[1]+'</span></div>';}).join('');
+    var enc=h.encoders||[];
+    $('#gHwEnc').textContent=h.hardware_encode?'可用（本机编码器支持）':'不可用 · 使用 libx264 软编码';
+    $('#gHwEnc').className='u-tag '+(h.hardware_encode?'green':'gray');
+    $('#gEncoders').textContent=enc.length?enc.join(' / '):'未读到编码器';
+  }
+  function fillPrivacy(s){
+    if(!s)return;
+    var map={gPrivLocal:'privacy_local_only',gPrivCloud:'privacy_no_cloud',
+             gPrivVoice:'privacy_voice_consent',gPrivCust:'privacy_customer_isolation'};
+    Object.keys(map).forEach(function(id){var el=$('#'+id);if(el)el.checked=!!s[map[id]]});
+  }
+  $$('.g-sw input').forEach(function(el){el.addEventListener('change',function(){
+    var key=this.id==='gPrivLocal'?'privacy_local_only':this.id==='gPrivCloud'?'privacy_no_cloud':
+            this.id==='gPrivVoice'?'privacy_voice_consent':'privacy_customer_isolation';
+    var patch={};patch[key]=this.checked;
+    window.api('/api/settings',{patch:patch}).then(function(){say('隐私设置已保存，后端会真的按这个拦截')})
+      .catch(function(e){say(e.message)});
+  })});
+
+  function fillLegal(d){
+    L.d=d;
+    $('#gVer').textContent='软件 '+(d.software_version||'—')+' · 协议 '+(d.legal_version||'—');
+    var c=d.consent||{};
+    $('#gConsentInfo').textContent=c.current?
+      ('已同意 · '+esc(c.time||'')+' · 设备指纹 '+esc(c.machine||'')):'尚未同意当前版本协议';
+    $('#gConsentTag').textContent=c.current?'已同意':'未同意';
+    $('#gConsentTag').className='u-tag '+(c.current?'green':'gold');
+    $('#gAgreeBtn').disabled=!!c.current;
+    $('#gRevokeBtn').disabled=!c.current;
+    $('#gConsentWarn').innerHTML=c.current?
+      ('<b>授权状态正常。</b>已同意协议版本 '+esc(d.legal_version)+'；协议更新后会在这里要求重新同意。'):
+      ('<b>尚未同意当前版本协议。</b>正式出售前请点「同意并继续」完成授权留痕；'+
+       '禁止逆向、破解、绕过授权校验与二次分发的条款见《软件许可与反逆向声明》第 2 条。');
+    $('#gDocs').innerHTML=(d.docs||[]).map(function(x){
+      return '<div class="lg-doc"><span class="nm"><b>'+esc(x.title)+(x.key?' <span class="u-tag gold">核心</span>':'')+'</b>'
+        +'<span>'+esc(x.file)+' · '+(x.exists?x.size+' 字节':'文件缺失')+'</span></span>'
+        +'<button class="u-btn sm" data-doc="'+esc(x.id)+'">查看</button></div>';
+    }).join('');
+    $('#gConsentDocs').innerHTML=(d.docs||[]).map(function(x){
+      return '<div class="lg-doc"><span class="nm"><b>'+esc(x.title)+'</b></span>'
+        +'<button class="u-btn sm" data-doc="'+esc(x.id)+'">查看</button></div>';
+    }).join('');
+    var it=d.integrity||{},sg=d.codesign||{},rt=d.runtime||{},ac=d.audit_check||{};
+    $('#gGuardTag').textContent=(it.ok===false||rt.suspicious)?'有异常线索':'本机校验完成';
+    $('#gGuardTag').className='u-tag '+(it.ok===false||rt.suspicious?'gold':'green');
+    $('#gGuard').innerHTML=[
+      ['完整性基线',it.baseline?(it.ok?'一致 · '+it.checked+' 个文件':'有改动 · '+(it.changed||[]).length+' 处'):'未建立（打包后首次启动建立）'],
+      ['代码签名',sg.signed===null?'源码运行未打包':(sg.signed?'签名有效':'未签名 · 发布前需签名并公证')],
+      ['注入 / 调试线索',rt.suspicious?'发现：'+esc((rt.hits||[]).join('、')):'未发现'],
+      ['审计日志链',ac.ok?'连续 · '+(ac.count||0)+' 条':'异常 · '+esc(ac.note||'')]
+    ].map(function(x){return '<div class="u-card"><b>'+x[0]+'</b><span>'+x[1]+'</span></div>'}).join('');
+    $('#gPolicyNote').textContent=d.policy_note||'';
+    var man=d.manifest||{};
+    $('#gTodo').innerHTML=(man.todo||[]).map(function(x){return '<li>'+esc(x)+'</li>'}).join('')||'<li>无</li>';
+    $('#gConsentVer').textContent='协议版本 '+(d.legal_version||'—');
+    if(!c.current){if(!L.consentShown){L.consentShown=true;openM('gConsentModal')}}
+    else closeM('gConsentModal');
+  }
+  function showDoc(id){
+    window.api('/api/legal',{action:'doc',id:id}).then(function(res){
+      /* ★ /api/legal 的 doc 分支返回的是 {title, file, exists, size, body}。
+         原代码读 r.text / r.version / r.updated / r.hash —— 一个都不存在，
+         于是弹窗标题永远是上一份的、正文永远「(空)」。
+         点隐私说明也显示「软件许可与反逆向声明」就是标题没跟着换 + 正文字段名错。
+         现在两种形状都认，标题以服务端返回的为准。 */
+      var r=(res&&res.data)||res||{};
+      var body=r.body!=null?r.body:(r.text!=null?r.text:'');
+      var ttl=r.title||'协议全文';
+      $('#gDocTitle').textContent=ttl;
+      $('#gDocText').innerHTML=mdLite(body||'（这份协议的文件还没装上）');
+      var bits=[];
+      if(r.file)bits.push(r.file);
+      if(r.exists===false)bits.push('文件缺失');
+      else if(r.size)bits.push(r.size+' 字');
+      $('#gDocMeta').textContent=bits.join(' · ')||'';
+      openM('gDocModal');
+    }).catch(function(e){say(e.message)});
+  }
+  /* 极简 Markdown：## / ### 标题、- 列表、**加粗**、`代码`、> 引用、空行分段。其余全部转义。 */
+  function mdLite(txt){
+    var lines=String(txt).replace(/\r\n/g,'\n').split('\n');
+    var out=[],buf=[],quote=[];
+    function inline(s){
+      return esc(s)
+        .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+        .replace(/`([^`]+)`/g,'<code>$1</code>');
+    }
+    function flush(){
+      if(!buf.length)return;
+      out.push('<p>'+buf.join(' ')+'</p>');buf=[];
+    }
+    function flushQuote(){
+      if(!quote.length)return;
+      out.push('<blockquote class="g-md-quote">'+quote.join('<br>')+'</blockquote>');quote=[];
+    }
+    for(var li=0;li<lines.length;li++){
+      var l=lines[li];
+      var q=/^\s*>\s?(.*)$/.exec(l);
+      if(q){flush();quote.push(inline(q[1]));return}
+      flushQuote();
+      var m=/^(#{1,4})\s+(.*)$/.exec(l);
+      if(m){
+        flush();
+        var lv=Math.min(4,m[1].length);
+        var tag=lv===1?'h3':(lv===2?'h4':(lv===3?'h5':'h6'));
+        out.push('<'+tag+' class="g-md-h'+lv+'">'+inline(m[2])+'</'+tag+'>');
+        continue;
+      }
+      if(/^\s*[-*]\s+/.test(l)){
+        /* 连续列表项收集成一个 ul */
+        var last=out[out.length-1];
+        var item='<li>'+inline(l.replace(/^\s*[-*]\s+/,''))+'</li>';
+        if(last&&/^<ul class="g-md-ul">/.test(last)) out[out.length-1]=last.replace(/<\/ul>$/,'')+item+'</ul>';
+        else { flush(); out.push('<ul class="g-md-ul">'+item+'</ul>'); }
+        continue;
+      }
+      /* 分隔线 --- / *** / ___ ：协议的章节之间要用它断开，不然一坨糊在一起 */
+      if(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(l)){ flush(); out.push('<hr class="g-md-hr">'); continue }
+      /* 表格：| a | b |  +  |---|---| */
+      if(/^\s*\|.*\|\s*$/.test(l) && /^\s*\|[\s:|-]+\|\s*$/.test(String(lines[li+1]||''))){
+        flush();
+        var cell=function(row){return row.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(function(c){return inline(c.trim())})};
+        var head=cell(l), body=[];
+        li+=2;
+        while(li<lines.length && /^\s*\|.*\|\s*$/.test(lines[li])){ body.push(cell(lines[li])); li++ }
+        li--;
+        out.push('<table class="g-md-tb"><thead><tr>'+head.map(function(c){return '<th>'+c+'</th>'}).join('')+'</tr></thead><tbody>'
+          +body.map(function(r){return '<tr>'+r.map(function(c){return '<td>'+c+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table>');
+        continue;
+      }
+      if(!l.trim()){flush();return}
+      buf.push(inline(l));
+    }
+    flush();flushQuote();
+    return out.join('');
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('[data-doc]');
+    if(b){
+      /* ★ 协议文档跟别的文档一样，直接在右侧标签页打开（docOpen），
+         不再另弹一个小窗 —— 两个地方看文档、标题还不跟着换，体验是割裂的。
+         服务端已经返回绝对路径 path，前端只需要把它交给 docOpen。 */
+      var did=b.getAttribute('data-doc');
+      window.api('/api/legal',{action:'doc',id:did}).then(function(res){
+        var r=(res&&res.data)||res||{};
+        if(window.docOpen&&r.path){ window.docOpen(r.path); return }
+        /* 文件真缺失时才退回弹窗，把原因说清楚 */
+        $('#gDocTitle').textContent=r.title||'协议全文';
+        $('#gDocText').innerHTML=mdLite(r.body||r.text||'（这份协议的文件还没装上）');
+        $('#gDocMeta').textContent=(r.file||'')+' · 文件缺失';
+        openM('gDocModal');
+      }).catch(function(e2){say('打不开协议：'+((e2&&e2.message)||e2))});
+    }
+  });
+  $('#gAgreeBtn').addEventListener('click',function(){
+    window.api('/api/legal',{action:'consent'}).then(function(){say('已同意，授权记录已写入本机');return loadLegal(true)})
+      .catch(function(e){say(e.message)});
+  });
+  $('#gRevokeBtn').addEventListener('click',function(){
+    if(window.confirmAction)window.confirmAction({title:'撤回协议同意？',phrase:'撤回同意',
+      html:'撤回后授权记录会标记为未同意，下次启动会重新提示。<b>按协议约定，撤回后请停止使用并删除软件。</b>',
+      onOk:function(){window.api('/api/legal',{action:'revoke'}).then(function(){
+        say('已撤回同意');return loadLegal(true)}).catch(function(e){say(e.message)})}});
+    else if(window.confirm('撤回协议同意？撤回后请停止使用并删除软件。'))
+      window.api('/api/legal',{action:'revoke'}).then(function(){loadLegal(true)});
+  });
+  $('#gConsentChk').addEventListener('change',function(){$('#gConsentOk').disabled=!this.checked});
+  $('#gConsentOk').addEventListener('click',function(){
+    window.api('/api/legal',{action:'consent'}).then(function(){
+      say('已同意协议');closeM('gConsentModal');return loadLegal(true);
+    }).catch(function(e){say(e.message)});
+  });
+  $('#gConsentLater').addEventListener('click',function(){closeM('gConsentModal');say('尚未同意，下次启动会再次提示')});
+  $('#gOpenLegal').addEventListener('click',function(){
+    window.api('/api/legal',{action:'reveal'}).then(function(r){say('已打开：'+(r.path||''))}).catch(function(e){say(e.message)});
+  });
+  $('#gOpenData').addEventListener('click',function(){
+    var V=(window.RiffCut||{}).layout||{};
+    window.api('/api/reveal',{path:V['数据根目录']||''}).then(function(){say('已打开数据文件夹')}).catch(function(e){say(e.message)});
+  });
+  $('#gAuditBtn').addEventListener('click',function(){
+    window.api('/api/integrity',{action:'audit'}).then(function(r){
+      $('#gAuditText').textContent=(r.tail||[]).map(function(x){
+        return '#'+(x.seq!=null?x.seq:'?')+'  '+(x.time||'')+'  '+(x.event||'')+'\n    '+(x.detail||x.raw||'');
+      }).join('\n')||'（暂无记录）';
+      var c=r.check||{};
+      $('#gAuditCheck').textContent='哈希链校验：'+(c.ok?'连续，'+(c.count||0)+' 条记录未被删改':(c.note||'异常'))
+        +' · 文件 '+(r.path||'');
+      openM('gAuditModal');
+    }).catch(function(e){say(e.message)});
+  });
+  $('#gVerify').addEventListener('click',function(){verify(true)});
+  function verify(loud){
+    return window.api('/api/integrity',{action:'verify'}).then(function(r){
+      var it=r.integrity||{},sg=r.codesign||{},rt=r.runtime||{};
+      var msg='完整性：'+(it.note||'—')+' · 签名：'+(sg.detail||'').slice(0,40)
+        +' · 注入线索：'+(rt.suspicious?'有':'无');
+      if(loud)say(msg);
+      return loadLegal(true);
+    }).catch(function(e){say(e.message)});
+  }
+  $('#gFfBtn').addEventListener('click',function(){checkFf(true)});
+  function checkFf(loud){
+    // 只有用户自己点「检查」才允许动手修（heal=1）；页面启动时自动跑的那次只报告。
+    return window.api('/api/ffmpeg',{heal:loud?1:0}).then(function(r){
+      $('#gFfTag').textContent=r.ok?'已就位':'异常';$('#gFfTag').className='u-tag '+(r.ok?'green':'gold');
+      $('#gFfPath').textContent=r.path||'—';
+      $('#gFfVer').textContent=r.ffmpeg||'—';
+      $('#gFfProbe').textContent=r.ffprobe_ok?'ffprobe 可用':'ffprobe 异常';
+      $('#gCodec').textContent=(L.d&&L.d.hardware&&L.d.hardware.encoders||[]).indexOf('libx265')>=0?'libx264 / libx265':'libx264';
+      if(loud)say(r.ok?'FFmpeg 校验通过：'+(r.ffmpeg||''):'FFmpeg 校验失败');
+    }).catch(function(e){say(e.message)});
+  }
+  function loadLegal(quiet){
+    return window.api('/api/legal',{action:'bootstrap'}).then(function(d){
+      fillLegal(d);fillHw(d.hardware);fillPrivacy(window.RiffCut&&window.RiffCut.settings);
+      if(!quiet)say('系统设置已读取本机真实状态');return d;
+    }).catch(function(e){say(e.message)});
+  }
+  /* ── 开放接口 ── */
+  function loadOpen(){
+    return window.api('/api/openapi',{action:'status'}).then(function(d){
+      /* window.api() 已经剥掉外层 data，这里再取一次永远是空对象：
+         状态永远显示「未开放」、Key 永远读不到、换 Key 后输入框被清空。 */
+      var st=d||{};
+      var tag=$('#gOpenTag');
+      if(tag){tag.textContent=st.running?('已开放 · 端口 '+st.port):'未开放';
+        tag.className='u-tag '+(st.running?'green':'gray')}
+      if($('#gOpenToggle'))$('#gOpenToggle').textContent=st.enabled?'关闭':'打开';
+      if($('#gOpenUrl'))$('#gOpenUrl').value=st.url||'未启动';
+      if($('#gOpenHost')&&st.host)$('#gOpenHost').value=st.host;
+      if($('#gOpenPort')&&st.port)$('#gOpenPort').value=st.port;
+      // key 完整值只有本机看得到：要复制给对方 AI 就得能整条读出来
+      if($('#gOpenKey'))$('#gOpenKey').value=st.key||'（没读到）';
+      var on=!!st.auto_approve;
+      if($('#gOpenAutoTag')){$('#gOpenAutoTag').textContent=on?'自动放行':'需确认';
+        $('#gOpenAutoTag').className='u-tag '+(on?'gold':'green')}
+      if($('#gOpenAuto'))$('#gOpenAuto').textContent=on?'改回需确认':'改成自动放行';
+    }).catch(function(e){say(e.message)});
+  }
+  function openSet(patch){
+    return window.api('/api/openapi',Object.assign({action:'set'},patch)).then(function(){
+      return loadOpen();
+    }).catch(function(e){say(e.message)});
+  }
+  if($('#gOpenToggle'))$('#gOpenToggle').addEventListener('click',function(){
+    var cur=$('#gOpenTag').textContent.indexOf('已开放')>=0;
+    openSet({enabled:!cur}).then(function(){say(cur?'开放接口已关闭':'开放接口已打开，地址见上方')});
+  });
+  if($('#gOpenRotate'))$('#gOpenRotate').addEventListener('click',function(){
+    window.api('/api/openapi',{action:'rotate'}).then(function(d){
+      var st=d||{};if($('#gOpenKey'))$('#gOpenKey').value=st.key||'';
+      say('已换新密钥，旧密钥立刻作废，记得填回对方 AI');
+    }).catch(function(e){say(e.message)});
+  });
+  if($('#gOpenHost'))$('#gOpenHost').addEventListener('change',function(){
+    openSet({host:this.value.trim()||'127.0.0.1'}).then(function(){say('监听地址已改，已按新地址重起')});
+  });
+  if($('#gOpenPort'))$('#gOpenPort').addEventListener('change',function(){
+    openSet({port:this.value.trim()||8787}).then(function(){say('端口已改，已按新端口重起')});
+  });
+  if($('#gOpenAuto'))$('#gOpenAuto').addEventListener('click',function(){
+    var on=$('#gOpenAutoTag').textContent.indexOf('自动')>=0;
+    openSet({auto_approve:!on}).then(function(){say(on?'已改回：写操作仍需对方显式确认':'已改为自动放行：对方 AI 的写操作会直接落地')});
+  });
+  if($('#gOpenDocs'))$('#gOpenDocs').addEventListener('click',function(){
+    window.api('/api/openapi',{action:'docs'}).then(function(d){
+      var r=d||{};
+      var n=Object.keys(r.paths||{}).length;
+      say('接口描述已生成：'+n+' 个路径，共 '+(r['x-tool-count']||0)+' 个能力');
+    }).catch(function(e){say(e.message)});
+  });
+
+
+  /* ── AI 权限档 ── */
+  var AGENT_DESC={
+    '只读':'能看技能库、模板、知识库和你的素材，但不能写、不能改。最保守。',
+    '建议':'能看能写，写文件 / 复制素材前会弹卡片等你点同意。日常用这个。',
+    '可整理':'在上面基础上，还能移动、归拢你的素材（原文件留备份）。',
+    '完全托管':'AI 直接动手，不再逐条问。适合你信任它、放手让它批量整理的时候。'
+  };
+  function renderAgent(cur){
+    var box=$('#gAgentList');if(!box)return;
+    box.innerHTML=['只读','建议','可整理','完全托管'].map(function(lv){
+      var on=lv===cur;
+      return '<div class="g-row" style="border:1px solid '+(on?'#BFE0DA':'var(--line)')+';'+
+        'background:'+(on?'#FFFBF2':'#fff')+';border-radius:8px;padding:9px 11px;cursor:pointer" data-lv="'+lv+'">'+
+        '<div class="lab"><b>'+lv+(lv==='建议'?' · 推荐':'')+'</b><span>'+AGENT_DESC[lv]+'</span></div>'+
+        '<span class="u-tag'+(on?' gold':' gray')+'">'+(on?'当前':'选用')+'</span></div>';
+    }).join('');
+    $('#gAgentNow').textContent=cur;
+  }
+  /* ── 可访问范围（跟授权档是两件事：这个管「看得见多大」）── */
+  var SCOPE_DESC={
+    '标准':'只能看软件数据目录、当前素材夹、客户目录。最保守，什么都不越界。',
+    '影创':'整个影创目录都能看：参考库、开发目录、全部客户、数据。默认，够它自己找材料。',
+    '本机':'整台电脑（家目录 / 桌面 / 下载 / 外接盘）。要它处理影创之外的文件时才用。'
+  };
+  function renderScope(cur){
+    var box=$('#gScopeList');if(!box)return;
+    box.innerHTML=['标准','影创','本机'].map(function(sc){
+      var on=sc===cur;
+      return '<div class="g-row" style="border:1px solid '+(on?'#BFE0DA':'var(--line)')+';'+
+        'background:'+(on?'#FFFBF2':'#fff')+';border-radius:8px;padding:9px 11px;cursor:pointer" data-sc="'+sc+'">'+
+        '<div class="lab"><b>'+sc+(sc==='影创'?' · 默认':'')+'</b><span>'+SCOPE_DESC[sc]+'</span></div>'+
+        '<span class="u-tag'+(on?' gold':' gray')+'">'+(on?'当前':'选用')+'</span></div>';
+    }).join('');
+  }
+  function setScope(sc){
+    window.api('/api/agent',{action:'scope',scope:sc}).then(function(){
+      renderScope(sc);say('AI 可访问范围已切到「'+sc+'」');
+    }).catch(function(e){say(e.message)});
+  }
+  function loadAgent(){
+    return window.api('/api/agent',{action:'tools'}).then(function(d){
+      renderAgent(d.level);renderScope(d.scope||'影创');
+    }).catch(function(){});
+  }
+  function setAgent(lv){
+    window.api('/api/agent',{action:'level',level:lv}).then(function(d){
+      renderAgent(d.level);say('AI 权限已切到「'+d.level+'」');
+    }).catch(function(e){say(e.message)});
+  }
+  document.addEventListener('riffcut-ready',function(){
+    fillPaths();loadLegal(true);checkFf(false);loadAgent();loadOpen();
+    /* 隐私开关以 /api/settings 的最新值为准，不用 bootstrap 缓存 */
+    window.api('/api/settings',{}).then(function(s){fillPrivacy(s)}).catch(function(){});
+  });
+  document.addEventListener('click',function(e){
+    var it=e.target.closest('[data-lv]');
+    if(it)setAgent(it.getAttribute('data-lv'));
+    var sc=e.target.closest('[data-sc]');
+    if(sc)setScope(sc.getAttribute('data-sc'));
+  });
+  if(window.RiffCut&&window.RiffCut.layout)fillPaths();
+})();
+</script>
+<script>
+/* 联网搜索：状态 + 手动测一次。测试是真发一次查询，不是查缓存。 */
+(function(){
+  var b=document.getElementById('gNetTest'),tag=document.getElementById('gNetTag');
+  if(!b)return;
+  b.addEventListener('click',function(){
+    b.disabled=true;if(tag){tag.textContent='测试中…';tag.className='u-tag gray';}
+    window.api('/api/websearch',{action:'probe'}).then(function(r){
+      b.disabled=false;
+      if(tag){tag.textContent=r.ok?'已开通':'连不上';tag.className='u-tag '+(r.ok?'green':'gray');}
+      if(r.ok){window.say('联网正常：'+(r.provider_label||r.provider||'')+' · '+r.ms+'ms · 拿到 '+r.n+' 条结果');}
+      else{window.say('联网失败：'+(r.error||'未知原因')+'（离线也能正常剪辑，只是不能查外部资料）',true);}
+    }).catch(function(e){
+      b.disabled=false;
+      if(tag){tag.textContent='连不上';tag.className='u-tag gray';}
+      window.say(e.message||'联网测试失败',true);
+    });
+  });
+})();
+</script>

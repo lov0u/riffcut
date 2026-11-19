@@ -1,0 +1,151 @@
+<style>
+/* 会话历史。
+   两个来源必须分开画，混在一起用户会以为是同一件事：
+     · 内核会话 —— 内核每一轮真跑了什么（jsonl 压缩包，只读）
+     · 首页存档 —— 你在首页打的字 + AI 回的话（可改标题、可归档）
+   合起来看才是「这段时间到底做了什么」，缺一个就只剩半边。 */
+.hs-tabs{display:flex;gap:6px;margin-bottom:9px}
+.hs-tab{height:28px;padding:0 12px;border:1px solid var(--line);border-radius:14px;background:#FFF;
+  font-size:var(--f5);color:#5A6272;cursor:pointer;transition:all .15s}
+.hs-tab.on{background:#EAF5F3;border-color:#BFE0DA;color:#33405A;font-weight:600}
+.hs-body{flex:1;min-height:0;display:grid;grid-template-columns:clamp(240px,25vw,320px) minmax(0,1fr);gap:clamp(8px,1%,12px)}
+.hs-list{display:flex;flex-direction:column;min-height:0}
+.hs-rows{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:5px 6px}
+.hs-rows::-webkit-scrollbar{display:none}
+.hs-row{padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;border:1px solid transparent}
+.hs-row:hover{background:#F4F6FA}
+.hs-row.on{background:#EAF5F3;border-color:#BFE0DA}
+.hs-row .t{font-size:var(--f4);color:#2C3340;line-height:1.4;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hs-row .m{display:flex;gap:6px;align-items:center;margin-top:4px;font-size:10px;color:#98A0AF}
+.hs-chat{display:flex;flex-direction:column;min-height:0}
+.hs-msgs{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:12px 15px}
+.hs-msgs::-webkit-scrollbar{display:none}
+.hs-m{margin-bottom:13px}
+.hs-m .who{font-size:10.5px;color:#98A0AF;margin-bottom:3px;display:flex;gap:6px;align-items:center}
+.hs-m .bd{font-size:var(--f4);line-height:1.65;color:#2C3340;white-space:pre-wrap;word-break:break-word}
+.hs-m.ai .bd{background:#F8FAFC;border:1px solid var(--line);border-radius:var(--r-md);padding:9px 12px}
+.hs-steps{margin-top:6px;display:flex;flex-direction:column;gap:2px}
+.hs-step{font-size:10px;color:#7A8496;font-family:ui-monospace,Menlo,monospace}
+.hs-step.ok{color:#2E8B6E}
+.hs-step.no{color:#B04949}
+.hs-empty{padding:30px 12px;text-align:center;color:#98A0AF;font-size:var(--f4)}
+</style>
+
+<section class="page" data-page="history">
+  <div class="u-head">
+    <div class="txt">
+      <div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-clock"/></svg>会话历史</div>
+      <div class="u-sub">内核跑过的每一轮 + 你在首页说过的话 · 两份记录分开存，都不改对方</div>
+    </div>
+    <div class="u-actions">
+      <button class="u-btn" id="hsRefresh"><svg class="ic"><use href="#i-refresh"/></svg>刷新</button>
+    </div>
+  </div>
+
+  <div class="hs-tabs">
+    <button class="hs-tab on" data-tab="kernel">内核会话</button>
+    <button class="hs-tab" data-tab="conv">首页存档</button>
+  </div>
+
+  <div class="hs-body">
+    <div class="u-card hs-list" style="padding:0">
+      <div class="hs-rows" id="hsRows"><div class="hs-empty">读取中…</div></div>
+    </div>
+    <div class="u-card hs-chat" style="padding:0">
+      <div class="hs-msgs" id="hsMsgs"><div class="hs-empty">左边点一条看内容</div></div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  /* window.api 一开始是排队桩，真身晚几百行才装好 —— 不能存成局部变量 */
+  function A(){ return window.api.apply(null, arguments) }
+  var $=function(s){return document.querySelector(s)};
+  var rows=$('#hsRows'), msgs=$('#hsMsgs');
+  var tab='kernel', items=[], cur='';
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  function fmt(ts){
+    if(!ts) return '—';
+    var d=new Date(Number(ts));
+    if(isNaN(d.getTime())) return String(ts);
+    var p=function(n){return n<10?'0'+n:''+n};
+    return p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+  }
+
+  function paintList(){
+    if(!items.length){
+      rows.innerHTML='<div class="hs-empty">'+(tab==='kernel'?'内核还没跑过对话':'还没有首页存档')+'</div>';
+      return;
+    }
+    rows.innerHTML=items.map(function(x){
+      var meta = tab==='kernel'
+        ? '<span>'+x.userTurns+' 轮</span><span>·</span><span>'+x.tools+' 次工具</span><span>·</span><span>'+fmt(x.updated)+'</span>'
+        : '<span>'+x.msg_count+' 条</span><span>·</span><span>'+fmt(x.updated)+'</span>'+(x.archived?'<span class="u-tag gray">已归档</span>':'');
+      return '<div class="hs-row'+(cur===x.id?' on':'')+'" data-id="'+esc(x.id)+'">'
+        +'<div class="t">'+esc(x.title||'（无标题）')+'</div>'
+        +'<div class="m">'+meta+'</div></div>';
+    }).join('');
+  }
+
+  function paintMsgs(list){
+    if(!list||!list.length){ msgs.innerHTML='<div class="hs-empty">这条没有内容</div>'; return }
+    msgs.innerHTML=list.map(function(m){
+      var who=m.who==='用户'?'你':(m.who==='AI'?'AI':esc(m.who));
+      var cls=m.who==='AI'?'hs-m ai':'hs-m';
+      var steps='';
+      if(m.steps&&m.steps.length){
+        steps='<div class="hs-steps">'+m.steps.map(function(s){
+          return '<div class="hs-step '+(s.ok?'ok':'no')+'">'+(s.ok?'✓':'✗')+' '+esc(s.tool||'')+'</div>';
+        }).join('')+'</div>';
+      }
+      return '<div class="'+cls+'"><div class="who">'+who
+        +(m.at||m.time?'<span>'+esc(String(m.at||m.time))+'</span>':'')+'</div>'
+        +'<div class="bd">'+esc(m.text||'')+'</div>'+steps+'</div>';
+    }).join('');
+    msgs.scrollTop=0;
+  }
+
+  function load(){
+    rows.innerHTML='<div class="hs-empty">读取中…</div>';
+    var p = tab==='kernel'
+      ? A('/api/conversations',{action:'kernel',limit:60})
+      : A('/api/conversations',{action:'list',limit:60});
+    p.then(function(d){
+      items = Array.isArray(d) ? d : ((d&&d.items)||[]);
+      cur=''; paintList(); paintMsgs([]);
+    }).catch(function(e){
+      rows.innerHTML='<div class="hs-empty">读不到：'+esc((e&&e.message)||e)+'</div>';
+    });
+  }
+
+  function open(id){
+    cur=id; paintList();
+    msgs.innerHTML='<div class="hs-empty">读取中…</div>';
+    if(tab==='kernel'){
+      A('/api/conversations',{action:'kernel_get',id:id}).then(function(d){
+        paintMsgs((d&&d.messages_list)||[]);
+      }).catch(function(e){ msgs.innerHTML='<div class="hs-empty">'+esc(e.message)+'</div>' });
+    } else {
+      A('/api/conversations',{action:'get',id:id}).then(function(d){
+        paintMsgs((d&&d.messages)||[]);
+      }).catch(function(e){ msgs.innerHTML='<div class="hs-empty">'+esc(e.message)+'</div>' });
+    }
+  }
+
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('.hs-tab');
+    if(t){ tab=t.getAttribute('data-tab')||'kernel';
+      [].forEach.call(document.querySelectorAll('.hs-tab'),function(b){b.classList.toggle('on',b===t)});
+      load(); return }
+    var r=e.target.closest('.hs-row');
+    if(r&&r.getAttribute('data-id')) open(r.getAttribute('data-id'));
+  });
+  $('#hsRefresh').addEventListener('click',load);
+  document.addEventListener('riffcut-ready',load);
+  if(window.RiffCut) load();
+})();
+</script>

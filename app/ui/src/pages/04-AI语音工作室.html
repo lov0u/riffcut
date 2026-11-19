@@ -1,0 +1,1265 @@
+<style>
+/* ══ AI 语音工作室 · 模型能力驱动 ═════════════════════════ */
+.vm-body{flex:1;min-height:0;display:grid;grid-template-columns:clamp(215px,22%,285px) minmax(0,1fr) clamp(235px,25%,315px);gap:clamp(8px,1%,14px)}
+.vm-col{min-width:0;min-height:0;display:flex;flex-direction:column}
+.vm-models{padding:0;display:flex;flex-direction:column}
+.vm-colhead{display:flex;align-items:center;gap:8px;padding:11px 12px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.vm-colhead b{font-size:var(--f3)}
+.vm-colhead .u-actions{margin-left:auto}
+.vm-mirrorbar{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:7px 12px;background:#F7FAF8;
+  border-bottom:1px solid var(--line);font-size:var(--f5);color:#3E6B53;line-height:1.5}
+.vm-mirrorbar .ic{width:12px;height:12px;flex:0 0 auto}
+.vm-mirrorbar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vm-mirrorbar button{margin-left:auto;color:#2E7D52;font-size:var(--f5);white-space:nowrap}
+.vm-mlist{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:10px}
+.vm-mlist::-webkit-scrollbar{display:none}
+.vm-mcard{border:1px solid var(--line);border-radius:var(--r-md);padding:10px;margin-bottom:9px;
+  box-shadow:var(--sh-btn);cursor:pointer;transition:background .16s,border-color .16s}
+.vm-mcard:hover{background:#FAFBFD}
+.vm-mcard.on{background:#EAF5F3;border-color:#BFE0DA}
+.vm-mcard .r1{display:flex;align-items:center;gap:7px;font-size:var(--f4);font-weight:600;min-width:0}
+.vm-mcard .r1 .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.vm-mcard .r1 .chev{flex:0 0 auto;width:12px;height:12px;color:var(--ink3);transition:transform .16s}
+.vm-mcard.open .r1 .chev{transform:rotate(90deg)}
+.vm-mcard .r2{font-size:var(--f5);color:var(--ink3);margin-top:5px;display:flex;gap:7px;flex-wrap:wrap}
+.vm-mdetail{display:none}
+.vm-mcard.open .vm-mdetail{display:block}
+.vm-mcard .r3{font-size:var(--f5);color:var(--ink2);margin-top:7px;line-height:1.6}
+.vm-mcard .nmwrap{flex:1;min-width:0}
+.vm-caps{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+.vm-cap{font-size:10.5px;padding:2px 6px;border-radius:12px;background:#F1F4F9;color:#5A6272;white-space:nowrap}
+.vm-cap.key{background:#E8F0FE;color:#3567C0}
+.vm-mbar{margin-top:8px}
+.vm-mbar .tx{font-size:var(--f5);color:#5A6272;margin-bottom:4px;line-height:1.5}
+.vm-mact{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;padding-top:8px;border-top:1px dashed #EDEFF4}
+.vm-mact .u-btn{height:23px;padding:0 8px;font-size:10.5px}
+.vm-foot{flex:0 0 auto;padding:9px 12px;border-top:1px solid var(--line);font-size:var(--f5);
+  color:var(--ink3);line-height:1.65}
+
+/* 中栏：脚本分段 */
+.vm-segs{padding:0;display:flex;flex-direction:column}
+.vm-segshead{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.vm-segshead b{font-size:var(--f2)}
+.vm-segshead .u-actions{margin-left:auto}
+/* 头部只许一行：标题、按钮各自锁住宽度，模型名再长也在胶囊内部横向滚动，
+   绝不把两边挤成两排（用户 2026-11-11 要求） */
+.vm-segshead{flex-wrap:nowrap}
+.vm-segshead b{flex:0 0 auto;white-space:nowrap}
+.vm-segshead .u-actions{flex:0 0 auto;flex-wrap:nowrap;margin-left:0}
+/* 胶囊放在标题与按钮之间的空白正中，最多 720px：
+   多数音色名本来一眼能看全，别一上来就裁；真装不下才在内部跑（用户 2026-11-11 要求） */
+.vm-now{flex:0 1 auto;min-width:0;max-width:720px;margin:0 auto;overflow:hidden;
+  display:inline-flex;align-items:center}
+.vm-now .vm-now-in{flex:0 0 auto;margin:0 auto;display:block;white-space:nowrap;will-change:transform}
+/* animation 简写里塞 var() 在部分内核下会整条失效，所以逐条写 */
+.vm-now.run .vm-now-in{animation-name:vmmq;animation-duration:var(--vmmq-d,9s);
+  animation-timing-function:linear;animation-iteration-count:infinite;
+  animation-direction:alternate;animation-delay:1.2s}
+@keyframes vmmq{from{transform:translateX(0)}to{transform:translateX(var(--vmmq-x,0px))}}
+.vm-scriptwrap{flex:0 0 auto;padding:10px 14px 0;position:relative}
+.vm-scriptwrap textarea{width:100%;height:64px;resize:none;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:#FCFDFE;box-shadow:var(--sh-in);padding:9px 58px 9px 10px;font-size:var(--f4);line-height:1.7;
+  color:#3A4252;outline:none}
+.vm-scriptwrap textarea:focus{border-color:#BFE0DA}
+/* 稿子带进来后，想换一份得先把字一个个删掉 —— 给一个清除按钮，点了就空。
+   空的输入框里不显示它，免得看着像「这儿本来就该有个框」 */
+.vm-sclear{position:absolute;top:17px;right:21px;height:22px;padding:0 8px;display:none;
+  border:1px solid var(--line);border-radius:8px;background:#fff;color:#6A7284;
+  font-size:var(--f5);line-height:1;cursor:pointer;box-shadow:var(--sh-btn)}
+.vm-sclear.on{display:block}
+.vm-sclear:hover{background:#F4F6FA;border-color:#BFE0DA;color:#5A6272}
+.vm-slist{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:10px 14px}
+.vm-slist::-webkit-scrollbar{display:none}
+.vm-seg{border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:9px;box-shadow:var(--sh-btn)}
+.vm-seg .top{display:flex;align-items:flex-start;gap:9px}
+.vm-seg .no{width:22px;height:22px;border-radius:8px;background:#F0F2F6;color:#5A6272;display:grid;place-items:center;font-size:var(--f5);font-weight:600;flex:0 0 auto}
+.vm-seg .txt{flex:1;min-width:0;font-size:var(--f4);line-height:1.6;color:#3A4252}
+.vm-seg .bot{display:flex;align-items:center;gap:7px;margin-top:9px;flex-wrap:wrap}
+.vm-dur{flex:1;min-width:70px;font-size:var(--f5);color:var(--ink3);text-align:right}
+.vm-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  color:var(--ink3);font-size:var(--f4);padding:26px;text-align:center;height:100%}
+
+/* 右栏：音色管理 */
+.vm-right{padding:0;display:flex;flex-direction:column;overflow:hidden}
+/* 提示统一走 shell 的底部细条 say()，页内不再自己弹浮条：
+   以前这里有一条 .vm-hintbar，跟底部那条并排显示，同一个动作出现两条提示。 */
+.vm-ctl{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:12px}
+.vm-ctl::-webkit-scrollbar{display:none}
+.vm-cur .t{font-size:var(--f4);font-weight:600;display:flex;align-items:center;gap:6px}
+.vm-cur .d{font-size:var(--f5);color:var(--ink3);line-height:1.6;margin-top:5px}
+.vm-sec{margin-bottom:14px}
+.vm-sec h4{font-size:var(--f4);font-weight:600;margin:0 0 9px;display:flex;align-items:center;gap:7px}
+.vm-sec h4 .u-tag{margin-left:auto}
+.vm-voice{display:flex;align-items:center;gap:9px;padding:9px;border:1px solid var(--line);border-radius:var(--r-md);
+  margin-bottom:7px;box-shadow:var(--sh-btn);cursor:pointer}
+.vm-voice:hover{background:#FAFBFD}
+.vm-voice.on{background:#EAF5F3;border-color:#BFE0DA}
+/* 本机读不出声的音色：整项灰掉并禁止点击，不给用户「点了没反应」的机会 */
+.vm-voice.dead{opacity:.55;cursor:not-allowed;background:#FAFBFD;box-shadow:none}
+.vm-voice.dead:hover{background:#FAFBFD}
+.vm-voice.dead span{color:#B4746B}
+.vm-note{font-size:var(--f5);color:var(--ink3);line-height:1.75;margin-top:2px}
+/* 重新检测：标题右侧的小图标按钮，不占地方也不抢视线 */
+.vm-mini.rescan{margin-left:auto;width:20px;height:20px;border-radius:8px;
+  color:var(--ink3);border-color:transparent;background:transparent}
+.vm-mini.rescan:hover{background:#F5F7FB;border-color:var(--line);color:#6A7284}
+.vm-mini.rescan .ic{width:12px;height:12px}
+/* 头像位改成「锁定」按钮：锁上就不会被换掉，点开锁才能从右侧拿掉 */
+.vm-voice .lockbtn{width:28px;height:28px;border-radius:8px;flex:0 0 auto;
+  border:1px solid transparent;background:#F1F4F9;color:#98A2B3;display:grid;place-items:center;
+  transition:background .12s,color .12s,border-color .12s}
+.vm-voice .lockbtn .ic{width:14px;height:14px}
+.vm-voice .lockbtn:hover{background:#F4F6FA;border-color:#BFE0DA;color:#5A6272}
+.vm-voice .lockbtn.on{background:#EAF5F3;border-color:#BFE0DA;color:#5A6272}
+.vm-voice .lockbtn:disabled{cursor:default;opacity:.55}
+.vm-voice.on .lockbtn{background:#F4F6FA}
+.vm-voice .tx{flex:1;min-width:0}
+.vm-voice b{font-size:var(--f4);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vm-voice span{font-size:var(--f5);color:var(--ink3);display:block;margin-top:2px}
+.vm-mini{width:24px;height:24px;border:1px solid var(--line);border-radius:8px;background:#fff;
+  color:#6A7284;display:grid;place-items:center;flex:0 0 auto}
+.vm-mini:hover{background:#F4F6FA;border-color:#BFE0DA;color:#5A6272}
+.vm-mini .ic{width:13px;height:13px}
+.vm-mini.del:hover{background:#FFF1F1;border-color:#E4C7C7;color:#B45B5B}
+/* 锁定 / 已锁定：锁住的那个按钮常亮，一眼看出哪几个受保护 */
+.vm-mini.pin.on,.vm-mini.add.on{background:#EAF5F3;border-color:#BFE0DA;color:#5A6272}
+/* 右侧的 + / − 是文字，给大一点，和旁边小图标按钮区分开 */
+.vm-mini.add{font-size:15px;line-height:1;font-weight:600;padding-bottom:1px}
+.vm-mini.add:not(.on){color:#4A5670}
+.vm-mini.add.on{background:#EEF3FB;border-color:#D6E0F0;color:#42506A}
+/* 音色列表单独滚动：一屏正好露 6 行，再多就在框里滚，不把下面的「配音控制」挤走。
+   行高 = 9*2 内边距 + 32 内容 + 2 边框 ≈ 52，加 7 的行间距 ≈ 59。 */
+.vm-vlist{max-height:calc(6 * 59px - 7px);overflow:auto;padding-right:2px;margin-bottom:8px;scrollbar-width:thin}
+.vm-vlist::-webkit-scrollbar{width:5px}
+.vm-vlist::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:4px}
+/* 「看全部 N 个音色」：撑满一行，别做成小链接让人找不到 */
+.vm-allbtn{width:100%;justify-content:center;margin:1px 0 9px;font-size:var(--f5)}
+/* 全部音色弹窗：搜索框钉在顶部，列表自己滚，弹窗高度不随音色数量长 */
+.vmd-alllist{max-height:min(56vh,420px);margin:0;padding-right:5px}
+/* 90 多个音色单列排太散、找起来费劲 —— 一屏铺成 3 列网格，
+   窗口变窄自动降到 2 列 / 1 列，不需要横向滚动（用户 2026-11-11 要求） */
+.vm-dialog.wide.vmd-wide{width:min(920px,95vw)}
+.vmd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;align-content:start;max-height:min(64vh,560px);overflow:auto;padding-right:6px}
+/* 窗口窄到三列挤不下时降成两列，绝不横向滚动 */
+@media (max-width:800px){.vmd-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.vmd-grid .vm-voice{margin-bottom:0;padding:8px 9px;gap:7px}
+/* 格子窄，副标题一行放不下就省略，不许把卡片撑高或挤到第二行 */
+.vmd-grid .vm-voice span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vmd-tip{font-size:var(--f5);color:var(--ink3);margin-right:auto}
+.vm-actions{display:flex;gap:7px;margin-bottom:8px}
+.vm-actions .u-btn{flex:1;justify-content:center;font-size:var(--f5);padding:0 6px}
+.vm-actions .u-btn.off{opacity:.45;background:#F5F6F9;color:#9AA2B1;box-shadow:none;cursor:not-allowed}
+.vm-hint{font-size:var(--f5);color:var(--ink3);line-height:1.7;background:#F7F9FC;border-radius:var(--r-sm);padding:9px 10px;margin-bottom:12px}
+.vm-hint.ok{background:#F1FAF4;color:#2E7D52}
+.vm-hint.warn{background:#FFF8EA;color:#5A6272}
+.vm-slider{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
+.vm-slider .lab{display:flex;align-items:center;gap:8px;font-size:var(--f5);color:var(--ink2)}
+.vm-slider .lab b{margin-left:auto;color:var(--ink);font-weight:600}
+.vm-slider input{width:100%;accent-color:var(--gold-deep)}
+/* 情绪 / 语速 / 音高 / 音量：离散选项就用按钮，滑杆表达不了「高兴」 */
+.vm-opt{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.vm-opt .lab{font-size:var(--f5);color:var(--ink2);font-weight:600}
+.vm-opt .chips{display:flex;gap:5px;flex-wrap:wrap}
+.vm-chip{font-size:var(--f5);line-height:1;padding:6px 9px;border:1px solid var(--line);
+  border-radius:12px;background:#fff;color:#4A5262;cursor:pointer;white-space:nowrap;
+  transition:background .14s,border-color .14s,color .14s}
+.vm-chip:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
+.vm-chip.on{background:#EAF5F3;border-color:#BFE0DA;color:#5A6272;font-weight:600}
+.vm-note{font-size:var(--f5);color:var(--ink3);line-height:1.7;background:#F7F9FC;border-radius:var(--r-sm);padding:9px 10px}
+.vm-alert{font-size:var(--f5);line-height:1.7;border-radius:var(--r-sm);padding:9px 10px;
+  background:#FFF8EA;color:#5A6272;border:1px solid #F4F6FA}
+.vm-alert.ok{background:#F1FAF4;color:#2E7D52;border-color:#D8EEDF}
+
+/* 弹窗 */
+.vm-modal{position:fixed;inset:0;z-index:340;display:none;align-items:center;justify-content:center}
+.vm-modal.open{display:flex}
+.vm-shade{position:absolute;inset:0;background:rgba(24,30,42,.36);backdrop-filter:blur(2px)}
+.vm-dialog{position:relative;width:min(500px,92vw);max-height:88vh;display:flex;flex-direction:column;
+  background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 24px 70px rgba(20,28,44,.28);overflow:hidden}
+.vm-dialog.wide{width:min(660px,94vw)}
+.vm-dhd{display:flex;align-items:center;gap:9px;padding:14px 17px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.vm-dhd b{font-size:var(--f2)}
+.vm-x{margin-left:auto;width:26px;height:26px;border:0;background:transparent;color:#8A92A2;font-size:20px;
+  line-height:1;cursor:pointer;border-radius:8px}
+.vm-x:hover{background:#F2F4F8;color:#3A4252}
+.vm-dbd{padding:15px 17px;overflow:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:11px}
+.vm-dft{display:flex;align-items:center;gap:8px;padding:12px 17px;border-top:1px solid var(--line);flex:0 0 auto}
+.vm-dft .u-btn:first-child{margin-right:auto}
+.vm-f{display:flex;flex-direction:column;gap:6px;min-width:0}
+.vm-f label{font-size:var(--f5);color:var(--ink2);font-weight:600}
+.vm-f .u-input,.vm-f .u-select{height:34px}
+.vm-f textarea{width:100%;height:66px;resize:vertical;border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:8px 10px;font-size:var(--f4);line-height:1.6;outline:none}
+.vm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vm-capchecks{display:flex;flex-wrap:wrap;gap:6px}
+.vm-capchecks label{display:flex;align-items:center;gap:5px;font-size:var(--f5);color:#4A5262;
+  border:1px solid var(--line);border-radius:12px;padding:4px 9px;cursor:pointer}
+.vm-capchecks label.on{background:#EAF5F3;border-color:#BFE0DA;color:#5A6272}
+.vm-capchecks input{accent-color:var(--gold-deep)}
+.vm-check{display:flex;align-items:flex-start;gap:8px;font-size:var(--f5);color:#4A5262;line-height:1.6;cursor:pointer}
+.vm-check input{accent-color:var(--gold-deep);margin-top:2px}
+.compact .vm-body{grid-template-columns:clamp(190px,21%,240px) minmax(0,1fr) clamp(205px,23%,260px)}
+.tiny .vm-body{grid-template-columns:1fr 1.3fr}
+.tiny .vm-right{display:none}
+</style>
+
+<section class="page" data-page="voice">
+  <div class="u-head">
+    <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-mic"/></svg>AI 语音工作室</div>
+      <div class="u-sub">本地语音模型 · 国内镜像安装 · 音色与试听/录制严格跟随当前模型能力</div></div>
+    <div class="u-actions">
+      <button class="u-btn" id="vmMirrorBtn"><svg class="ic"><use href="#i-settings"/></svg>镜像设置</button>
+      <button class="u-btn" id="vmRevealBtn"><svg class="ic"><use href="#i-folder"/></svg>模型目录</button>
+      <button class="u-btn" id="vmAdoptBtn"><svg class="ic"><use href="#i-upload"/></svg>从文件夹接入</button>
+      <button class="u-btn" id="vmAddBtn"><svg class="ic"><use href="#i-plus"/></svg>添加模型</button>
+      <button class="u-btn gold" id="vmGenAllBtn"><svg class="ic"><use href="#i-play"/></svg>生成全部配音</button>
+    </div>
+  </div>
+
+  <div class="vm-body">
+    <!-- 左：本地语音模型目录 -->
+    <div class="u-card vm-col vm-models">
+      <div class="vm-colhead"><b>本地语音模型</b><span class="u-tag" id="vmCount">—</span>
+        <div class="u-actions"><button class="u-btn sm" id="vmAddBtn2">+ 添加</button></div></div>
+      <div class="vm-mirrorbar" id="vmMirrorBar"><svg class="ic"><use href="#i-shield"/></svg><span>国内镜像加载中…</span></div>
+      <div class="vm-mlist" id="vmList"></div>
+      <div class="vm-foot" id="vmFoot">模型与软件本体分开安装；下载一律走国内镜像，装完离线可用。</div>
+    </div>
+
+    <!-- 中：脚本分段配音 -->
+    <div class="u-card vm-col vm-segs">
+      <div class="vm-segshead"><b>脚本分段配音</b><span class="u-tag gold vm-now" id="vmSegModel"><span class="vm-now-in">当前模型：—</span></span>
+        <div class="u-actions">
+          <button class="u-btn sm" id="vmFromPlan">载入方案配音稿</button>
+          <button class="u-btn sm" id="vmResplit">重新分句</button>
+        </div></div>
+      <div class="vm-scriptwrap"><textarea id="vmScript" placeholder="粘贴或输入配音稿；点「载入方案配音稿」可从首页的聊天 / 方案里取稿。点「重新分句」按句切分，逐段试听 / 生成。"></textarea>
+        <button class="vm-sclear" id="vmScriptClear" type="button" title="清空配音稿（清空后可重新载入方案稿，或直接粘贴新稿）">清除</button></div>
+      <div class="vm-slist" id="vmSlist"></div>
+    </div>
+
+    <!-- 右：音色管理（跟随当前模型） -->
+    <div class="u-card vm-col vm-right">
+      <div class="vm-ctl" id="vmRight"></div>
+    </div>
+  </div>
+
+  <audio id="vmAudio" style="display:none"></audio>
+</section>
+
+<!-- 镜像设置 -->
+<div class="vm-modal" id="vmMirrorModal" role="dialog" aria-modal="true" aria-label="下载镜像设置">
+  <div class="vm-shade" data-close="vmMirrorModal"></div>
+  <div class="vm-dialog">
+    <div class="vm-dhd"><b>下载镜像设置</b><button class="vm-x" data-close="vmMirrorModal">×</button></div>
+    <div class="vm-dbd">
+      <div class="vm-alert ok">所有模型安装都<b>强制走国内镜像</b>：运行环境从国内 PyPI 源安装，权重从魔搭 / HF-Mirror 下载，避免 pypi.org、huggingface.co 打不开导致装不上。</div>
+      <div class="vm-f"><label>pip 运行环境镜像</label><div class="u-select"><select id="vmPipSel"></select></div></div>
+      <div class="vm-f" id="vmPipCustomWrap" style="display:none"><label>自定义镜像地址</label>
+        <div class="u-input"><input id="vmPipCustom" placeholder="https://mirrors.example.com/pypi/simple"></div></div>
+      <div class="vm-f"><label>模型权重来源</label><div class="u-select"><select id="vmWeightSel"></select></div></div>
+      <div class="vm-note" id="vmWeightNote"></div>
+    </div>
+    <div class="vm-dft"><button class="u-btn" data-close="vmMirrorModal">取消</button>
+      <button class="u-btn gold" id="vmMirrorSave">保存设置</button></div>
+  </div>
+</div>
+
+<!-- 全部音色：右栏只摆精选，89 个全量收在这里，带搜索 -->
+<div class="vm-modal" id="vmVoiceModal" role="dialog" aria-modal="true" aria-label="全部音色">
+  <div class="vm-shade" data-close="vmVoiceModal"></div>
+  <div class="vm-dialog wide vmd-wide">
+    <div class="vm-dhd"><b>全部音色</b><span class="u-tag gold" id="vmVoiceTotal">—</span>
+      <button class="vm-x" data-close="vmVoiceModal">×</button></div>
+    <div class="vm-dbd vmd-all">
+      <div class="u-input"><input id="vmVoiceQ" placeholder="搜音色：灵楷 / 讲故事 / 女生 / 纪录片"></div>
+      <div class="vm-vlist vmd-alllist vmd-grid" id="vmVoiceAll"></div>
+    </div>
+    <div class="vm-dft"><span class="vmd-tip">右 + 加到右侧 · 左锁保护 · 点名称换主音色（会确认一次）</span>
+      <button class="u-btn" data-close="vmVoiceModal">关闭</button></div>
+  </div>
+</div>
+
+<!-- 添加 / 编辑模型 -->
+<div class="vm-modal" id="vmFormModal" role="dialog" aria-modal="true" aria-label="添加语音模型">
+  <div class="vm-shade" data-close="vmFormModal"></div>
+  <div class="vm-dialog wide">
+    <div class="vm-dhd"><b id="vmFormTitle">添加语音模型</b><button class="vm-x" data-close="vmFormModal">×</button></div>
+    <div class="vm-dbd">
+      <div class="vm-grid">
+        <div class="vm-f"><label>模型名称 *</label><div class="u-input"><input id="vmFName" placeholder="例：我的本地 TTS"></div></div>
+        <div class="vm-f"><label>标识 ID *</label><div class="u-input"><input id="vmFId" placeholder="my-tts（小写字母/数字/连字符）"></div></div>
+        <div class="vm-f"><label>类别</label><div class="u-select"><select id="vmFCat">
+          <option>自定义</option><option>系统内置</option><option>本地神经 TTS</option>
+          <option>声音克隆</option><option>云端 API</option><option>语音识别</option></select></div></div>
+        <div class="vm-f"><label>引擎</label><div class="u-select"><select id="vmFEngine">
+          <option value="custom">自定义 / 手动安装</option><option value="system">system（macOS 系统音色）</option>
+          <option value="mlx">mlx（Apple 芯片本地 TTS，如 Ming）</option>
+          <option value="piper">piper</option><option value="cosyvoice">cosyvoice（声音克隆）</option>
+          <option value="gpt_sovits">gpt_sovits（声音克隆）</option>
+          <option value="whisper">whisper（语音识别）</option><option value="cloud">cloud（云端 API）</option>
+        </select></div></div>
+        <div class="vm-f"><label>体积</label><div class="u-input"><input id="vmFSize" placeholder="约 500 MB"></div></div>
+        <div class="vm-f"><label>许可证</label><div class="u-input"><input id="vmFLicense" placeholder="MIT / Apache-2.0"></div></div>
+      </div>
+      <div class="vm-f"><label>一句话说明</label><div class="u-input"><input id="vmFDesc" placeholder="这个模型能做什么、不能做什么"></div></div>
+      <div class="vm-f"><label>模型能力（决定右侧音色、试听、录制、参数显示什么）</label>
+        <div class="vm-capchecks" id="vmFCaps"></div></div>
+      <label class="vm-check"><input type="checkbox" id="vmFNeed"> 需要下载安装（运行环境 + 权重）</label>
+      <div class="vm-grid">
+        <div class="vm-f"><label>pip 包（空格或逗号分隔）</label><div class="u-input"><input id="vmFPip" placeholder="modelscope torch"></div></div>
+        <div class="vm-f"><label>权重目录名</label><div class="u-input"><input id="vmFDir" placeholder="my-tts"></div></div>
+        <div class="vm-f"><label>权重仓库 ID / 直链</label><div class="u-input"><input id="vmFRepo" placeholder="iic/CosyVoice2-0.5B 或 https://…zip"></div></div>
+        <div class="vm-f"><label>权重来源</label><div class="u-select"><select id="vmFSource">
+          <option value="">跟随全局镜像设置</option><option value="modelscope">魔搭 ModelScope</option>
+          <option value="hf-mirror">HF-Mirror</option><option value="url">自定义直链</option></select></div></div>
+      </div>
+      <div class="vm-grid">
+        <div class="vm-f"><label>接口地址（云端 TTS）</label><div class="u-input"><input id="vmFUrl" placeholder="https://api.example.com/v1"></div></div>
+        <div class="vm-f"><label>密钥（云端 TTS）</label><div class="u-input"><input id="vmFKey" placeholder="sk-…"></div></div>
+      </div>
+      <div class="vm-f"><label>预设音色（每行一条：名称|显示名|语言）</label>
+        <textarea id="vmFVoices" placeholder="zh_female|预设 · 中文女声|中文"></textarea></div>
+      <div class="vm-note">已经下好权重的模型不用填这些：点顶栏 <b>「从文件夹接入」</b> 选一下文件夹，
+        软件自己认出引擎、能力和音色并接进来（软链，不复制）。
+        走安装的，装完也会自动登记，不需要再手动加一遍。</div>
+    </div>
+    <div class="vm-dft"><button class="u-btn" data-close="vmFormModal">取消</button>
+      <button class="u-btn gold" id="vmFormSave">保存模型</button></div>
+  </div>
+</div>
+
+<!-- 录制我的音色 -->
+<div class="vm-modal" id="vmRecordModal" role="dialog" aria-modal="true" aria-label="录制我的音色">
+  <div class="vm-shade" data-close="vmRecordModal"></div>
+  <div class="vm-dialog">
+    <div class="vm-dhd"><b>录制我的音色</b><button class="vm-x" data-close="vmRecordModal">×</button></div>
+    <div class="vm-dbd">
+      <div class="vm-alert">录制自己的音色属于<b>声音克隆</b>，只有当前模型带「录制我的音色」能力时才可用。录下来的样本只属于这个模型，不会串到别的模型里。</div>
+      <div class="vm-grid">
+        <div class="vm-f"><label>音色名称</label><div class="u-input"><input id="vmRName" placeholder="我的音色"></div></div>
+        <div class="vm-f"><label>录制时长</label><div class="u-select"><select id="vmRSec">
+          <option value="10">10 秒</option><option value="6">6 秒</option><option value="3">3 秒</option>
+          <option value="20">20 秒</option></select></div></div>
+      </div>
+      <label class="vm-check"><input type="checkbox" id="vmRAuth"> 我确认这是本人或已获明确授权的声音样本，仅用于本项目配音。</label>
+      <div class="vm-note">用电脑自带的麦克风直接录，录完会自动识别你念的词，克隆时不用另外填。念得自然一点、别有环境噪音；第一次用会弹系统麦克风授权。</div>
+    </div>
+    <div class="vm-dft"><button class="u-btn" data-close="vmRecordModal">取消</button>
+      <button class="u-btn gold" id="vmRecordGo" disabled>开始录制</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(s,r){return (r||document).querySelector(s)};
+  var $$=function(s,r){return [].slice.call((r||document).querySelectorAll(s))};
+  function A(p,d){return window.api(p,d)}
+  function say(m,bad){if(window.say)window.say(m,bad)}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function confirm(o){if(window.confirmAction)window.confirmAction(o);
+    else if(window.confirm((o.title||'确认')+'：'+String(o.html||'').replace(/<[^>]+>/g,''))){if(o.onOk)o.onOk()}}
+  function openM(id){var m=document.getElementById(id);if(m){m.classList.add('open');document.body.classList.add('modal-open')}}
+  function closeM(id){var m=document.getElementById(id);if(m){m.classList.remove('open');document.body.classList.remove('modal-open')}}
+
+  var CAT=null,V=null,ACTIVE='',SELVOICE='',SEGS=[],POLL=null,AUDIO=null,EDITID='';
+  /* 情绪 / 语速 / 音高 / 音量：选了就记住，跨页面、跨重启都还在 */
+  var OPTS={emotion:'',speed:'',pitch:'',volume:''};
+  /* 哪些模型卡是展开的。默认全部收起，只显示名称+大小；点卡片切换。
+     安装中/安装失败/待放权重的卡片强制展开，否则用户看不到进度和错误。 */
+  var OPENED={};
+  var STATE={ready:['已就绪','green'],installing:['安装中','blue'],error:['安装失败','gray'],
+             need_weights:['待放权重','gold'],need_config:['待配置','gold'],none:['未安装','gray']};
+  var PARAM={speed:{label:'语速',min:50,max:150,def:100,fmt:function(v){return (v/100).toFixed(1)+'×'}},
+             volume:{label:'音量',min:0,max:100,def:70,fmt:function(v){return Math.round(v/100*6-3)+' dB'}},
+             pitch:{label:'音调',min:0,max:100,def:50,fmt:function(v){return Math.round(v/100*10-5)}},
+             emotion:{label:'情绪强度',min:0,max:100,def:35,fmt:function(v){return v<30?'沉稳':v<70?'自然':'饱满'}},
+             pause:{label:'句间停顿',min:0,max:100,def:40,fmt:function(v){return Math.round(v*8)+' ms'}}};
+
+  /* 提示只留一条。以前这里是页面自己的绿色浮条（#vmHint），而底部还有一条 say()：
+     同一个动作两处同时弹，字几乎一样，屏幕上就是双提示。
+     现在 hint() 只是 say() 的别名，kind='bad' 让它染红，位置仍在底部那一条。 */
+  function hint(msg,kind){say(msg,kind==='bad')}
+  function audioPlay(url,note){
+    if(!AUDIO)return;
+    try{AUDIO.pause();AUDIO.src=url+'?t='+Date.now();
+      var p=AUDIO.play();if(p&&p.then)p.then(function(){if(note)say(note)}).catch(function(){say('音频已生成，但播放被拦截：'+url)});
+    }catch(e){say('播放失败：'+e.message)}
+  }
+  function curRate(){
+    var r=$('[data-cap="speed"] input');
+    return r?Math.round(+r.value/100*175):175;
+  }
+  function sampleText(){
+    var t=(($('#vmScript')||{}).value||'').trim();
+    var first=t.split(/[。！？；!?;\n]/)[0].trim();
+    return first||'在影创的镜头下，每一个瞬间都值得被定格，让创意，成为影像。';
+  }
+
+  /* ── 数据加载 ── */
+  function boot(){
+    AUDIO=$('#vmAudio');
+    try{Object.keys(OPTS).forEach(function(k){
+      var v=localStorage.getItem('riffcut.vm.opt.'+k);if(v!==null)OPTS[k]=v;
+    })}catch(e){}
+    loadAll();
+    /* 不在进页面时自动读稿：那要读一遍会话和方案文件，白占启动 CPU / 内存，
+       而且用户不一定马上要配音。要稿子点「载入方案配音稿」，一次就好（用户 2026-11-11 要求）。 */
+  }
+  function loadAll(){
+    return A('/api/voicemodels',{action:'list'}).then(function(c){
+      CAT=c;ACTIVE=c.active;renderModels(c);renderMirrorBar(c);return loadVoices();
+    }).catch(function(e){hint('读取模型失败：'+e.message,'bad')});
+  }
+  function loadVoices(){
+    return A('/api/voicemodels',{action:'voices'}).then(function(v){
+      V=v;
+      var list=(v.voices||[]).filter(function(x){return x.usable!==false&&x.kind!=='我的音色'});
+      /* 选中过的音色按模型记住：下次打开面板还是它，不会莫名跳回第一个。
+         第一优先是设置里记的（重启不丢），其次才是浏览器里那份旧快照。 */
+      var keep=SELVOICE&&(v.voices||[]).some(function(x){return x.name===SELVOICE});
+      if(!keep){
+        var cfgSel=((v.picks||{}).sel)||'';
+        var last='';try{last=localStorage.getItem(selKey())||''}catch(e){}
+        /* 第一次用：默认选「最适合出片」的那个（电台叙述），不是列表第一个「灵小安」 */
+        var def=byRank(list.filter(function(x){return x.featured}))[0]||list[0]||v.voices[0]||{};
+        var want=(cfgSel||last);
+        SELVOICE=(want&&(v.voices||[]).some(function(x){return x.name===want}))?want:(def.name||'');
+      }
+      /* 先定下「选中的是哪个」再排右侧：否则第一次垫默认锁定时，
+         会把空的 sel 一起写进设置。 */
+      loadPins(v);
+      renderRight(v);renderSegHead(v);
+      /* 弹窗开着的时候删掉自己的音色，列表必须当场重画 ——
+         只重画右栏的话，弹窗里那个名字会一直挂着，得关了再开才消失。 */
+      refreshVoiceLists();
+    }).catch(function(e){hint('读取音色失败：'+e.message,'bad')});
+  }
+
+  /* ── 右侧展示框：当前选中 1 个 + 自己摆上去的（最多 9 个）
+     一屏露出 6 行，超过就在框里滚；总数上限 10 行。
+     摆位和锁都按模型分开记在设置里，换模型不会串，重启也不会丢。 */
+  var PINNED=[];      /* 右侧摆着的音色名（不含当前选中） */
+  var LOCKED=[];      /* 其中上了锁的：不会被换掉，也不能直接移除 */
+  var HINT_T=null;    /* 提示浮层的自动收起定时器 */
+  var PIN_MAX=9;      /* 右侧能摆几个（不含当前选中） */
+  var LIST_MAX=10;    /* 右侧一列最多摆几行：1 + 9 */
+  var SHOW_ROWS=6;    /* 一屏露 6 行，其余内部滚动 */
+  function selKey(){return 'riffcut.vm.sel.'+((V&&V.model&&V.model.id)||ACTIVE||'')}
+  function pinKey(){return 'riffcut.vm.pin.'+((V&&V.model&&V.model.id)||ACTIVE||'')}
+  function lockKey(){return 'riffcut.vm.lock.'+((V&&V.model&&V.model.id)||ACTIVE||'')}
+  function curMid(){return (V&&V.model&&V.model.id)||ACTIVE||''}
+  /* 选中音色 / 右侧摆位 / 上锁 → 写进设置（服务端）。只写 localStorage 没用：
+     App 用 file:// 载页面，每次启动 WebKit 都换一份存储，重启就回到默认了。 */
+  function syncPicks(){
+    var mid=curMid();if(!mid)return;
+    var body={action:'save_picks',id:mid,
+      pinned:PINNED.slice(0,PIN_MAX),
+      locked:LOCKED.filter(function(n){return PINNED.indexOf(n)>=0})};
+    /* 选中的音色没定下来时不要传空串，免得把已经记住的那个冲掉 */
+    if(SELVOICE)body.sel=SELVOICE;
+    A('/api/voicemodels',body).catch(function(){});
+  }
+  function savePins(){
+    try{localStorage.setItem(pinKey(),JSON.stringify(PINNED.slice(0,PIN_MAX)));
+        localStorage.setItem(lockKey(),JSON.stringify(LOCKED))}catch(e){}
+    syncPicks();
+  }
+  /* 真的换主音色（确认框点「确定换用」之后才走到这） */
+  function applyVoice(name){
+    if(!name||name===SELVOICE)return;
+    var prev=SELVOICE;
+    SELVOICE=name;
+    try{localStorage.setItem(selKey(),SELVOICE)}catch(e1){}
+    /* 换下去的那个不要凭空消失：它还留在右侧，只是从第一格往后挪 */
+    if(prev&&PINNED.indexOf(prev)<0&&PINNED.length<PIN_MAX){
+      PINNED.push(prev);
+      if(LOCKED.indexOf(prev)<0)LOCKED.push(prev);
+    }
+    savePins();
+    /* 从弹窗里选的：关掉弹窗，回到右栏 —— 选中的那个会被顶到第一位 */
+    var md=$('#vmVoiceModal');
+    if(md&&md.classList.contains('open'))closeM('vmVoiceModal');
+    renderRight(V);renderSegHead(V);
+    /* 「主音色」就是出片配音用谁：同步到出片那套设置，成片才真的按它出声。
+       首页通话是 call_voice_* 另一套，这里不碰（用户 2026-11-11 要求分开）。 */
+    if(curMid())A('/api/audio',{action:'save_voice',source:'choose',
+      model_id:curMid(),voice_id:name}).catch(function(){});
+    hint('主音色已换成「'+name+'」','ok');
+  }
+  function refreshVoiceLists(){
+    renderRight(V);
+    var md=$('#vmVoiceModal');
+    if($('#vmVoiceAll')&&md&&md.classList.contains('open'))
+      renderAllVoices(($('#vmVoiceQ')||{}).value||'');
+  }
+  /* 左锁：锁定 / 解锁。点锁 = 加到右侧并锁住；解锁只解除保护，不移除。 */
+  function toggleLock(name){
+    if(!name)return;
+    var li=LOCKED.indexOf(name);
+    if(li>=0){
+      LOCKED.splice(li,1);savePins();refreshVoiceLists();
+      hint('已解锁「'+name+'」：现在还摆在右侧，点右边的 − 才能拿掉','ok');
+      return;
+    }
+    if(name===SELVOICE){hint('「'+name+'」是当前主音色，已经在第一格了，不用再锁','ok');return}
+    if(PINNED.indexOf(name)<0){
+      if(PINNED.length>=PIN_MAX){
+        hint('右侧最多摆 '+PIN_MAX+' 个（加当前主音色一共 '+LIST_MAX+' 行）。先拿掉一个再锁','bad');return;
+      }
+      PINNED.push(name);
+    }
+    LOCKED.push(name);savePins();refreshVoiceLists();
+    hint('已锁定「'+name+'」：不会被换掉，拿掉之前要先解锁','ok');
+  }
+  /* 右 +/−：加进右侧展示框 / 拿掉。锁住的不许直接拿。 */
+  function toggleAdd(name){
+    if(!name)return;
+    var i=PINNED.indexOf(name);
+    if(i>=0){
+      if(LOCKED.indexOf(name)>=0){
+        hint('「'+name+'」已锁定，先把左边的锁点开再拿掉','bad');return;
+      }
+      PINNED.splice(i,1);savePins();refreshVoiceLists();
+      hint('已把「'+name+'」从右侧拿掉','ok');
+      return;
+    }
+    if(name===SELVOICE){hint('「'+name+'」已经是当前主音色，就在第一格','ok');return}
+    if(PINNED.length>=PIN_MAX){
+      hint('右侧最多摆 '+PIN_MAX+' 个（加当前主音色一共 '+LIST_MAX+' 行）。先拿掉一个再添加','bad');return;
+    }
+    PINNED.push(name);savePins();refreshVoiceLists();
+    hint('已把「'+name+'」加到右侧（没上锁，随时可以拿掉）','ok');
+  }
+  function loadPins(v){
+    /* ① 设置里记着的（用户自己定过，重启不丢）→ ② 服务端给的出厂默认
+       （灵小柔 + 4 个锁好）→ ③ 浏览器旧快照 → ④ 精选兜底 */
+    var pk=(v&&v.picks)||{};
+    if(pk.saved||((pk.pinned||[]).length)){
+      PINNED=(pk.pinned||[]).slice(0,PIN_MAX);
+      LOCKED=(pk.locked||[]).filter(function(n){return PINNED.indexOf(n)>=0});
+      try{localStorage.setItem(pinKey(),JSON.stringify(PINNED));
+          localStorage.setItem(lockKey(),JSON.stringify(LOCKED))}catch(e){}
+      return;
+    }
+    var raw=null;try{raw=localStorage.getItem(pinKey())}catch(e){}
+    if(raw!==null){
+      try{PINNED=JSON.parse(raw)||[]}catch(e){PINNED=[]}
+      var rl=null;try{rl=localStorage.getItem(lockKey())}catch(e){}
+      try{LOCKED=rl?(JSON.parse(rl)||[]):PINNED.slice()}catch(e){LOCKED=PINNED.slice()}
+      return;
+    }
+    /* 第一次用这个模型：垫上「更适合出片」的那几个，省得展示框空着不好看。
+       模型标了 featured 的就是这类，只用来定默认值，界面上不出现「精选」标签。 */
+    var all=(v.voices||[]).filter(function(x){return x.usable!==false&&x.kind!=='我的音色'});
+    var feat=byRank(all.filter(function(x){return x.featured}));
+    PINNED=(feat.length?feat:all).slice(0,PIN_MAX).map(function(x){return x.name});
+    LOCKED=PINNED.slice();
+    savePins();
+  }
+  /* 有 rank 按 rank，没有就保持原顺序 */
+  function byRank(arr){
+    return arr.slice().sort(function(a,b){return (a.rank||99)-(b.rank||99)});
+  }
+
+  /* ── 左栏：模型目录 ── */
+  function renderModels(c){
+    var box=$('#vmList');if(!box)return;
+    $('#vmCount').textContent=c.models.length+' 个';
+    if(!c.models.length){box.innerHTML='<div class="vm-empty">还没有语音模型，点「添加模型」建一个。</div>';return}
+    box.innerHTML=c.models.map(function(m){
+      var st=STATE[m.state]||STATE.none, caps=(m.caps||[]).map(function(k){
+        return '<span class="vm-cap'+(k==='clone'?' key':'')+'">'+esc((m.caps_labels||{})[k]||k)+'</span>'}).join('');
+      var bar='';
+      if(m.state==='installing')bar='<div class="vm-mbar"><div class="tx">'+esc(m.step||'安装中…')+'</div>'+
+        '<div class="u-progress"><i style="width:'+(m.progress||5)+'%"></i></div></div>';
+      else if(m.state==='error')bar='<div class="vm-mbar"><div class="tx" style="color:#B45B5B">'+esc(m.error||'安装失败')+'</div></div>';
+      else if(m.state==='need_weights')bar='<div class="vm-mbar"><div class="tx">'+esc(m.step||'待放权重')+'</div></div>';
+      var acts=[];
+      if(m.active)acts.push('<span class="u-tag gold">● 当前</span>');
+      else acts.push('<button class="u-btn sm" data-act="active">设为当前</button>');
+      if(m.need_install){
+        if(m.state==='installing')acts.push('<button class="u-btn sm" disabled>安装中…</button>');
+        else if(m.state==='ready'||m.state==='need_weights'){
+          acts.push('<button class="u-btn sm" data-act="install">重新安装</button>');
+          acts.push('<button class="u-btn sm" data-act="uninstall">卸载</button>');
+        }else acts.push('<button class="u-btn sm" data-act="install">安装</button>');
+      }
+      acts.push('<button class="u-btn sm" data-act="edit">编辑</button>');
+      if(!m.builtin)acts.push('<button class="u-btn sm" data-act="del">删除</button>');
+      /* 默认只显示「图标 + 名称 + 状态」和「类别 + 大小」两行，
+         详细能力、描述、按钮都收进 .vm-mdetail，点卡片展开才显示。 */
+      var opened=(OPENED[m.id]||m.state==='installing'||m.state==='error'||
+                  m.state==='need_weights')?' open':'';
+      return '<div class="vm-mcard'+(m.active?' on':'')+opened+'" data-id="'+esc(m.id)+'">'+
+        '<div class="r1"><svg class="ic" style="width:14px;height:14px"><use href="#i-'+
+          (m.engine==='cloud'?'cloud':m.category==='语音识别'?'text':'mic')+'"/></svg>'+
+        '<span class="nm">'+esc(m.name)+'</span><span class="u-tag '+st[1]+'">'+st[0]+'</span>'+
+        '<svg class="ic chev"><use href="#i-chev"/></svg></div>'+
+        '<div class="r2"><span>'+esc(m.category)+'</span><span>'+esc(m.size)+'</span>'+
+          (m.used_mb?'<span>已用 '+m.used_mb+' MB</span>':'')+'</div>'+
+        '<div class="vm-mdetail">'+
+          '<div class="r3">'+esc(m.desc)+'</div><div class="vm-caps">'+caps+'</div>'+bar+
+          '<div class="vm-mact">'+acts.join('')+'</div></div></div>';
+    }).join('');
+  }
+  function renderMirrorBar(c){
+    var pip=c.pip_mirrors.filter(function(x){return x.id===c.pip_mirror})[0];
+    var w=c.weight_sources.filter(function(x){return x.id===c.weight_source})[0];
+    var bar=$('#vmMirrorBar');
+    bar.innerHTML='<svg class="ic"><use href="#i-shield"/></svg><span>国内镜像：'+
+      esc(pip?pip.name:(c.pip_mirror==='custom'?'自定义':'—'))+' / '+esc(w?w.name:'—')+
+      '</span><button data-act="mirror">修改</button>';
+    $('#vmFoot').textContent='目录：'+c.dir+' · 所有下载强制国内镜像，装完离线可用；内置系统音色不可删除。';
+  }
+  function startPoll(mid){
+    stopPoll();var n=0,before={};
+    if(mid)before[mid]=1;
+    (CAT.models||[]).forEach(function(m){if(m.state==='installing')before[m.id]=1});
+    POLL=setInterval(function(){
+      n++;
+      A('/api/voicemodels',{action:'status'}).then(function(c){
+        CAT=c;renderModels(c);renderMirrorBar(c);
+        var busy=c.models.some(function(m){return m.state==='installing'});
+        c.models.forEach(function(m){
+          if(before[m.id]&&m.state==='ready'&&window.notice)window.notice('✓ '+m.name+' 安装完成',true);
+          if(before[m.id]&&m.state==='error'&&window.notice)window.notice('✗ '+m.name+' 安装失败：'+(m.error||''),false);
+          if(before[m.id]&&m.state!=='installing')delete before[m.id];
+        });
+        if(!busy){stopPoll();loadVoices()}
+      }).catch(function(){});
+      if(n>500)stopPoll();
+    },1200);
+  }
+  function stopPoll(){if(POLL){clearInterval(POLL);POLL=null}}
+
+  /* ── 右栏：能力驱动 ── */
+  /* 一行音色：主列表和「全部音色」弹窗共用同一套渲染，选中态只认 SELVOICE。
+     两个按钮分工不同，别混：
+       左锁 = 锁住 / 解锁（锁住的不会被换掉、也不能移除）
+       右 +/- = 添加到右侧展示框 / 从右侧拿掉（不锁的话随时可拿） */
+  function voiceRow(x,compact){
+    var mine=x.kind==='我的音色', bad=x.usable===false;
+    var added=PINNED.indexOf(x.name)>=0;
+    var locked=LOCKED.indexOf(x.name)>=0;
+    var sub=[x.lang||'',(x.gender?x.gender+'声':''),x.kind].filter(Boolean).join(' · ');
+    /* 网格里格子只有两百多像素，副标题去掉语言（中文音色是绝大多数），
+       否则「中文 · 女声 · 预设置音色」一定被省略号吃掉后半段，等于没写 */
+    if(compact)sub=[(x.gender?x.gender+'声':''),x.kind].filter(Boolean).join(' · ');
+    if(mine)sub='我的音色 · '+(x.playable?'可克隆说话':'样本文件已丢失');
+    if(bad)sub+=' · 读不出声';
+    var isSel=(x.name===SELVOICE);
+    return '<div class="vm-voice'+(isSel?' on':'')+(bad?' dead':'')+'" data-v="'+esc(x.name)+'">'+
+      '<button class="lockbtn'+(locked||isSel?' on':'')+'" data-lock="'+esc(x.name)+'"'+
+        (isSel?' disabled':'')+' title="'+
+        (isSel?'当前主音色固定在第一格，不用锁'
+              :locked?'已锁定：不会被换掉。点一下解锁，解锁后就能从右侧拿掉'
+                     :'锁定它（加到右侧并锁住，最多 '+PIN_MAX+' 个）')+
+        '" aria-label="'+((locked||isSel)?'已锁定':'锁定')+'"><svg class="ic"><use href="#i-lock"/></svg></button>'+
+      '<div class="tx"><b>'+esc(x.label)+'</b><span>'+esc(sub)+'</span></div>'+
+      /* 当前主音色固定在第一格，不给 +/−，免得点出一句「它已经在了」 */
+      (isSel?'':'<button class="vm-mini add'+(added?' on':'')+'" data-add="'+esc(x.name)+'" title="'+
+        (added?(locked?'已锁在右侧，先解锁才能拿掉':'已经摆在右侧，点一下拿掉')
+              :'添加到右侧展示框（不锁也能随时拿掉）')+'" aria-label="'+(added?'拿掉':'添加')+'">'+
+        (added?'−':'+')+'</button>')+
+      (bad?'':'<button class="vm-mini" data-play="'+esc(x.name)+'" title="试听"><svg class="ic"><use href="#i-play"/></svg></button>')+
+      (mine?'<button class="vm-mini del" data-vdel="'+esc(x.name)+'" title="删除这个音色（连同样本文件）">×</button>':'')+
+      '</div>';
+  }
+  /* 弹窗里的全量音色：一次列完，带搜索。选中项照样排第一。 */
+  function renderAllVoices(q){
+    var box=$('#vmVoiceAll');if(!box||!V)return;
+    var all=(V.voices||[]).filter(function(x){return x.usable!==false});
+    q=(q||'').trim().toLowerCase();
+    var list=q?all.filter(function(x){
+      return (x.name+' '+(x.label||'')+' '+(x.gender||'')+' '+(x.lang||'')).toLowerCase().indexOf(q)>=0;
+    }):all.slice();
+    var total=$('#vmVoiceTotal');
+    if(total)total.textContent=all.length+' 个'+(q?('，匹配 '+list.length):'');
+    if(!list.length){box.innerHTML='<div class="vm-hint">没有匹配的音色，换个词试试（比如「灵楷」「女生」「讲故事」）。</div>';return}
+    /* 自己录的音色排最前（用户 2026-11-11：录出来的必须摆在列表头一个），
+       组内按录制时间倒序，刚录的排最前面；当前主音色没落在这一组时，紧跟其后。 */
+    var mine=list.filter(function(x){return x.kind==='我的音色'});
+    var rest=list.filter(function(x){return x.kind!=='我的音色'});
+    if(mine.length>1)mine.sort(function(a,b){
+      return String(b.created||'').localeCompare(String(a.created||''))});
+    var sel=rest.filter(function(x){return x.name===SELVOICE})[0];
+    if(sel)rest=[sel].concat(rest.filter(function(x){return x!==sel}));
+    list=mine.concat(rest);
+    box.innerHTML=list.map(function(x){return voiceRow(x,true)}).join('');
+  }
+  function renderRight(v){
+    var box=$('#vmRight');if(!box)return;
+    var m=v.model,caps=m.caps||[],pc=m.param_caps||[];
+    /* 这里以前还挂一张「当前模型」卡片，跟左栏的模型卡一模一样 ——
+       同一段介绍在屏幕上出现两次，白占一屏高度。删掉，信息只留在左栏。 */
+    var h='';
+
+    h+='<div class="vm-sec"><h4>音色管理 <span class="u-tag">'+v.count+' 个</span>'+
+       (m.engine==='system'
+         ? '<button class="vm-mini rescan" data-rescan="1" title="重新检测这台 Mac 的音色">'+
+           '<svg class="ic"><use href="#i-refresh"/></svg></button>'
+         : '')+'</h4>';
+    /* ★ is_tts 在后端是 v.model.is_tts，不是顶层 v.is_tts。
+       以前写 v.is_tts → 永远 undefined → 每个模型都被判成「不提供音色」，
+       哪怕 Ming 明明返回了 10 个音色、已就绪，右边也只显示这句红字。 */
+    if(!m.is_tts){
+      h+='<div class="vm-alert">这个模型不提供配音音色。它的能力是：'+
+         caps.map(function(k){return esc((m.caps_labels||{})[k]||k)}).join('、')+
+         '。要做配音请切换到系统音色或声音克隆模型。</div>';
+    }else if(!v.voices.length){
+      h+='<div class="vm-alert">该模型还没有可用音色。可在「编辑」里添加预设音色，或先安装并放好权重。</div>';
+    }else{
+      /* 读不出声的音色不在软件里显示：后端已过滤，这里再兜一层，
+         防止旧配置或异常返回把它们又摆出来，影响体验 */
+      var shown=(v.voices||[]).filter(function(x){return x.usable!==false});
+      /* 右侧一列：选中的排第一（高亮），往下是自己锁住的，最多摆 LIST_MAX 行。
+         一屏只露 6 行，多出来的在这个框里滚 —— 不占下面配音控制的位置。 */
+      var sel=shown.filter(function(x){return x.name===SELVOICE})[0];
+      var main=sel?[sel]:[];
+      PINNED.forEach(function(n){
+        var x=shown.filter(function(y){return y.name===n})[0];
+        if(x&&main.indexOf(x)<0&&main.length<LIST_MAX)main.push(x);
+      });
+      h+='<div class="vm-vlist">'+main.map(function(x){return voiceRow(x)}).join('')+'</div>';
+      if(shown.length>main.length){
+        h+='<button class="u-btn sm vm-allbtn" id="vmAllVoices">'+
+           '看全部 '+shown.length+' 个音色</button>';
+      }
+      /* 一句话说清规则，省得用户问「+ 和锁差在哪」 */
+      h+='<div class="vm-note">当前主音色 <b>1</b> 个 + 右侧最多 <b>'+PIN_MAX+
+         '</b> 个（一列 '+LIST_MAX+' 行、一屏露 '+SHOW_ROWS+' 行，多的在框里滚）。'+
+         '右边 <b>+</b> 是摆上去（随时能点 <b>−</b> 拿掉），左边<b>锁</b>是保护：'+
+         '锁住的不会被换掉，拿掉之前要先把锁点开。'+
+         (v.unusable_count?'<br>另有 '+v.unusable_count+' 个系统音色在这台 Mac 上读不出中文，已不在列表里显示。':'')+
+         '</div>';
+    }
+    h+='</div>';
+
+    h+='<div class="vm-actions">'+
+      '<button class="u-btn'+(v.can_clone?'':' off')+'" data-act="record"'+(v.can_clone?'':' data-off="1"')+'>'+
+        '<svg class="ic"><use href="#i-mic"/></svg>录制我的音色</button>'+
+      '<button class="u-btn'+(v.can_import?'':' off')+'" data-act="import"'+(v.can_import?'':' data-off="1"')+'>'+
+        '<svg class="ic"><use href="#i-upload"/></svg>导入音色样本</button></div>';
+    if(!v.can_clone)h+='<div class="vm-hint warn">'+esc(v.clone_hint)+'</div>';
+    else h+='<div class="vm-hint ok">当前模型支持声音克隆：录制或导入的样本只登记在这个模型名下，可随时试听（用这个音色念新内容）、删除。</div>';
+
+    h+='<div class="u-divider"></div><div class="vm-sec" style="margin-top:12px"><h4>配音控制 '+
+       '<span class="u-tag gray">只显示模型支持项</span></h4>';
+    var topt=v.tts_opts||{};
+    if(topt.emotion&&topt.emotion.length){
+      /* 能听懂情绪指令的模型（Ming 这类）：给按钮，不给滑杆 ——
+         情绪是离散的，「63% 的高兴」没有意义。选完立刻生效在下一段配音上。 */
+      [['emotion','情绪'],['speed','语速'],['pitch','音高'],['volume','音量']].forEach(function(g){
+        var arr=topt[g[0]];if(!arr||!arr.length)return;
+        h+='<div class="vm-opt" data-opt="'+g[0]+'"><div class="lab">'+g[1]+'</div><div class="chips">'+
+          arr.map(function(o){
+            return '<button type="button" class="vm-chip'+((OPTS[g[0]]||'')===o.value?' on':'')+
+              '" data-opt="'+g[0]+'" data-val="'+esc(o.value)+'">'+esc(o.label)+'</button>';
+          }).join('')+'</div></div>';
+      });
+      h+='<div class="vm-note">情绪、语速是<b>真交给模型</b>的指令，不是后期变速变调；'+
+         '想要叹气/笑声，直接在台词里写 [Sigh] / [Laughter]。</div>';
+    }else if(!pc.length)h+='<div class="vm-hint">该模型没有可调参数。</div>';
+    else pc.forEach(function(k){
+      var p=PARAM[k];if(!p)return;
+      h+='<div class="vm-slider" data-cap="'+k+'"><div class="lab">'+p.label+
+         ' <b>'+p.fmt(p.def)+'</b></div><input type="range" min="'+p.min+'" max="'+p.max+'" value="'+p.def+'"></div>';
+    });
+    h+='</div><div class="u-divider"></div><div class="vm-sec" style="margin-top:12px"><h4>字幕同步</h4>'+
+       '<div class="vm-note">句子级 / 分句级同步已启用；逐词时间戳与关键词高亮为后续规划。最终由 FFmpeg 统一混音输出。'+
+       '当前选中音色：'+esc(SELVOICE||'（未选择）')+'。</div></div>';
+    box.innerHTML=h;restoreParams();
+  }
+  function restoreParams(){
+    try{
+      $$('.vm-slider').forEach(function(s){
+        var k=s.dataset.cap,v=localStorage.getItem('riffcut.vm.param.'+k);
+        if(v!==null){var i=$('input',s);i.value=v;updLabel(s)}
+      });
+    }catch(e){}
+  }
+  function updLabel(s){
+    var p=PARAM[s.dataset.cap],i=$('input',s),b=$('.lab b',s);
+    if(p&&i&&b)b.textContent=p.fmt(+i.value);
+  }
+  /* 头部胶囊：文字长了就在胶囊里横向跑马灯，不挤标题和右边按钮。
+     量宽度要等一帧，否则拿到的是上一段文本的布局。 */
+  function segNow(txt){
+    var box=$('#vmSegModel'),inner=box&&box.querySelector('.vm-now-in');
+    if(!box||!inner)return;
+    box.setAttribute('data-t',txt);
+    if(inner.textContent!==txt)inner.textContent=txt;
+    box.classList.remove('run');inner.style.transform='';
+    requestAnimationFrame(function(){
+      var cs=window.getComputedStyle(box);
+      var vis=box.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0);
+      var over=Math.ceil(inner.getBoundingClientRect().width-vis);
+      if(over<6)return;
+      /* 变量挂在动画元素自己身上：keyframes 里的 var 才稳拿得到 */
+      inner.style.setProperty('--vmmq-x',(-over-2)+'px');
+      inner.style.setProperty('--vmmq-d',Math.max(7,Math.round(over/26))+'s');
+      box.classList.add('run');
+    });
+  }
+  /* 窗口变宽变窄都要重算：宽了就不用跑，窄了要重新量距离 */
+  var segRT=0;
+  window.addEventListener('resize',function(){
+    clearTimeout(segRT);
+    segRT=setTimeout(function(){
+      var b=$('#vmSegModel');if(b&&b.getAttribute('data-t'))segNow(b.getAttribute('data-t'));
+    },160);
+  });
+  function renderSegHead(v){
+    segNow('当前模型：'+v.model.name+' · 音色：'+(SELVOICE||'未选择'));
+  }
+  function showCloneHint(){
+    /* can_clone 在后端是 V.model.can_clone，不是顶层（同 is_tts 的坑） */
+    if(V&&V.model&&!V.model.can_clone)hint(V.clone_hint,'bad');
+    else hint('当前模型支持录制音色。','ok');
+  }
+
+  /* ── 中栏：脚本分段 ── */
+  function splitScript(){
+    var t=(($('#vmScript')||{}).value||'').trim();
+    if(!t){SEGS=[];renderSegs();return}
+    var parts=t.replace(/([。！？；!?;\n])/g,'$1\u0001').split('\u0001')
+      .map(function(x){return x.trim()}).filter(function(x){return x.length>0});
+    SEGS=parts.map(function(x,i){return {no:i+1,text:x,state:'待生成',url:'',dur:0}});
+    renderSegs();
+  }
+  function renderSegs(){
+    var box=$('#vmSlist');if(!box)return;
+    if(!SEGS.length){box.innerHTML='<div class="vm-empty"><svg class="ic" style="width:26px;height:26px"><use href="#i-text"/></svg>'+
+      '还没有分段。<br>在上面粘贴配音稿，或从首页方案「载入方案配音稿」，再点「重新分句」。</div>';return}
+    box.innerHTML=SEGS.map(function(s,i){
+      var tag=s.state==='已生成'?'<span class="u-tag green">'+s.dur.toFixed(1)+' s</span>':
+        s.state==='生成中'?'<span class="u-tag blue">生成中…</span>':
+        s.state==='失败'?'<span class="u-tag gray">失败</span>':'<span class="u-tag">待生成</span>';
+      return '<div class="vm-seg"><div class="top"><span class="no">'+('0'+s.no).slice(-2)+'</span>'+
+        '<div class="txt">'+esc(s.text)+'</div></div><div class="bot">'+
+        '<button class="u-btn sm" data-segplay="'+i+'"><svg class="ic"><use href="#i-play"/></svg>试听</button>'+
+        '<button class="u-btn sm" data-seggen="'+i+'">生成</button>'+
+        '<span class="vm-dur">'+(s.url?esc(s.mode||'已生成'):'用当前选中音色：'+esc(SELVOICE||'未选择'))+'</span>'+tag+'</div></div>';
+    }).join('');
+  }
+  function doSeg(i){
+    if(!SEGS[i])return;
+    SEGS[i].state='生成中';renderSegs();
+    return A('/api/voicemodels',{action:'tts',id:ACTIVE,voice:SELVOICE,
+      text:SEGS[i].text,rate:curRate(),
+      emotion:OPTS.emotion,speed:OPTS.speed,pitch:OPTS.pitch,volume:OPTS.volume}).then(function(r){
+      if(!r.ok){SEGS[i].state='失败';renderSegs();hint(r.error,'bad');return}
+      SEGS[i].state='已生成';SEGS[i].url=r.url;SEGS[i].dur=r.duration||0;SEGS[i].mode=r.mode||'';
+      /* 只出一条提示：以前这里 audioPlay 弹一次 say、又 hint 弹一次，同一个动作两条叠在一起。 */
+      renderSegs();audioPlay(r.url,'第 '+(i+1)+' 段配音已生成：'+(r.note||r.mode||'已生成'));
+    }).catch(function(e){SEGS[i].state='失败';renderSegs();hint(e.message,'bad')});
+  }
+  function genAll(){
+    if(!SEGS.length){hint('请先粘贴配音稿并点「重新分句」','bad');return}
+    var i=0;
+    function next(){
+      if(i>=SEGS.length){say('全部 '+SEGS.length+' 段配音已生成');return}
+      doSeg(i).then(function(){i++;next()});
+    }
+    next();
+  }
+  /* 「载入方案配音稿」的三级取法：
+     ① 首页刚出的方案（内存里就有，最快）
+     ② 磁盘上最近一份方案（换过页面 / 重启也能取）
+     ③ 最近一次 AI 回答里写过的文案（只在聊天里让 AI 写稿时兜底）
+     都没有才提示，提示会自己消失。 */
+  function fillFromPlan(auto){
+    var p=window.__veloraPlan||{};
+    var t=((p.voice||{}).text||'').trim();
+    if(!t){
+      /* AI 出方案时偶尔不写 voice 字段：把每个镜头的字幕按顺序拼起来，一样能念 */
+      var caps=[];
+      (p.shots||[]).forEach(function(sh){
+        var c=String((sh||{}).caption||'').trim();
+        if(c&&caps.indexOf(c)<0)caps.push(c);
+      });
+      t=caps.join('  ');
+    }
+    if(t){putScript(t,auto?'已从方案载入配音稿':'已载入方案配音稿',auto);return Promise.resolve(true)}
+    return A('/api/voicemodels',{action:'plan_script'}).then(function(r){
+      var text=String((r&&r.text)||'').trim();
+      if(!text){
+        if(!auto)hint('还没找到能念的文字：首页聊过一段文案就能取过来，也可以直接把稿子粘到上面的输入框。','bad');
+        return false;
+      }
+      putScript(text,'已载入配音稿：'+(r.source||'最近一份方案'),auto);
+      return true;
+    }).catch(function(e){
+      if(!auto)hint('读取配音稿失败：'+(e&&e.message||'本机服务没响应')+'。重开一次软件再试。','bad');
+      return false;
+    });
+  }
+  function putScript(t,msg,quiet){
+    var box=$('#vmScript');if(!box)return;
+    box.value=t;splitScript();syncScriptClear();
+    /* quiet：进页面 / 首页刚出完方案时自动带入，不用弹提示打断 */
+    if(!quiet)hint(msg+'（共 '+SEGS.length+' 段，点每段的播放可试听）','ok');
+  }
+  /* 清除按钮只在该有稿子的时候出现：空框上挂个「清除」等于让用户点了个白点 */
+  function syncScriptClear(){
+    var b=$('#vmScriptClear'),box=$('#vmScript');
+    if(b&&box)b.classList.toggle('on',!!String(box.value||'').trim());
+  }
+
+  /* ── 动作 ── */
+  function setActive(id){
+    A('/api/voicemodels',{action:'set_active',id:id}).then(function(r){
+      ACTIVE=id;SELVOICE='';hint('已切换到「'+r.name+'」，右侧音色已按这个模型的能力刷新','ok');
+      return loadAll();
+    }).catch(function(e){hint(e.message,'bad')});
+  }
+  function doInstall(m){
+    confirm({title:'安装语音模型',okText:'开始安装',
+      html:'即将安装 <b>'+esc(m.name)+'</b>（'+esc(m.size)+'）。<br>运行环境走<b>国内 PyPI 镜像</b>、权重走<b>魔搭 / HF-Mirror 国内源</b>，首次需联网下载，耗时取决于网速。确定继续吗？',
+      onOk:function(){
+        say('开始安装，正在走国内镜像下载…');
+        A('/api/voicemodels',{action:'install',id:m.id}).then(function(){
+          return A('/api/voicemodels',{action:'list'});
+        }).then(function(c){CAT=c;renderModels(c);startPoll(m.id)}).catch(function(e){hint(e.message,'bad')});
+      }});
+  }
+  function doUninstall(m){
+    confirm({title:'卸载语音模型',okText:'确认卸载',
+      html:'将删除 <b>'+esc(m.name)+'</b> 的权重文件（共享运行环境保留，可随时重装）。',
+      onOk:function(){A('/api/voicemodels',{action:'uninstall',id:m.id}).then(function(){
+        say('已卸载权重');return loadAll()}).catch(function(e){hint(e.message,'bad')})}});
+  }
+  function doDelete(m){
+    confirm({title:'删除语音模型',okText:'确认删除',phrase:'删除模型',
+      html:'将删除 <b>'+esc(m.name)+'</b> 及其权重目录，不可恢复。<br>请输入「<b>删除模型</b>」，或点输入框旁的粘贴按钮自动填入。',
+      onOk:function(){A('/api/voicemodels',{action:'delete',id:m.id}).then(function(){
+        say('已删除模型');SELVOICE='';return loadAll()}).catch(function(e){hint(e.message,'bad')})}});
+  }
+  function doPreview(name){
+    if(!V)return;
+    /* can_preview 在后端是 V.model.can_preview，不是顶层。
+       以前读 V.can_preview 永远 undefined → 点试听一律「当前模型不支持」，
+       Ming 明明 caps 里有 preview 也放不出来。 */
+    if(!V||!V.model||!V.model.can_preview){hint('当前模型不支持试听音色','bad');return}
+    /* 同一个动作只留一条提示：以前「合成中」是页面浮条、「已生成」又叠一条浮条 + 底部 say，
+       用户看到的就是两条字几乎一样的东西叠在屏幕下方。现在全程走原来那条底部提示。 */
+    say('正在用「'+V.model.name+'」合成试听…');
+    A('/api/voicemodels',{action:'preview',id:ACTIVE,voice:name,text:sampleText(),rate:curRate(),
+      emotion:OPTS.emotion,speed:OPTS.speed,pitch:OPTS.pitch,volume:OPTS.volume}).then(function(r){
+      if(!r.ok){hint(r.error,'bad');return}
+      audioPlay(r.url,(r.mode?r.mode+'：':'')+(r.note||'试听已生成'));
+    }).catch(function(e){hint(e.message,'bad')});
+  }
+  function doImport(){
+    if(!V||!V.model||!V.model.can_import){hint('当前模型不支持导入音色样本','bad');return}
+    hint('请在弹出的窗口里选择音色样本…');
+    A('/api/voicemodels',{action:'import',id:ACTIVE}).then(function(r){
+      if(!r.ok){hint(r.error,'bad');return}
+      hint(r.note,'ok');return loadVoices();
+    }).catch(function(e){hint(e.message,'bad')});
+  }
+  function doRecordGo(){
+    var name=($('#vmRName').value||'').trim()||('我的音色-'+new Date().toISOString().slice(0,10));
+    var sec=+$('#vmRSec').value||6;
+    if($('#vmRAuth')&&!$('#vmRAuth').checked){
+      hint('请先勾选「这是本人或已获授权的声音」再录','bad');return;
+    }
+    if(!window.riffcutRecGuide){hint('这台机器打不开麦克风，可改用「导入音色样本」','bad');return}
+    closeM('vmRecordModal');
+    /* 不在页面上弹进度条：录音卡片自己带进度和倒数，这里只管保存 */
+    window.riffcutRecGuide({seconds:sec,title:'录一段参考音频',
+      text:window.RiffCut_SAMPLE_TEXT||'在影创的镜头下，每一个瞬间都值得被定格，让创意，成为影像。'
+    }).then(function(r){
+      if(!r)return;                                  /* 自己取消的，不提示 */
+      return A('/api/voicemodels',{action:'record_audio',id:ACTIVE,audio:r.b64,name:name})
+        .then(function(res){
+          r.close();
+          if(!res.ok){hint((res.error||'录制失败')+' 可改用「导入音色样本」','bad');return}
+          hint(res.note,'ok');return loadVoices();
+        }).catch(function(e){
+          r.close();hint((e.message||'保存失败')+' · 也可以改用「导入音色样本」','bad');
+        });
+    }).catch(function(e){
+      hint((e.message||'录制失败')+' · 也可以改用「导入音色样本」','bad');
+    });
+  }
+
+  /* ── 弹窗：镜像 ── */
+  function adoptFolder(){
+    /* 用户自己下好的模型放哪都行：选一个文件夹，软件识别后直接接进来（软链，不复制） */
+    hint('请选择下载好的模型文件夹（可以选上一级，会自动往里找）…','ok');
+    A('/api/voicemodels',{action:'adopt'}).then(function(r){
+      if(!r||r.cancelled){hint('已取消接入','');return}
+      hint('已接入「'+r.name+'」，正在刷新模型列表…','ok');
+      return loadAll().then(function(){
+        hint('「'+r.name+'」已接入并设为可选模型；点「设为当前」就能用它配音。','ok');
+      });
+    }).catch(function(e){hint('接入失败：'+e.message,'bad')});
+  }
+
+  function openMirror(){
+    if(!CAT)return;
+    var ps=$('#vmPipSel');
+    ps.innerHTML=CAT.pip_mirrors.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>'}).join('')+
+      '<option value="custom">自定义地址</option>';
+    ps.value=CAT.pip_mirror||'tsinghua';
+    $('#vmPipCustom').value=CAT.pip_custom||'';
+    var ws=$('#vmWeightSel');
+    ws.innerHTML=CAT.weight_sources.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>'}).join('');
+    ws.value=CAT.weight_source||'modelscope';
+    syncMirror();openM('vmMirrorModal');
+  }
+  function syncMirror(){
+    var ps=$('#vmPipSel'),ws=$('#vmWeightSel');
+    $('#vmPipCustomWrap').style.display=ps.value==='custom'?'':'none';
+    var w=CAT.weight_sources.filter(function(x){return x.id===ws.value})[0];
+    $('#vmWeightNote').textContent=w?w.note:'';
+  }
+  function saveMirror(){
+    A('/api/voicemodels',{action:'mirror_save',pip_mirror:$('#vmPipSel').value,
+      weight_source:$('#vmWeightSel').value,pip_custom:$('#vmPipCustom').value}).then(function(r){
+      closeM('vmMirrorModal');say('镜像已保存：'+r.pip_url);return loadAll();
+    }).catch(function(e){hint(e.message,'bad')});
+  }
+
+  /* ── 弹窗：添加/编辑模型 ── */
+  function setSel(sel,val){
+    var has=$$('option',sel).some(function(o){return o.value===val});
+    if(!has&&val){var o=document.createElement('option');o.value=val;o.textContent=val;sel.appendChild(o)}
+    sel.value=val||'';
+  }
+  function openForm(m){
+    EDITID=m?m.id:'';
+    $('#vmFormTitle').textContent=m?'编辑语音模型':'添加语音模型';
+    $('#vmFName').value=m?m.name:'';$('#vmFId').value=m?m.id:'';
+    $('#vmFId').disabled=!!m;
+    setSel($('#vmFCat'),m?m.category:'自定义');setSel($('#vmFEngine'),m?m.engine:'custom');
+    $('#vmFSize').value=m?m.size:'';$('#vmFLicense').value=m?m.license:'';
+    $('#vmFDesc').value=m?m.desc:'';$('#vmFNeed').checked=m?!!m.need_install:true;
+    $('#vmFPip').value=m?(m.pip||[]).join(' '):'';$('#vmFDir').value=m?m.weight_dir:'';
+    $('#vmFRepo').value=m?(m.repo||m.weight_url||''):'';$('#vmFSource').value=m?(m.weight_source||''):'';
+    $('#vmFUrl').value=m?(m.url||''):'';$('#vmFKey').value=m?(m.key||''):'';
+    var vs=m&&Array.isArray(m.voices)?m.voices.map(function(x){return x.name+'|'+x.label+'|'+x.lang}).join('\n'):'';
+    $('#vmFVoices').value=vs;
+    $('#vmFCaps').innerHTML=Object.keys(CAT.cap_labels).map(function(k){
+      var on=m&&(m.caps||[]).indexOf(k)>=0;
+      return '<label><input type="checkbox" value="'+esc(k)+'"'+(on?' checked':'')+'>'+esc(CAT.cap_labels[k])+'</label>';
+    }).join('');
+    syncCaps();openM('vmFormModal');
+  }
+  function syncCaps(){
+    $$('#vmFCaps input').forEach(function(i){
+      if(i.parentNode)i.parentNode.classList.toggle('on',i.checked);
+    });
+  }
+  function saveForm(){
+    var d={id:$('#vmFId').value.trim(),name:$('#vmFName').value.trim(),
+      category:$('#vmFCat').value,engine:$('#vmFEngine').value,size:$('#vmFSize').value.trim(),
+      license:$('#vmFLicense').value.trim(),desc:$('#vmFDesc').value.trim(),
+      need_install:$('#vmFNeed').checked,pip:$('#vmFPip').value.trim(),
+      weight_dir:$('#vmFDir').value.trim(),weight_source:$('#vmFSource').value,
+      url:$('#vmFUrl').value.trim(),key:$('#vmFKey').value.trim(),
+      voices_text:$('#vmFVoices').value,
+      caps:$$('#vmFCaps input:checked').map(function(x){return x.value})};
+    var repo=$('#vmFRepo').value.trim();
+    if(/^https?:\/\//i.test(repo)){d.weight_url=repo;d.repo='';if(!d.weight_source)d.weight_source='url'}
+    else d.repo=repo;
+    if(!d.name){hint('请填模型名称','bad');return}
+    /* 标识 ID 不用人操心：留空就由服务端按名称/时间生成，少一个必填项就少一次卡住 */
+    d.action='save';
+    A('/api/voicemodels',d).then(function(){
+      closeM('vmFormModal');say('已保存模型');return loadAll();
+    }).catch(function(e){hint(e.message,'bad')});
+  }
+
+  /* ── 事件委托 ── */
+  document.addEventListener('click',function(e){
+    var c=e.target.closest('[data-close]');
+    if(c){closeM(c.getAttribute('data-close'));return}
+    var t=e.target;
+    /* 用 closest('button') 而不是 e.target.id：点到按钮里的 svg 图标照样生效 */
+    var btn=t.closest?t.closest('button'):null;
+    if(btn&&/^vm(MirrorBtn|AddBtn|AddBtn2|RevealBtn|AdoptBtn|GenAllBtn|FromPlan|Resplit|ScriptClear|MirrorSave|FormSave|RecordGo)$/.test(btn.id||'')){
+      var id=btn.id;
+      if(id==='vmMirrorBtn')openMirror();
+      else if(id==='vmAddBtn'||id==='vmAddBtn2')openForm(null);
+      else if(id==='vmAdoptBtn')adoptFolder();
+      else if(id==='vmRevealBtn')A('/api/voicemodels',{action:'reveal'}).then(function(){say('已在 Finder 打开模型目录')}).catch(function(x){hint(x.message,'bad')});
+      else if(id==='vmGenAllBtn')genAll();
+      else if(id==='vmFromPlan')fillFromPlan(false);
+      else if(id==='vmResplit')splitScript();
+      else if(id==='vmScriptClear'){
+        /* 清掉稿子和已有分段，输入框退回空态，随时能载入新的一份 */
+        var sb=$('#vmScript');
+        if(sb){sb.value='';splitScript();syncScriptClear();sb.focus()}
+        hint('配音稿已清空。可以点「载入方案配音稿」，或直接粘贴新稿。','ok');
+      }
+      else if(id==='vmMirrorSave')saveMirror();
+      else if(id==='vmFormSave')saveForm();
+      else if(id==='vmRecordGo'&&!btn.disabled)doRecordGo();
+      return;
+    }
+    var chip=t.closest?t.closest('.vm-chip'):null;
+    if(chip){
+      /* 情绪这类离散选项：点一下就换，立刻记住，下一段配音按新选项念 */
+      var ok=chip.getAttribute('data-opt'),ov=chip.getAttribute('data-val')||'';
+      OPTS[ok]=ov;
+      try{localStorage.setItem('riffcut.vm.opt.'+ok,ov)}catch(e0){}
+      $$('.vm-chip[data-opt="'+ok+'"]').forEach(function(x){x.classList.toggle('on',x===chip)});
+      hint('已设置：'+({emotion:'情绪',speed:'语速',pitch:'音高',volume:'音量'}[ok]||ok)+
+           ' → 「'+(chip.textContent||'').trim()+'」，下一段配音就按这个念。','ok');
+      return;
+    }
+    /* 「看全部音色」：把 80 多个音色摊在弹窗里挑，不挤占右栏 */
+    if(t.closest&&t.closest('#vmAllVoices')){
+      renderAllVoices('');openM('vmVoiceModal');
+      setTimeout(function(){var q=$('#vmVoiceQ');if(q)q.focus()},60);
+      return;
+    }
+    /* 音色左边的锁：锁定 / 解锁（锁住的不怕被换掉） */
+    var lockBtn=t.closest?t.closest('[data-lock]'):null;
+    if(lockBtn){
+      e.stopPropagation();
+      toggleLock(lockBtn.getAttribute('data-lock'));
+      return;
+    }
+    /* 音色右边的 +/−：加进右侧展示框 / 从右侧拿掉 */
+    var addBtn=t.closest?t.closest('[data-add]'):null;
+    if(addBtn){
+      e.stopPropagation();
+      toggleAdd(addBtn.getAttribute('data-add'));
+      return;
+    }
+    var act=t.closest('[data-act]');
+    if(act){
+      var a=act.getAttribute('data-act'),card=act.closest('.vm-mcard');
+      var mid=card?card.getAttribute('data-id'):'';
+      var m=CAT?CAT.models.filter(function(x){return x.id===mid})[0]:null;
+      if(a==='mirror'){openMirror();return}
+      if(a==='active'&&m){setActive(mid);return}
+      if(a==='edit'&&m){openForm(m);return}
+      if(a==='install'&&m){doInstall(m);return}
+      if(a==='uninstall'&&m){doUninstall(m);return}
+      if(a==='del'&&m){doDelete(m);return}
+      if(a==='record'){
+        if(act.getAttribute('data-off')){showCloneHint();return}
+        $('#vmRName').value='';$('#vmRAuth').checked=false;$('#vmRecordGo').disabled=true;
+        openM('vmRecordModal');return;
+      }
+      if(a==='import'){
+        if(act.getAttribute('data-off')){hint('当前模型不支持导入音色样本；请切换到带声音克隆能力的模型。','bad');return}
+        doImport();return;
+      }
+    }
+    var rsc=t.closest('[data-rescan]');
+    if(rsc){
+      /* 重新实测本机音色：换了 Mac 用户、系统里装了新音色之后用得上 */
+      rsc.disabled=true;
+      hint('正在重新检测这台 Mac 的音色…','ok');
+      A('/api/voicemodels',{action:'rescan_voices'}).then(function(){
+        return loadVoices();
+      }).then(function(){
+        hint('已重新检测：当前可用 '+((V&&V.count)||0)+' 个音色'+
+             ((V&&V.unusable_count)?('，另有 '+V.unusable_count+' 个读不出中文已隐藏'):''),'ok');
+      }).catch(function(x){hint('重新检测失败：'+x.message,'bad')});
+      return;
+    }
+    var play=t.closest('[data-play]');
+    if(play){doPreview(play.getAttribute('data-play'));return}
+    var vdel=t.closest('[data-vdel]');
+    if(vdel){
+      var name=vdel.getAttribute('data-vdel');
+      confirm({title:'删除音色',okText:'确认删除',
+        html:'将删除「我的音色」<b>'+esc(name)+'</b>，样本文件一并清理，不可恢复。'+
+             '<br><span style="color:#8A92A2">模型自带的音色和 macOS 系统音色不受影响。</span>',
+        onOk:function(){
+          var wasSel=(name===SELVOICE);
+          A('/api/voicemodels',{action:'voice_delete',id:ACTIVE,name:name}).then(function(r){
+            /* 只有删掉的正是当前主音色才清空，否则会把用户选好的主音色白白重置回默认 */
+            if(wasSel)SELVOICE='';
+            hint((r&&r.note)||'已删除音色','ok');
+            return loadVoices().then(function(){
+              /* 删掉的正好是出片配音用的那个：重挑一个之后要把设置一起改掉，
+                 否则界面上显示「灵小柔」，成片还在找已经不存在的样本 */
+              if(wasSel&&SELVOICE&&curMid())
+                A('/api/audio',{action:'save_voice',source:'choose',
+                  model_id:curMid(),voice_id:SELVOICE}).catch(function(){});
+            });
+          }).catch(function(x){hint(x.message,'bad')});
+        }});
+      return;
+    }
+    var v=t.closest('.vm-voice');
+    if(v){
+      /* 读不出声的音色直接拦下：告诉原因，而不是让它「选中了却没声音」 */
+      if(v.classList.contains('dead')){
+        var dead=(V&&V.voices||[]).filter(function(x){return x.name===v.getAttribute('data-v')})[0]||{};
+        hint('「'+v.getAttribute('data-v')+'」在本机读不出中文：'+(dead.why||'合成结果是空音频')+
+             '。选列表里其他音色即可。','bad');
+        return;
+      }
+      var pickName=v.getAttribute('data-v');
+      /* 只有点「名字那一块」才算要选它 —— 点到行里的空白不该弹确认框，
+         否则想看一下列表都会误触。 */
+      if(!t.closest('.tx'))return;
+      if(pickName===SELVOICE){hint('「'+pickName+'」已经是当前主音色了','ok');return}
+      var pickLabel=(v.querySelector('b')||{}).textContent||pickName;
+      /* 换主音色只影响出片配音。首页通话的音色是通话面板里单独设的，
+         不跟着变（用户 2026-11-11 明确过），文案不能再说「都跟着改」。 */
+      confirm({
+        title:'换用这个主音色？',okText:'确定换用',
+        html:'接下来配音会用「'+esc(pickLabel)+'」说话。'+
+             '<br><span style="color:#8A92A2">换错了随时点回来，已经生成的配音不受影响。</span>',
+        onOk:function(){applyVoice(pickName)}});
+      return;
+    }
+    var sp=t.closest('[data-segplay]');
+    if(sp){var i=+sp.getAttribute('data-segplay');
+      if(SEGS[i]&&SEGS[i].url)audioPlay(SEGS[i].url,'试听第 '+(i+1)+' 段');
+      else doSeg(i);return}
+    var sg=t.closest('[data-seggen]');
+    if(sg){doSeg(+sg.getAttribute('data-seggen'));return}
+    var mc=t.closest('.vm-mcard');
+    if(mc){
+      /* 点卡片＝展开／收起详情。「设为当前」只走卡片里的按钮，
+         避免「想看一眼详情，结果把模型换了」。 */
+      var id2=mc.getAttribute('data-id');
+      if(OPENED[id2])delete OPENED[id2];else OPENED[id2]=1;
+      mc.classList.toggle('open');
+      return;
+    }
+  });
+  document.addEventListener('input',function(e){
+    var t=e.target;
+    if(t.id==='vmScript'){/* 不自动重分句，避免打字时分好的段被冲掉 */syncScriptClear();}
+    if(t.id==='vmVoiceQ'){renderAllVoices(t.value);return}
+    if(t.id==='vmRAuth')$('#vmRecordGo').disabled=!t.checked;
+    var s=t.closest('.vm-slider');
+    if(s){updLabel(s);try{localStorage.setItem('riffcut.vm.param.'+s.dataset.cap,t.value)}catch(e2){}}
+  });
+  document.addEventListener('change',function(e){
+    if(e.target.id==='vmPipSel'||e.target.id==='vmWeightSel')syncMirror();
+    if(e.target.closest&&e.target.closest('#vmFCaps'))syncCaps();
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape')$$('.vm-modal.open').forEach(function(m){closeM(m.id)});
+  });
+  document.addEventListener('planchanged',function(e){
+    /* 首页出了新方案只记下引用，不往输入框里塞：用户可能正在改自己的稿子，
+       被悄悄替换掉就白改了。要换稿点「载入方案配音稿」（用户 2026-11-11 要求）。 */
+    window.__veloraPlan=(e.detail||{}).plan||null;
+  });
+  document.addEventListener('riffcut-ready',boot);
+  /* 服务没起来时给个明确空态，不显示写死的假数据。
+     这里只铺空态、不再 hint：页眉正中已经有红色呼吸告警在报「本机服务没连上」，
+     同一件事弹两处提示就是重复打扰（用户明说过不要）。 */
+  setTimeout(function(){
+    if(!CAT){
+      $('#vmList').innerHTML='<div class="vm-empty">本机服务没连上。<br>连上之后，这里会显示真实的语音模型目录。</div>';
+      $('#vmRight').innerHTML='<div class="vm-alert">右侧音色由当前选中模型的能力决定，服务连上后自动加载。</div>';}
+  },3000);
+})();
+</script>

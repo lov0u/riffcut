@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>影创</title>
+<style>
+  html,body{margin:0;height:100%;background:#0E1013;color:#8C94A3;
+    font:13px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
+    display:flex;align-items:center;justify-content:center;-webkit-user-select:none}
+  .b{text-align:center}
+  .d{width:26px;height:26px;margin:0 auto 14px;border-radius:50%;
+    border:2px solid rgba(255,255,255,.12);border-top-color:#C9A46A;
+    animation:r .8s linear infinite}
+  @keyframes r{to{transform:rotate(360deg)}}
+</style></head>
+<body><div class="b"><div class="d"></div><div id="m">正在启动内核…</div></div>
+<script>
+  const V = window.riffcut
+  if (V) {
+    V.onEvent(() => {})
+    setTimeout(() => {
+      const m = document.getElementById('m')
+      if (m) m.textContent = '内核还在启动，第一次会比较慢…'
+    }, 6000)
+  }
+</script></body></html>

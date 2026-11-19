@@ -1,0 +1,113 @@
+# ---- 构建产物 ----
+RiffCut影创.app/
+.build/
+bin/
+runtime/
+
+# ---- 依赖 ----
+node_modules/
+app/node_modules/
+kernel/dsh/node_modules/
+.pnpm-store/
+
+# ---- 用户数据（绝对不能进仓库）----
+# ★ 2026-11-20 改：以前是整条 `home/` 排除，结果连模板库（121MB，210 个 block）
+#   和导演技能、经验库、法律文件一起被挡在外面 —— 那些是产品资产，不是用户数据。
+#   现在改成「默认排除，白名单放行」，见下面 ! 开头的行。
+home/*
+data/
+profiles/
+sessions/
+logs/
+缓存/
+
+# 用户运行时产物（含真实对话、账单、客户路径、明文凭据）
+home/配置/*
+home/系统/*
+home/客户/
+home/缓存/
+home/sessions/
+home/storages/
+home/logs/
+home/profiles/
+home/AGENTS.md
+
+# ---- 白名单：这些是产品资产，必须进仓库 ----
+!home/模板库/
+!home/内置/
+!home/资源/
+# 配置目录只放行产品默认值（和 tools/make-seed.py 的白名单保持一致）
+!home/配置/路由.json
+!home/配置/导演规则.json
+!home/配置/导演指令.md
+!home/配置/导演经验.md
+!home/配置/界面.json
+!home/配置/语音模型.json
+!home/配置/本地安全.json
+!home/配置/导演技能/
+!home/配置/经验库/
+
+# ---- 密钥与凭据（双保险，上面白名单里也绝不放行）----
+home/配置/服务.token
+home/配置/开放接口.json
+home/配置/凭据.vault
+home/配置/模型.json
+home/配置/设置.json
+home/配置/全局记忆.md
+home/配置/授权同意.json
+home/配置/完整性清单.json
+home/配置/对话.json
+home/配置/调用明细.json
+home/配置/调用累计.json
+home/配置/费用.json
+home/配置/客户.json
+home/配置/历史.json
+home/配置/素材库.json*
+home/配置/最近方案.json
+home/配置/待确认操作.json
+home/配置/任务.json
+home/配置/发布.json
+home/配置/路由状态.json
+home/配置/port.txt
+home/配置/协议/
+*.key
+*.pem
+.env
+.env.*
+配置/模型.json
+凭据*
+*服务.token
+
+# ---- 大文件二进制（见 NOTICE.md 第 3 节）----
+# Node 运行时 140MB，是构建时从 nodejs.org 下载的 arm64 二进制，不该进仓库。
+# 需要它时跑 tools/fetch-node.sh（README 里说明了），或者直接用系统 node。
+kernel/dsh/node
+# ffmpeg 带 --enable-nonfree，不可随源码分发，须用户自装
+tools/ffmpeg
+tools/ffprobe
+# audio.cpp 是预编译二进制（38MB），上游没有公开源码仓库，随包分发有风险
+# 需要的话自己按 README 说明下载
+tools/audio.cpp/
+# 语音模型权重合计约 1.9GB，GitHub 单文件上限 100MB，走 Release 或首次启动下载
+home/系统/本地模型/语音/weights/
+home/模板库/.tls/
+
+# ---- 系统 ----
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# ---- 编辑器 ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- 临时文件 ----
+*.log
+*.tmp
+*.bak
+*.bak-*
+/tmp/

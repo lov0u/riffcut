@@ -1,0 +1,670 @@
+<style>
+/* ══ 客户与素材库 ═════════════════════════ */
+.a-body{flex:1;min-height:0;display:grid;grid-template-columns:clamp(180px,18%,230px) minmax(0,1fr);gap:clamp(8px,1%,14px)}
+.a-left{display:flex;flex-direction:column;min-height:0;padding:12px}
+.a-cust{position:relative;padding:9px 28px 9px 10px;border-radius:var(--r-md);border:1px solid var(--line);
+  margin-bottom:7px;cursor:pointer;box-shadow:var(--sh-btn)}
+.a-cust:hover{background:#FAFBFD}
+.a-cust.on{background:#EAF5F3;border-color:#BFE0DA}
+.a-cust b{font-size:var(--f4);display:flex;align-items:center;gap:6px;padding-right:2px}
+.a-cust b .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.a-cust b .u-dot{margin-left:auto;flex:0 0 auto}
+.a-cust span.sub{font-size:var(--f5);color:var(--ink3);display:block;margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.a-cust-del{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:20px;height:20px;
+  border:1px solid transparent;border-radius:8px;background:transparent;color:#A8AFBC;font-size:15px;
+  line-height:1;display:grid;place-items:center;cursor:pointer}
+.a-cust-del:hover{border-color:#E4C7C7;background:#FFF1F1;color:#B45B5B}
+.a-note{font-size:var(--f5);color:var(--ink3);margin-top:10px;line-height:1.7}
+.a-main{display:flex;flex-direction:column;min-height:0;gap:clamp(8px,1%,12px);overflow:auto;scrollbar-width:none}
+.a-main::-webkit-scrollbar{display:none}
+.a-top{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(220px,1fr);gap:clamp(8px,1%,12px);flex:0 0 auto}
+.a-info{padding:13px 15px;display:flex;flex-direction:column;gap:9px}
+.a-info .u-row{flex-wrap:wrap;gap:7px}
+.a-path{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:#FAFBFD;font-size:var(--f5);color:var(--ink2);box-shadow:var(--sh-in)}
+.a-path .ic{width:14px;height:14px;color:#8A92A2;flex:0 0 auto}
+.a-path b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;color:#3E4655}
+.a-ops{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.a-hint{font-size:var(--f5);color:var(--ink3);line-height:1.65}
+/* 扫描进行中：必须看得见，否则用户会以为卡死 */
+.a-busy{display:none;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;
+  border:1px solid #F4F6FA;background:#FDF7EA;border-radius:var(--r-md)}
+.a-busy.on{display:flex}
+.a-spin{width:15px;height:15px;flex:0 0 auto;border-radius:50%;
+  border:2px solid #EAF5F3;border-top-color:#1B8B7E;animation:aSpin .8s linear infinite}
+@keyframes aSpin{to{transform:rotate(360deg)}}
+.a-busy-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.a-busy-t b{font-size:var(--f4);color:#147567}
+.a-busy-t span{font-size:var(--f5);color:#1B8B7E;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.a-busy-time{margin-left:auto;font-size:var(--f5);color:#1B8B7E;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.a-busy-bar{height:3px;border-radius:4px;background:#F4F6FA;overflow:hidden;margin-top:8px}
+.a-busy-bar i{display:block;height:100%;width:35%;background:#1B8B7E;border-radius:4px;
+  animation:aSlide 1.15s ease-in-out infinite}
+@keyframes aSlide{0%{margin-left:-35%}100%{margin-left:100%}}
+/* 扫描中：按钮只是「看起来在跑」，仍然可点（点了给提示），不禁用 */
+.u-btn.working{position:relative;border-color:#F4F6FA;background:#FDF7EA;color:#147567;
+  animation:aBreath 1.5s ease-in-out infinite}
+@keyframes aBreath{0%,100%{box-shadow:0 0 0 0 rgba(185,138,46,.22)}50%{box-shadow:0 0 0 4px rgba(185,138,46,0)}}
+.a-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;flex:0 0 auto}
+.a-stats .u-card{padding:12px 14px}
+.a-stats b{font-size:20px;font-weight:700;display:block}
+.a-stats span{font-size:var(--f5);color:var(--ink3)}
+.a-scan{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.a-scan .u-progress{margin-top:2px}
+.a-idx-line{font-size:var(--f5);color:var(--ink2);line-height:1.6;word-break:break-all}
+.a-idx-line b{color:var(--ink)}
+.a-lib{flex:1;min-height:0;display:flex;flex-direction:column;padding:0}
+.a-lib-head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap}
+.a-lib-head .u-input{width:190px;height:29px}
+.a-filters{display:flex;gap:6px;flex-wrap:wrap}
+.a-filter{height:26px;padding:0 10px;border:1px solid var(--line);border-radius:12px;font-size:var(--f5);
+  color:#5A6272;background:#FFFFFF;box-shadow:var(--sh-btn);cursor:pointer}
+.a-filter.on{background:#EAF5F3;border-color:#BFE0DA;color:#33405A}
+/* 素材网格：卡片式、统一比例、信息不超过两行。
+   以前每个格子只有「缩略图 + 文件名 + 宽×高 + 标签」四段散装文字，
+   标签长短不一导致高度参差、@2x 缩略图也挤在一起，看着很乱。 */
+/* grid-auto-rows 必须是 max-content。默认 auto 时，行高会跟着「容器固定高度」
+   一起被压缩——实测每行只剩 3px，缩略图有 115px 全被 overflow:hidden 剪掉，
+   屏幕上只剩一排细条（用户截图反馈「什么都看不见」）。
+   指定 max-content 后行高由内容决定，高度瞬间从 3px 恢复 178px。 */
+.a-grid{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:12px 14px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px;
+  grid-auto-rows:max-content;align-content:start}
+.a-grid::-webkit-scrollbar{display:none}
+.a-item{display:flex;flex-direction:column;min-height:0;cursor:pointer;background:#fff;
+  border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:var(--sh-btn);
+  transition:box-shadow .16s,transform .16s,border-color .16s}
+.a-item:hover{box-shadow:0 8px 20px rgba(28,38,58,.14);transform:translateY(-1px);border-color:#F4F6FA}
+/* 缩略图固定 16:10，靠 object-fit/cover 视觉统一，不再各高各矮 */
+.a-item .u-thumb{height:auto;aspect-ratio:16/10;flex:0 0 auto;position:relative;background-size:cover;
+  background-position:center;background-color:#F1F3F7}
+.a-item .u-thumb .badge{position:absolute;left:6px;top:6px;height:18px;padding:0 6px;border-radius:4px;
+  background:rgba(20,26,36,.72);color:#fff;font-size:10.5px;display:flex;align-items:center;gap:3px}
+/* 右上角只留一个状态点：废片（模糊/重复）/ 片尾 / 高分，别的细节进悬停详情，不在格子里堆文字 */
+.a-item .u-thumb .flag{position:absolute;right:6px;top:6px;height:17px;padding:0 5px;border-radius:4px;
+  font-size:10.5px;display:flex;align-items:center;gap:3px;background:rgba(20,26,36,.66);color:#fff}
+.a-item .u-thumb .flag.bad{background:rgba(180,74,74,.9)}
+.a-item .u-thumb .flag.end{background:rgba(122,92,32,.92)}
+.a-item .u-thumb .flag.good{background:rgba(38,110,76,.9)}
+.a-item .cap{padding:7px 9px 8px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.a-item .nm{font-size:var(--f5);line-height:1.4;font-weight:600;color:#333B49;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  word-break:break-all;min-height:2.8em}
+.a-item .meta{font-size:10.5px;color:var(--ink3);display:flex;align-items:center;gap:5px;
+  white-space:nowrap;overflow:hidden}
+.a-item .meta i{width:3px;height:3px;border-radius:50%;background:#C6CCD8;flex:0 0 auto}
+.a-item .meta span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.a-empty{grid-column:1/-1;padding:34px 16px;text-align:center;color:var(--ink3);font-size:var(--f5);line-height:1.8}
+.a-warn{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:var(--r-md);
+  background:#F5F8FF;border:1px solid #DCE6FB;color:#3567C0;font-size:var(--f5);flex:0 0 auto}
+.a-warn .ic{width:14px;height:14px}
+.a-modal-tip{font-size:var(--f5);color:var(--ink3);line-height:1.7}
+.compact .a-stats{grid-template-columns:repeat(5,1fr)}
+.compact .a-stats .u-card{padding:9px 11px}
+.compact .a-stats b{font-size:15px}
+.tiny .a-body{grid-template-columns:1fr}
+.tiny .a-left{display:none}
+.tiny .a-top{grid-template-columns:1fr}
+.tiny .a-stats{grid-template-columns:repeat(3,1fr)}
+</style>
+
+<section class="page" data-page="assets">
+  <div class="u-head">
+    <div class="u-tabs" id="aTabs">
+      <button class="on" data-goto="assets"><svg class="ic"><use href="#i-folder"/></svg>客户与素材</button>
+      <button data-goto="brand"><svg class="ic"><use href="#i-board"/></svg>品牌资产<span class="cnt" id="aTabBrandCnt"></span></button>
+    </div>
+    <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-folder"/></svg>客户与素材库</div>
+      <div class="u-sub">客户是最高组织单位 · 素材严格隔离 · 手动扫描与文件夹索引</div></div>
+    <div class="u-actions">
+      <button class="u-btn" id="aArchive"><svg class="ic"><use href="#i-shield"/></svg>归档</button>
+      <button class="u-btn" id="aEditCust">编辑客户</button>
+      <button class="u-btn gold" id="aNewCust"><svg class="ic"><use href="#i-plus"/></svg>新建客户</button>
+    </div>
+  </div>
+
+  <div class="a-body">
+    <div class="u-card a-left">
+      <div class="u-head" style="flex:0 0 auto"><div class="txt"><div class="u-title" style="font-size:var(--f3)">客户空间</div>
+        <div class="u-sub" id="aCustCount">读取中…</div></div></div>
+      <div class="u-scroll" id="aCustList" style="margin-top:10px"></div>
+      <div class="u-divider" style="margin-top:10px"></div>
+      <div class="a-note">
+        「影创」是你自己的工作空间，素材夹就是软件的套件文件夹（技能·模板·品牌库·片尾·配乐）。<br>
+        给客户做的项目建一个客户，各客户素材严格隔离；跨客户复用必须由你明确授权。<br>
+        删除客户时可选「只删记录（文件保留）」或「连客户文件夹一起删」，两种都不会动你选的外部素材夹。
+      </div>
+    </div>
+
+    <div class="a-main">
+      <div class="a-warn"><svg class="ic"><use href="#i-shield"/></svg>当前客户：<b id="aWarnName">—</b> · 所有素材查询自动带客户范围，项目创建时强制绑定</div>
+
+      <div class="a-top">
+        <div class="u-card a-info">
+          <div class="u-row"><b style="font-size:var(--f2)" id="aCustName">—</b><span class="u-tag green">当前客户</span><span class="u-tag gold" id="aCustSuite" style="display:none">套件文件夹</span><span class="u-tag" id="aCustNote"></span></div>
+          <div class="a-path"><svg class="ic"><use href="#i-folder"/></svg><b id="aFolderPath">尚未选择文件夹</b>
+            <button class="u-btn sm" data-pickfolder><svg class="ic"><use href="#i-folder"/></svg>选择文件夹</button></div>
+          <div class="a-ops">
+            <button class="u-btn sm gold" id="aScanBtn"><svg class="ic"><use href="#i-search"/></svg>扫描文件夹</button>
+            <button class="u-btn sm" id="aIncrementalBtn">增量扫描</button>
+            <button class="u-btn sm" id="aRescanBtn"><svg class="ic"><use href="#i-refresh"/></svg>重新扫描</button>
+          </div>
+          <div class="a-hint" id="aScanHint">选好文件夹后手动点「扫描文件夹」生成索引；「重新扫描」会全量重扫并复用已有画面索引，不重复烧 token。</div>
+          <div class="a-busy" id="aScanBusy">
+            <span class="a-spin"></span>
+            <div class="a-busy-t"><b id="aBusyTitle">正在扫描文件夹…</b><span id="aBusySub">读取文件列表</span></div>
+            <span class="a-busy-time" id="aBusyTime">0.0s</span>
+          </div>
+          <div class="a-busy-bar" id="aScanBar" style="display:none"><i></i></div>
+        </div>
+        <div class="u-card a-scan">
+          <div class="u-row"><b style="font-size:var(--f4)">素材索引</b><span class="u-tag gray" id="aIdxTag">读取中…</span></div>
+          <div class="u-progress"><i id="aIdxBar" style="width:0%"></i></div>
+          <div class="a-idx-line" id="aIdxLine">正在读取索引状态…</div>
+          <div class="a-idx-line">索引文件：<b>RiffCut-素材索引.json</b>，写在素材文件夹内，换机器也能复用。</div>
+          <div class="a-ops">
+            <button class="u-btn sm gold" id="aIdxBtn">生成索引</button>
+            <button class="u-btn sm" id="aIdxDelBtn">删除索引</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="a-stats">
+        <div class="u-card"><b id="aStTotal">0</b><span>文件总数</span></div>
+        <div class="u-card"><b id="aStVideo">0</b><span>视频</span></div>
+        <div class="u-card"><b id="aStImage">0</b><span>图片</span></div>
+        <div class="u-card"><b id="aStAudio">0</b><span>音频</span></div>
+        <div class="u-card"><b style="color:#2E7D52" id="aStUsable">0</b><span>可用素材</span></div>
+      </div>
+
+      <div class="u-card a-lib">
+        <div class="a-lib-head">
+          <div class="u-input"><svg class="ic"><use href="#i-search"/></svg><input id="aSearch" placeholder="关键词 / 语义搜索..." autocomplete="off"></div>
+          <div class="a-filters" id="aFilters">
+            <button class="a-filter on" data-f="全部">全部</button>
+            <button class="a-filter" data-f="视频">视频</button>
+            <button class="a-filter" data-f="图片">图片</button>
+            <button class="a-filter" data-f="横屏">横屏</button>
+            <button class="a-filter" data-f="竖屏">竖屏</button>
+            <button class="a-filter" data-f="4K">4K</button>
+            <button class="a-filter" data-f="片尾">片尾</button>
+          </div>
+          <span class="u-tag gray" style="margin-left:auto" id="aShown">显示 0 / 0</span>
+        </div>
+        <div class="a-grid" id="aGrid"><div class="a-empty">正在读取素材库…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新建 / 编辑客户 -->
+  <div class="m-modal" id="aNewModal" role="dialog" aria-modal="true" aria-label="新建客户">
+    <div class="m-dialog" style="width:min(440px,92vw)">
+      <div class="m-dialog-hd"><b id="aNewTitle">新建客户</b><button class="m-x" id="aNewX">×</button></div>
+      <div class="m-f"><label>客户名称</label>
+        <div class="m-inline">
+          <div class="u-input"><input id="aNewName" placeholder="例如：星辰科技" autocomplete="off"></div>
+          <button class="m-paste" id="aNewPaste" title="粘贴客户名称"><svg class="ic"><use href="#i-copy"/></svg></button>
+        </div>
+      </div>
+      <div class="m-f"><label>备注（选填）</label><div class="u-input"><input id="aNewNote" placeholder="例如：企业级 AI 视觉解决方案" autocomplete="off"></div></div>
+      <div class="m-f"><label>素材文件夹（可稍后选择）</label><div class="u-input"><input id="aNewRoot" placeholder="留空即可，之后点「选择文件夹」" autocomplete="off"></div></div>
+      <div class="m-hint" id="aNewHint">只加入客户列表，不会自动切换当前客户；点列表里的客户即可切换。</div>
+      <div class="m-dialog-ft"><button class="u-btn" id="aNewCancel">取消</button><button class="u-btn gold" id="aNewOk">创建客户</button></div>
+    </div>
+  </div>
+
+  <!-- 生成 / 重建素材索引 -->
+  <div class="m-modal" id="aIdxModal" role="dialog" aria-modal="true" aria-label="生成素材索引">
+    <div class="m-dialog" style="width:min(460px,92vw)">
+      <div class="m-dialog-hd"><b>生成素材索引</b><button class="m-x" id="aIdxX">×</button></div>
+      <div class="a-modal-tip" id="aIdxDesc">—</div>
+      <div class="m-adv">
+        <div class="m-adv-t">分析范围</div>
+        <div class="m-checks" style="flex-direction:column;gap:8px">
+          <label class="m-check"><input type="radio" name="aIdxMode" value="all" checked> 全部重新分析（重建索引，覆盖旧结果）</label>
+          <label class="m-check" id="aIdxNewLabel"><input type="radio" name="aIdxMode" value="new"> 只分析新增（保留已有结果，省 token）</label>
+        </div>
+      </div>
+      <div class="m-f"><label>看片密度</label>
+        <div class="u-select"><select id="aIdxStep">
+          <option value="4">每个镜头内每 4 秒 1 帧 · 推荐</option>
+          <option value="2">每个镜头内每 2 秒 1 帧 · 更细，慢一倍</option>
+        </select></div>
+      </div>
+      <div class="m-hint" id="aIdxWarn">文件名含「片尾」的素材不抽帧、不分析，生成视频时可自己选择是否使用。</div>
+      <div class="m-dialog-ft"><button class="u-btn" id="aIdxCancel">取消</button><button class="u-btn gold" id="aIdxRun">开始分析</button></div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)},$$=function(s){return [].slice.call(document.querySelectorAll(s))};
+  var CUSTS=[],LIB={},IDX={},EDIT=null,inited=false,curFilter='全部',scanning=false;
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function V(){return window.RiffCut||{}}
+  function say(m){if(window.say)window.say(m)}
+  function A(p,d){return window.api(p,d)}
+  function CUR_CUST(){
+    if(V().customer)return V().customer;
+    var c=CUSTS.filter(function(x){return x.current})[0];
+    return c?c.name:'影创';
+  }
+  function CUR_ROOT(){return LIB.root||(V().library||{}).root||''}
+  function shortRoot(p){if(!p)return '';var a=String(p).split('/');return a[a.length-1]||p}
+  function visionModel(){
+    var v=V(),list=v.chat_models||[],cur=v.currentModelId||'';
+    var mine=list.filter(function(m){return m.id===cur})[0];
+    return (mine&&mine.vision)?mine:(list.filter(function(m){return m.vision})[0]||null);
+  }
+  function confirm(o){if(window.confirmAction)window.confirmAction(o);else if(window.confirm&&window.confirm(o.title))o.onOk()}
+
+  /* ── 客户列表：真实增删切换 ── */
+  function loadCustomers(){
+    return A('/api/customers',{action:'list'}).then(function(list){
+      CUSTS=list||[];renderCustomers();
+    }).catch(function(e){say('读取客户列表失败：'+e.message)});
+  }
+  function renderCustomers(){
+    var box=$('#aCustList');if(!box)return;
+    if(!CUSTS.length){box.innerHTML='<div class="a-empty">还没有客户，点右上「新建客户」</div>'}
+    else box.innerHTML=CUSTS.map(function(c){
+      return '<div class="a-cust'+(c.current?' on':'')+'" data-name="'+esc(c.name)+'" data-id="'+esc(c.id)+'">'+
+        '<b><span class="nm">'+esc(c.name)+'</span>'+(c.current?'<span class="u-dot"></span>':'')+'</b>'+
+        '<span class="sub">'+esc(c.assets||0)+' 个素材 · '+(c.root?esc(shortRoot(c.root)):'未绑定文件夹')+'</span>'+
+        (c['default']?'':'<button class="a-cust-del" title="删除客户" data-del="'+esc(c.name)+'">×</button>')+'</div>';
+    }).join('');
+    var n=CUSTS.filter(function(c){return c.current}).length;
+    if($('#aCustCount'))$('#aCustCount').textContent=CUSTS.length+' 个客户 · '+n+' 个当前';
+  }
+  function switchCustomer(name){
+    if(name===CUR_CUST())return;
+    A('/api/settings',{patch:{customer:name}}).then(function(){
+      V().customer=name;
+      return A('/api/library',{customer:name});
+    }).then(function(lib){
+      LIB=lib||{};V().library=lib;
+      renderInfo();renderLib();renderStats();loadIndex();loadCustomers();
+      say('已切换到客户「'+name+'」· 素材范围已隔离');
+    }).catch(function(e){say('切换客户失败：'+e.message)});
+  }
+  function fmtSize(n){
+    n=Number(n||0);
+    if(n>=1073741824)return (n/1073741824).toFixed(2)+' GB';
+    if(n>=1048576)return (n/1048576).toFixed(1)+' MB';
+    if(n>=1024)return (n/1024).toFixed(0)+' KB';
+    return n+' B';
+  }
+  function delCustomer(name){
+    /* 先问后端这个客户到底占了多少，再让用户二选一（只删记录 / 连文件夹一起删） */
+    A('/api/customers',{action:'size',name:name}).then(function(sz){
+      var size=fmtSize(sz&&sz.bytes),folder=(sz&&sz.folder)||'';
+      confirm({
+        title:'删除客户「'+name+'」',
+        okText:'只删记录（文件保留）',
+        altText:'连文件夹一起删',
+        altDanger:true,
+        html:'<b>删除后不可撤销</b>，这个客户会从左侧列表消失，当前客户会自动切到别的客户。<br><br>'
+            +'它在软件内的位置：<br><code style="font-size:10.5px;word-break:break-all">'+esc(folder)+'</code><br>'
+            +'里面包含已生成的成片 / 图片 / 配音 / 工程 / 音色，共 <b>'+size+'</b>。<br><br>'
+            +'· <b>只删记录</b>：只移除客户和素材库记录，上面这些文件<b>全部保留</b>在磁盘上。<br>'
+            +'· <b>连文件夹一起删</b>：把整个客户文件夹<b>连同已生成的视频一起永久删除</b>，无法恢复。<br>'
+            +'· 你自由选择的外部素材夹<b>永远不动</b>。'
+            +(CUSTS.length<=1?'<br><br>「影创」是你自己的套件空间，不能删除。':''),
+        onOk:function(){doDelCustomer(name,false)},
+        onAlt:function(){doDelCustomer(name,true)}
+      });
+    }).catch(function(){
+      confirm({title:'删除客户「'+name+'」',okText:'只删记录（文件保留）',
+        altText:'连文件夹一起删',altDanger:true,
+        html:'<b>删除后不可撤销。</b><br>· 只删记录：客户与素材库记录移除，磁盘文件保留。<br>'
+            +'· 连文件夹一起删：软件内该客户目录（含已生成视频）永久删除。',
+        onOk:function(){doDelCustomer(name,false)},
+        onAlt:function(){doDelCustomer(name,true)}});
+    });
+  }
+  function doDelCustomer(name,purge){
+    A('/api/customers',{action:'delete',name:name,purge:!!purge}).then(function(r){
+      V().customer=r.customer;LIB=r.library||{};V().library=LIB;
+      say(purge
+        ? '已删除客户「'+name+'」，并清空其文件夹（释放 '+fmtSize(r.freed)+'）'
+        : '已删除客户「'+name+'」，磁盘文件已保留');
+      loadCustomers();renderInfo();renderLib();renderStats();loadIndex();
+    }).catch(function(e){say('删除失败：'+e.message)});
+  }
+
+  /* ── 新建 / 编辑客户弹窗 ── */
+  function openNew(edit){
+    EDIT=edit||null;
+    $('#aNewTitle').textContent=edit?'编辑客户':'新建客户';
+    $('#aNewName').value=edit?edit.name:'';$('#aNewName').disabled=!!edit;
+    $('#aNewNote').value=edit?(edit.note||''):'';
+    $('#aNewRoot').value=edit?(edit.root||''):'';
+    $('#aNewOk').textContent=edit?'保存修改':'创建客户';
+    $('#aNewHint').textContent=edit
+      ? '名称不可修改（改名会让旧素材库找不到归属）。可改备注与绑定的文件夹。'
+      : '只加入客户列表，不会自动切换当前客户；点列表里的客户即可切换，再点「选择文件夹」绑定素材。';
+    $('#aNewModal').classList.add('open');document.body.classList.add('modal-open');
+  }
+  function closeNew(){$('#aNewModal').classList.remove('open');document.body.classList.remove('modal-open')}
+  function saveNew(){
+    var name=$('#aNewName').value.trim(),note=$('#aNewNote').value.trim(),root=$('#aNewRoot').value.trim();
+    if(!name){say('请填客户名称');return}
+    if(!EDIT&&CUSTS.some(function(c){return c.name===name})){say('已经有同名客户了');return}
+    A('/api/customers',{action:'save',name:name,note:note,root:root,activate:false}).then(function(list){
+      CUSTS=list||[];renderCustomers();closeNew();
+      say(EDIT?'客户资料已保存':'已新建客户「'+name+'」');
+    }).catch(function(e){say(e.message)});
+  }
+  function pasteName(){
+    var inp=$('#aNewName');
+    if(navigator.clipboard&&navigator.clipboard.readText){
+      navigator.clipboard.readText().then(function(t){inp.value=(t||'').trim();inp.focus()})
+        .catch(function(){inp.focus();say('请按 ⌘V 粘贴')});
+    }else{inp.focus();say('请按 ⌘V 粘贴')}
+  }
+
+  /* ── 素材库显示 ── */
+  function renderInfo(){
+    var name=CUR_CUST();
+    var c=CUSTS.filter(function(x){return x.name===name})[0]||{};
+    if($('#aCustName'))$('#aCustName').textContent=name;
+    if($('#aWarnName'))$('#aWarnName').textContent=name;
+    if($('#aCustNote'))$('#aCustNote').textContent=c.note?('备注：'+c.note):'';
+    if($('#aCustSuite'))$('#aCustSuite').style.display=(LIB.suite||(c['default']&&!c.root))?'':'none';
+    if($('#aFolderPath'))$('#aFolderPath').textContent=CUR_ROOT()||'尚未选择文件夹，点右侧「选择文件夹」';
+  }
+  function renderStats(){
+    var st=(LIB.stats)||{};
+    var total=st['总数']||0;
+    var set=function(id,v){if($(id))$(id).textContent=v};
+    set('#aStTotal',total);set('#aStVideo',st['视频']||0);set('#aStImage',st['图片']||0);
+    set('#aStAudio',st['音频']||0);set('#aStUsable',Math.max(0,total-(st['废片']||0)));
+  }
+  function renderLib(){
+    var box=$('#aGrid');if(!box)return;
+    var items=LIB.items||[];
+    if(!items.length){
+      box.innerHTML='<div class="a-empty">还没有素材。<br>点「选择文件夹」选好目录，再点「扫描文件夹」就会生成索引并列在这里。</div>';
+      if($('#aShown'))$('#aShown').textContent='显示 0 / 0';return;
+    }
+    box.innerHTML=items.slice(0,120).map(function(a){
+      var isAud=a.kind==='音频';
+      var badge=isAud?'♪ 音频':(a.duration?('▶ '+fmtDur(a.duration)):'图片');
+      /* 每格最多三样东西：时长/类型角标、一个状态角标、两行标题 + 一行尺寸。
+         其余信息（评分、片尾、编码、路径）全部塞进 title，鼠标停上去才看得到，不再堆在格子里。 */
+      var flag='';
+      if(a.is_ending)flag='<span class="flag end">片尾</span>';
+      else if(a.blurry)flag='<span class="flag bad">模糊</span>';
+      else if(a.duplicate)flag='<span class="flag bad">重复</span>';
+      else if(a.ai_score!=null&&a.ai_score>=80)flag='<span class="flag good">优 '+a.ai_score+'</span>';
+      /* 没有宽高信息时不显示「—」（看着像出错）：视频/音频这类改显示文件类型，图片才显示尺寸缺失 */
+      var dim=(a.width||a.height)?((a.width||'?')+'×'+(a.height||'?'))
+              :(isAud?'音频文件':(a.kind==='图片'?'图片':'视频文件'));
+      var tip=[a.name,a.kind,dim,
+        a.duration?('时长 '+fmtDur(a.duration)):'',
+        a.fps?('帧率 '+a.fps+'fps'):'',
+        a.vcodec||'', a.ai_score!=null?('画面评分 '+a.ai_score):'',
+        a.is_ending?'片尾素材':'', a.blurry?'判定模糊':'', a.duplicate?'画面重复':'',
+        a.path||''].filter(Boolean).join('\n');
+      var f=a.kind+' '+(a.tags||[]).join(' ')+(a.is_ending?' 片尾':'')+
+            (a.width>a.height?' 横屏':'')+(a.height>a.width?' 竖屏':'')+
+            (a.width>=3840?' 4K':'');
+      return '<div class="a-item" data-n="'+esc(a.name)+'" data-f="'+esc(f)+'" title="'+esc(tip)+'"'+
+        ' data-info="'+esc(a.name+' · '+a.kind+' · '+(a.width||'—')+'×'+(a.height||'—')+
+          (a.ai_score!=null?(' · 画面评分 '+a.ai_score):'')+(a.is_ending?' · 片尾素材':''))+'">'+
+        '<div class="u-thumb" style="background-image:url(\''+(a.thumb?('/'+a.thumb):'assets/thumb1.png')+'\')">'+
+          '<span class="badge">'+esc(badge)+'</span>'+flag+'</div>'+
+        '<div class="cap"><div class="nm">'+esc(nmShort(a.name))+'</div>'+
+        '<div class="meta"><span>'+esc(dim)+'</span>'+(a.tags&&a.tags.length?'<i></i><span>'+esc((a.tags||[]).slice(0,1).join(''))+'</span>':'')+'</div></div></div>';
+    }).join('');
+    filterLib();
+  }
+  function fmtDur(s){
+    s=Math.max(0,Math.round(Number(s)||0));
+    if(s<60)return s+'s';
+    var m=Math.floor(s/60),r=s%60;
+    return m+':'+(r<10?'0':'')+r;
+  }
+  /* 卡片标题去掉扩展名：.mp4/.mov 对判断内容没帮助，占两行反而把真正的中文名截掉了。
+     扩展名放进 title（tip 第一行仍是完整文件名），需要时鼠标停一下就能看到。 */
+  function nmShort(n){
+    return String(n||'').replace(/\.(mp4|mov|m4v|mkv|avi|webm|wmv|flv|mpg|mpeg|mts|m2ts|jpg|jpeg|png|webp|heic|bmp|tif|tiff|wav|mp3|m4a|aac|flac|aiff|ogg)$/i,'');
+  }
+  function filterLib(){
+    var q=($('#aSearch')?$('#aSearch').value:'').trim(),n=0,all=$$('#aGrid .a-item');
+    all.forEach(function(it){
+      var ok=(curFilter==='全部'||(it.dataset.f||'').indexOf(curFilter)>=0)&&
+             (!q||(it.dataset.n||'').indexOf(q)>=0||(it.dataset.f||'').indexOf(q)>=0);
+      it.style.display=ok?'':'none';if(ok)n++;
+    });
+    if($('#aShown'))$('#aShown').textContent='显示 '+n+' / '+all.length;
+  }
+
+  /* ── 索引状态 ── */
+  function loadIndex(){
+    var root=CUR_ROOT();
+    if(!root){IDX={};renderIndex();return}
+    return A('/api/index',{action:'status',root:root,customer:CUR_CUST()}).then(function(r){
+      /* window.api 已剥掉外层 data，这里直接拿返回值 */
+      IDX=r||{};renderIndex();
+    }).catch(function(){IDX={};renderIndex()});
+  }
+  function renderIndex(){
+    var has=!!IDX.exists,count=IDX.count||0,can=IDX.analyzable||0,miss=IDX.missing||0;
+    var tag=$('#aIdxTag'),bar=$('#aIdxBar'),line=$('#aIdxLine'),btn=$('#aIdxBtn'),del=$('#aIdxDelBtn');
+    if(tag){tag.textContent=has?('已有索引 · '+count+' 项'):'未生成';tag.className='u-tag '+(has?'green':'gray')}
+    if(bar)bar.style.width=(can?Math.min(100,Math.round(count/can*100)):0)+'%';
+    if(line)line.innerHTML=has
+      ? ('已分析 <b>'+count+'</b> / 可分析 <b>'+can+'</b> 个素材，新增未分析 <b>'+miss+'</b> 个。'+
+         (IDX.model?('<br>分析模型：'+esc(IDX.model)+' · 建于 '+esc(IDX.created||'—')):''))
+      : (can?('文件夹里可分析 <b>'+can+'</b> 个素材，还没有画面理解索引。点「生成索引」开始。')
+            :'还没有素材。先选文件夹并扫描，再生成索引。');
+    if(btn)btn.textContent=has?'重新生成索引':'生成索引';
+    if(del)del.disabled=!has;
+  }
+  function openIdx(){
+    var root=CUR_ROOT();
+    if(!root){say('先选择素材文件夹，再生成索引');return}
+    var vm=visionModel();
+    if(!vm){say('先在「模型管理」添加并勾选「支持图片输入」的多模态模型，才能生成画面理解索引');return}
+    var total=(LIB.stats||{})['总数']||0;
+    $('#aIdxDesc').innerHTML='文件夹「<b>'+esc(shortRoot(root))+'</b>」共 <b>'+total+'</b> 个素材。<br>'+
+      (IDX.exists?('索引里已有 <b>'+(IDX.count||0)+'</b> 个分析结果，还有 <b>'+(IDX.missing||0)+'</b> 个没分析。')
+                 :'这个文件夹还没有画面理解索引。');
+    var nl=$('#aIdxNewLabel');
+    nl.style.opacity=IDX.exists?'1':'.45';
+    var r=$('input[name="aIdxMode"][value="new"]');if(r)r.disabled=!IDX.exists;
+    var all=$('input[name="aIdxMode"][value="all"]');if(all)all.checked=true;
+    var st=$('#aIdxStep');if(st)st.value=String(parseFloat((V().settings||{}).frame_step)||4);
+    $('#aIdxWarn').textContent='文件名含「片尾」的素材不抽帧、不分析，生成视频时可自己选择是否使用。分析在后台跑，完成后会通知你。';
+    $('#aIdxModal').classList.add('open');document.body.classList.add('modal-open');
+  }
+  function closeIdx(){$('#aIdxModal').classList.remove('open');document.body.classList.remove('modal-open')}
+  function startIndex(mode,step,silent){
+    var vm=visionModel(),root=CUR_ROOT();
+    if(!vm){if(!silent)say('请先添加多模态模型');return}
+    if(!root){if(!silent)say('先选择素材文件夹');return}
+    if(!silent)closeIdx();
+    A('/api/vision/analyze',{model:vm.id,root:root,customer:CUR_CUST(),mode:mode,frame_step:step})
+      .then(function(r){
+        say(silent?'扫描完成，正在后台生成画面索引':'已启动素材分析，完成后会通知你');
+        if(window.pollTask)window.pollTask(r.task_id,function(){refreshAll()});
+        setTimeout(refreshAll,3500);   /* 失败时也能把状态刷回来 */
+      }).catch(function(e){say('启动分析失败：'+e.message)});
+  }
+  function delIndex(){
+    confirm({title:'删除素材索引', okText:'确认删除',
+      html:'将删除素材文件夹里的 <b>RiffCut-素材索引.json</b>。<br>素材文件不受影响，之后可点「生成索引」重建。',
+      onOk:function(){
+        A('/api/index',{action:'delete',root:CUR_ROOT(),customer:CUR_CUST()}).then(function(){
+          say('索引已删除，点「生成索引」可重建');loadIndex();
+        }).catch(function(e){say('删除失败：'+e.message)});
+      }});
+  }
+
+  /* ── 手动扫描：扫描文件夹 / 增量 / 重新扫描 ──
+     重要：扫描在后台跑，界面上的按钮一个都不禁用。
+     以前这里把 4 个按钮 disabled 掉，用户看到满屏灰按钮以为软件死了；
+     现在只换文案 + 右下角进度，用户该切页切页、该搜素材搜素材。 */
+  var SCAN_T0=0,SCAN_TICK=null,SCAN_CUST='',SCAN_ROOT='';
+  function scanElapsed(){return SCAN_T0?(Date.now()-SCAN_T0)/1000:0}
+  function busy(on){
+    scanning=on;
+    ['#aScanBtn','#aIncrementalBtn','#aRescanBtn'].forEach(function(s){
+      var b=$(s);if(!b)return;
+      b.classList.toggle('working',!!on);   /* 只做视觉标记，不 disabled */
+      b.removeAttribute('disabled');
+    });
+    var b=$('#aScanBtn');if(b)b.textContent=on?'扫描中…':'扫描文件夹';
+    var h=$('#aScanHint');
+    if(h)h.innerHTML=on
+      ? '正在后台读取文件夹（元数据 / 缩略图 / 清晰度 / 去重）。<b>不影响操作</b>：可以切客户、切页面、继续搜素材。'
+      : '选好文件夹后手动点「扫描文件夹」生成索引；「重新扫描」会全量重扫并复用已有画面索引，不重复烧 token。';
+    var box=$('#aScanBusy'),bar=$('#aScanBar'),tm=$('#aBusyTime'),
+        sub=$('#aBusySub'),ttl=$('#aBusyTitle');
+    if(box)box.classList.toggle('on',!!on);
+    if(bar)bar.style.display=on?'':'none';
+    if(!on){
+      if(SCAN_TICK){clearInterval(SCAN_TICK);SCAN_TICK=null}
+      SCAN_T0=0;
+      if(tm)tm.textContent='0.0s';
+      if(window.taskUI)window.taskUI.done();
+      return;
+    }
+    SCAN_T0=Date.now();
+    if(ttl)ttl.textContent='正在扫描文件夹…';
+    if(sub)sub.textContent='读取文件列表';
+    if(window.taskUI)window.taskUI.start('正在读取素材文件夹…','读取文件列表');
+    var stage=function(s){
+      if(sub&&sub.textContent!==s)sub.textContent=s;
+      if(window.taskUI)window.taskUI.stage(s);
+    };
+    if(SCAN_TICK)clearInterval(SCAN_TICK);
+    SCAN_TICK=setInterval(function(){
+      var t=scanElapsed();
+      if(tm)tm.textContent=t.toFixed(1)+'s';
+      if(t<2)stage('读取文件列表');
+      else if(t<6)stage('读取分辨率 / 时长 / 大小');
+      else if(t<14)stage('生成缩略图（大文件夹会久一点）');
+      else if(t<30)stage('去重与素材归类');
+      else stage('文件较多，仍在后台处理，你可以继续用');
+    },200);
+  }
+  function doScan(incremental,autoIndex){
+    var root=CUR_ROOT();
+    if(!root){say('先点「选择文件夹」选好素材文件夹，再扫描');return}
+    if(scanning){
+      say('这个文件夹正在后台扫描，进度在右下角；你可以继续做别的');
+      return;
+    }
+    SCAN_CUST=CUR_CUST();SCAN_ROOT=root;
+    busy(true);
+    A('/api/scan',{root:root,customer:SCAN_CUST,incremental:!!incremental}).then(function(d){
+      var n=(d.stats||{})['总数']||0;
+      /* 扫描期间用户可能已经切了客户或换了文件夹：这时不能拿旧结果覆盖当前页面 */
+      if(CUR_CUST()!==SCAN_CUST||CUR_ROOT()!==SCAN_ROOT){
+        loadCustomers();
+        say((incremental?'增量扫描':'扫描')+'完成：客户「'+SCAN_CUST+'」'+n+' 个文件已入库；当前页面没有被覆盖');
+        return;
+      }
+      LIB=d||{};V().library=LIB;
+      document.dispatchEvent(new CustomEvent('folderchange',{
+        detail:{files:d.items||[],stats:d.stats||{},root:d.root,
+                scanned:d.scanned,index:d.index||null,origin:'assets'}}));
+      renderInfo();renderLib();renderStats();loadCustomers();
+      say((incremental?'增量扫描完成：':'扫描完成：')+n+' 个文件，基础索引已生成');
+      return loadIndex();
+    }).then(function(){
+      busy(false);
+      if(!incremental&&autoIndex&&!IDX.exists&&visionModel()){
+        startIndex('all',parseFloat((V().settings||{}).frame_step)||4,true);
+      }else if(!incremental&&autoIndex&&IDX.exists){
+        say('已复用文件夹里已有的素材索引，未重复消耗 token');
+      }else if(!incremental&&autoIndex&&!visionModel()){
+        say('基础索引已生成；要画面理解索引，请添加多模态模型后点「生成索引」');
+      }
+    }).catch(function(e){busy(false);say('扫描失败：'+e.message)});
+  }
+  function refreshAll(){
+    A('/api/library',{customer:CUR_CUST()}).then(function(lib){
+      LIB=lib||{};V().library=LIB;renderInfo();renderLib();renderStats();
+      return loadIndex();
+    }).then(function(){return loadCustomers()}).catch(function(){});
+  }
+
+  /* shell.html 里 window.api 定义在本页脚本之后，等 riffcut-ready 再初始化 */
+  function bind(){
+    $$('#aCustList').forEach(function(box){
+      box.addEventListener('click',function(e){
+        var del=e.target.closest('[data-del]');
+        if(del){e.stopPropagation();delCustomer(del.dataset.del);return}
+        var c=e.target.closest('.a-cust');
+        if(c)switchCustomer(c.dataset.name);
+      });
+    });
+    $$('#aNewCust').forEach(function(b){b.addEventListener('click',function(){openNew(null)})});
+    $$('#aEditCust').forEach(function(b){b.addEventListener('click',function(){
+      var c=CUSTS.filter(function(x){return x.name===CUR_CUST()})[0];
+      openNew(c||{name:CUR_CUST(),note:'',root:CUR_ROOT()});
+    })});
+    $$('#aNewX,#aNewCancel').forEach(function(b){b.addEventListener('click',closeNew)});
+    $$('#aNewOk').forEach(function(b){b.addEventListener('click',saveNew)});
+    $$('#aNewPaste').forEach(function(b){b.addEventListener('click',pasteName)});
+    $$('#aArchive').forEach(function(b){b.addEventListener('click',function(){
+      A('/api/assets/organize',{mode:'date',customer:CUR_CUST()}).then(function(r){
+        say('已按日期归类，复制 '+r.copied+' 个副本；原素材未改动');
+      }).catch(function(e){say(e.message)});
+    })});
+    $$('#aScanBtn').forEach(function(b){b.addEventListener('click',function(){doScan(false,true)})});
+    $$('#aIncrementalBtn').forEach(function(b){b.addEventListener('click',function(){doScan(true,false)})});
+    $$('#aRescanBtn').forEach(function(b){b.addEventListener('click',function(){doScan(false,false)})});
+    $$('#aIdxBtn').forEach(function(b){b.addEventListener('click',openIdx)});
+    $$('#aIdxDelBtn').forEach(function(b){b.addEventListener('click',delIndex)});
+    $$('#aIdxX,#aIdxCancel').forEach(function(b){b.addEventListener('click',closeIdx)});
+    $$('#aIdxRun').forEach(function(b){b.addEventListener('click',function(){
+      var m=document.querySelector('input[name="aIdxMode"]:checked');
+      startIndex(m?m.value:'all',parseFloat($('#aIdxStep').value)||2,false);
+    })});
+    $$('#aFilters .a-filter').forEach(function(b){b.addEventListener('click',function(){
+      $$('#aFilters .a-filter').forEach(function(x){x.classList.remove('on')});
+      b.classList.add('on');curFilter=b.dataset.f;filterLib();
+    })});
+    if($('#aSearch'))$('#aSearch').addEventListener('input',filterLib);
+    $$('#aGrid').forEach(function(g){g.addEventListener('click',function(e){
+      var it=e.target.closest('.a-item');if(it&&it.dataset.info)say('素材「'+it.dataset.info+'」');
+    })});
+    /* 其它页面（首页选文件夹 / 扫描）同步过来的真实素材 */
+    document.addEventListener('folderchange',function(e){
+      var d=e.detail||{};
+      if(d.origin==='assets')return;   /* 本页自己发的已处理过 */
+      /* 选完文件夹先把它「绑到当前客户」：不绑的话刷新页面又回到旧文件夹，
+         而且 AI 读素材时也会拿着旧路径 */
+      if(!d.root){return}
+      var who=CUR_CUST();
+      A('/api/customers',{action:'bind',name:who,root:d.root}).then(function(r){
+        LIB=(r&&r.library)||{root:d.root,items:d.files||[],stats:d.stats||{},scanned:d.scanned||''};
+        V().library=LIB;
+        renderInfo();renderLib();renderStats();loadIndex();loadCustomers();
+        say('已把文件夹绑到客户「'+who+'」'+(LIB.suite?'· 这是影创自己的套件文件夹，下次打开还在':''));
+      }).catch(function(){
+        /* 绑定失败也不影响先看结果，只是提示一句 */
+        if(d.root)LIB={root:d.root,items:d.files||[],stats:d.stats||{},scanned:d.scanned||''};
+        renderInfo();renderLib();renderStats();loadIndex();loadCustomers();
+      });
+    });
+  }
+  function init(){
+    if(!inited){inited=true;bind()}
+    /* riffcut-ready 之后 shell 才灌入 window.RiffCut，所以这里每次都要重读一次 */
+    LIB=V().library||LIB||{};
+    renderInfo();renderCustomers();renderLib();renderStats();renderIndex();
+    loadCustomers();loadIndex();
+  }
+  document.addEventListener('riffcut-ready',init);
+  document.addEventListener('customerchange',init);
+  setTimeout(init,1200);
+})();
+</script>

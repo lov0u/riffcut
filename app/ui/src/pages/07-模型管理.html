@@ -1,0 +1,464 @@
+<style>
+/* ══ 模型管理 · 一个列表 + 是否支持图片 ═══════════ */
+.m-main{flex:1;min-height:0;display:flex;flex-direction:column;gap:clamp(8px,1%,12px);
+  overflow:auto;scrollbar-width:none}
+.m-main::-webkit-scrollbar{display:none}
+
+/* 模型类型标签：文本 / 多模态 / 视频 / 生图 */
+.m-ktag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:8px;
+  font-size:10.5px;font-weight:600;white-space:nowrap;line-height:1}
+.m-ktag.text{background:#F2F4F8;color:#5A6478}
+.m-ktag.vision{background:#EAF1FF;color:#3569D6}
+.m-ktag.video{background:#F1EDFF;color:#6B4FC0}
+.m-ktag.image{background:#F0F3F8;color:#5A6272}
+
+/* 添加 / 编辑模型：悬浮弹窗 */
+.m-modal{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;
+  padding:18px;background:rgba(22,28,40,.34);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.m-modal.open{display:flex}
+.m-dialog{width:min(520px,94vw);max-height:86vh;overflow:auto;background:#fff;
+  border:1px solid var(--line);border-radius:12px;box-shadow:0 22px 60px rgba(20,28,44,.24);
+  padding:18px 20px 16px;display:flex;flex-direction:column;gap:12px}
+.m-dialog::-webkit-scrollbar{width:6px}
+.m-dialog::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:4px}
+.m-dialog-hd{display:flex;align-items:center;gap:9px}
+.m-dialog-hd b{font-size:15px;color:var(--ink)}
+.m-dialog-hd .m-x{margin-left:auto;width:28px;height:28px;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:#fff;color:var(--ink3);font-size:15px;line-height:1;cursor:pointer}
+.m-dialog-hd .m-x:hover{color:var(--ink);background:#F7F8FA}
+.m-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.m-f>label{font-size:var(--f4);color:var(--ink2);font-weight:600}
+.m-f .u-input,.m-f .u-select{height:36px}
+.m-f .u-input input,.m-f .u-select select{font-size:var(--f4);height:100%}
+.m-inline{display:flex;gap:7px;align-items:center;min-width:0}
+.m-inline .u-input{flex:1;min-width:0}
+.m-paste{flex:0 0 auto;width:34px;height:36px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:#fff;color:var(--ink3);display:grid;place-items:center;cursor:pointer}
+.m-paste .ic{width:15px;height:15px}
+.m-paste:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
+.m-adv{border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;
+  display:flex;flex-direction:column;gap:9px;background:#FBFCFE}
+
+/* 预设说明卡：选中一家供应商后告诉用户「接口已填好，密钥得你自己去注册」 */
+.m-preset{border:1px solid #E8EEF7;border-radius:var(--r-md);padding:11px 13px;
+  display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg,#FCFDFF 0%,#F8FAFE 100%)}
+.m-preset-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.m-preset-hd b{font-size:var(--f4);color:var(--ink);font-weight:600}
+.m-preset-note{font-size:var(--f5);color:var(--ink2);line-height:1.65}
+.m-preset-act{display:flex;gap:8px;flex-wrap:wrap}
+.m-preset-act .u-btn{height:31px}
+.m-preset-inv{display:flex;flex-direction:column;gap:5px;padding-top:8px;border-top:1px dashed #E6ECF5}
+.m-preset-inv>label{font-size:10.5px;color:var(--ink3)}
+.m-preset-inv .u-btn{height:31px;flex:0 0 auto}
+/* 「免费额度」这一档用绿色 —— 全站绿色只表示「通/可用」，用户扫一眼就知道这家不要钱。
+   金色留给「推荐动作」，红色留给失败，三色各管一件事，不混用。 */
+.u-tag.free{background:#E4F7EC;color:#1F7A4D;font-weight:600}
+.m-preset-free{display:flex;align-items:center;gap:7px;font-size:var(--f4);line-height:1.5;
+  color:#1F7A4D;font-weight:600;background:#F2FBF6;border:1px solid #D8F0E2;
+  border-radius:var(--r-sm);padding:7px 10px}
+.m-preset-free .ic{width:13px;height:13px;flex:0 0 auto;color:#1F7A4D}
+
+.m-adv-t{font-size:var(--f4);font-weight:600;color:var(--ink2)}
+.m-checks{display:flex;gap:8px 16px;flex-wrap:wrap}
+.m-check{display:flex;align-items:center;gap:7px;font-size:var(--f5);color:var(--ink);cursor:pointer}
+.m-check input{width:15px;height:15px;accent-color:#1B8B7E}
+.m-check.off{opacity:.48;cursor:default}
+.m-protocol{display:flex;align-items:center;gap:9px;font-size:var(--f5);color:var(--ink2)}
+.m-protocol .u-select{width:190px;height:30px}
+.m-hint{font-size:var(--f5);color:var(--ink3);line-height:1.6;min-height:18px}
+.m-hint.warn{color:#5A6272;background:#FCFDFE;border:1px solid #F4F6FA;border-radius:8px;padding:7px 10px}
+.m-dialog-ft{display:flex;justify-content:flex-end;gap:8px;padding-top:11px;border-top:1px solid var(--line)}
+.m-dialog-ft .u-btn{min-width:82px;height:34px}
+.m-dialog-ft .u-btn:disabled{opacity:.42;cursor:default;filter:grayscale(.6)}
+.m-note{font-size:var(--f5);color:var(--ink3);line-height:1.6}
+
+/* 读取可用模型 → 勾选要添加哪几个 */
+.m-scan{border:1px solid var(--line);border-radius:var(--r-md);background:#FBFCFE;
+  padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+/* 展开后的列表内部也要留间距，否则「添加选中的」按钮会贴着列表最后一行 */
+#mScanBody{display:flex;flex-direction:column;gap:8px}
+.m-scan-hd{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.m-scan-hd .u-btn{height:30px;flex:0 0 auto}
+.m-scan-hd .m-note{flex:1;min-width:150px;font-size:var(--f5)}
+.m-scan-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.m-scan-top b{font-size:var(--f4)}
+.m-scan-top .u-input{flex:1;min-width:110px;height:28px}
+.m-scan-top .u-input input{height:100%;font-size:var(--f5)}
+.m-scan-top button{font-size:var(--f5);padding:4px 8px;border:1px solid var(--line);
+  border-radius:8px;background:#fff;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.m-scan-top button:hover{border-color:#BFE0DA;color:#5A6272}
+.m-scan-list{max-height:164px;overflow:auto;display:flex;flex-direction:column;gap:4px;
+  border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px}
+.m-scan-list::-webkit-scrollbar{width:6px}
+.m-scan-list::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:4px}
+.m-scan-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px;
+  font-size:var(--f5);cursor:pointer;min-width:0}
+.m-scan-row:hover{background:#F7F9FC}
+.m-scan-row input[type=checkbox]{width:15px;height:15px;flex:0 0 auto;accent-color:#1B8B7E}
+.sr-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.sr-t b{font-size:var(--f5);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-t span{font-size:10.5px;color:var(--ink3)}
+.m-scan-row select{height:26px;width:86px;flex:0 0 auto;font-size:var(--f5);
+  border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink2);padding:0 4px}
+.m-scan-ft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.m-scan-ft .m-note{flex:1;min-width:120px;font-size:var(--f5)}
+.m-scan-ft .u-btn{height:32px;white-space:nowrap}
+.m-scan-hint{font-size:var(--f5);color:var(--ink3);line-height:1.5}
+
+/* 我的模型：标题一条 + 自适应矩形卡片网格（每行多个，宽度够显示内容即可） */
+.m-groups{display:flex;flex-direction:column;gap:10px;flex:0 0 auto}
+.m-my-hd{padding:11px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.m-g-hd{display:flex;align-items:center;gap:10px;flex:1;min-width:190px}
+.m-g-ic{width:34px;height:34px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;
+  background:linear-gradient(180deg,#FCFDFE,#F6F8FB);border:1px solid #F4F6FA;color:#5A6272}
+.m-g-ic .ic{width:18px;height:18px}
+.m-g-t{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.m-g-t b{font-size:var(--f3)}
+.m-g-t span{font-size:var(--f5);color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-g-foot{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.m-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.m-model-card{padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;
+  display:flex;flex-direction:column;gap:9px;min-width:0;
+  box-shadow:var(--sh-btn);transition:border-color .15s,box-shadow .15s}
+.m-model-card:hover{border-color:#BFE0DA;box-shadow:var(--sh-1)}
+.m-model-card.is-def{border-color:#BFE0DA;background:#FFFCF4;
+  box-shadow:0 0 0 1px rgba(199,154,75,.18),var(--sh-btn)}
+.mc-name{font-size:12px;font-weight:700;color:var(--ink);line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-key{margin-top:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:10.5px;color:#7A8496;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-acts{flex-wrap:wrap}
+.mc-acts button[disabled]{opacity:.45;cursor:not-allowed}
+.mc-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.mc-meta{font-size:var(--f5);color:var(--ink3);line-height:1.55;word-break:break-all}
+.mc-meta span{color:var(--ink2)}
+.mc-acts{display:flex;gap:6px;margin-top:auto;padding-top:2px}
+.mc-acts button{flex:1;min-width:0;height:29px;font-size:var(--f5);color:#5A6272;
+  border:1px solid var(--line);border-radius:8px;background:#fff;white-space:nowrap;
+  transition:all .15s;cursor:pointer;padding:0 4px}
+.mc-acts button:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
+.mc-acts button.danger:hover{border-color:#E4C7C7;color:#B45B5B;background:#FFF7F7}
+.m-empty{padding:14px;border:1px dashed var(--line);border-radius:var(--r-md);
+  font-size:var(--f5);color:var(--ink3);text-align:center;line-height:1.6;grid-column:1/-1}
+
+/* 底部路由（已无本地模型面板，仅保留路由样式） */
+.m-route .nm{width:96px;flex:0 0 auto;color:#4A5262;font-weight:600}
+.m-route .u-select{flex:1;height:28px;min-width:0}
+.m-route .u-select select{font-size:var(--f5)}
+/* ══ 模型使用量 概览：只统计本机绑定模型的真实调用 ══ */
+.m-mon{flex:0 0 auto}
+.m-mon-hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 15px;
+  border-bottom:1px solid var(--line)}
+.m-mon-hd .ic{width:16px;height:16px;color:var(--gold-deep)}
+.m-mon-hd b{font-size:var(--f3)}
+.m-mon-tabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;
+  background:#F7F8FA;padding:2px;gap:2px}
+.m-mon-tabs button{border:0;background:transparent;border-radius:8px;padding:5px 11px;
+  font-size:var(--f5);color:var(--ink2);cursor:pointer;white-space:nowrap}
+.m-mon-tabs button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:var(--sh-btn)}
+.m-mon-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.m-mon-right .life{font-size:var(--f5);color:var(--ink3);white-space:nowrap}
+.m-mon-body{padding:12px 15px;display:flex;flex-direction:column;gap:11px}
+.m-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:9px}
+.m-stat{border:1px solid var(--line);border-radius:var(--r-md);background:#FBFCFE;
+  padding:10px 12px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.m-stat label{font-size:var(--f5);color:var(--ink3)}
+.m-stat b{font-size:20px;line-height:1.25;color:var(--ink);font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-stat b.blue{color:#3569D6}.m-stat b.green{color:#2E9B62}.m-stat b.gold{color:#1B8B7E}
+.m-stat small{font-size:10.5px;color:var(--ink3);line-height:1.45}
+/* 详情里的趋势图只留一条「火花线」：一眼看走势，高度全让给下面三张表 */
+.m-chart{border:1px solid var(--line);border-radius:var(--r-md);padding:4px 12px;background:#fff;
+  flex:0 0 auto;display:flex;align-items:center;gap:12px}
+.m-chart-hd{display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  flex:0 0 auto;width:74px;font-weight:600;line-height:1.35}
+.m-chart-hd .ic{display:none}
+.m-chart-hd b{font-size:10.5px;font-weight:600;color:var(--ink2)}
+.m-chart-hd .peak{margin:0;font-size:10.5px;color:var(--ink3);font-weight:400;white-space:nowrap}
+#mUsageChart{flex:1 1 auto;min-width:0;width:auto;height:26px;display:block}
+.m-tbl{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;flex:0 0 auto}
+.m-tbl .hd{padding:5px 12px;border-bottom:1px solid var(--line);font-size:var(--f5);
+  font-weight:600;display:flex;align-items:center;gap:7px;background:#FBFCFE}
+.m-tbl .hd .ic{width:13px;height:13px;color:var(--gold-deep)}
+.m-tbl .hd span{margin-left:auto;font-size:var(--f5);color:var(--ink3);font-weight:400}
+.m-tbl table{width:100%;border-collapse:collapse;font-size:var(--f5);table-layout:fixed}
+.m-tbl th{text-align:left;padding:4px 12px;color:var(--ink3);font-weight:500;font-size:10.5px;
+  border-bottom:1px solid var(--line)}
+.m-tbl td{padding:4px 12px;border-bottom:1px solid #F0F2F6;color:var(--ink2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-tbl tr:last-child td{border-bottom:0}
+.m-tbl td.t{color:var(--ink3);font-variant-numeric:tabular-nums}
+.m-tbl td.in{color:#3569D6;font-weight:600;font-variant-numeric:tabular-nums}
+.m-tbl td.out{color:#2E9B62;font-weight:600;font-variant-numeric:tabular-nums}
+.m-tbl td.bad{color:#B45B5B}
+.m-tbl .dot{display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#57A66B;margin-right:6px;vertical-align:middle}
+.m-tbl .dot.no{background:#C96A6A}
+.m-tbl .est{color:var(--ink3);font-size:10.5px;margin-right:2px}
+.m-empty2{padding:14px;text-align:center;font-size:var(--f5);color:var(--ink3);line-height:1.6}
+.m-mon-ft{padding:9px 15px;border-top:1px solid var(--line);display:flex;
+  align-items:center;gap:9px;flex-wrap:wrap}
+.m-mon-ft .m-note{flex:1;min-width:190px}
+.m-mon-ft button{font-size:var(--f5);padding:4px 10px;border:1px solid var(--line);
+  border-radius:8px;background:#fff;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.m-mon-ft button:hover{border-color:#BFE0DA;color:#5A6272}
+.m-mon-ft button.armed{border-color:#E4C7C7;background:#FFF1F1;color:#B45B5B}
+.tiny .m-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tiny .m-mon-hd{padding:9px 12px}.tiny .m-mon-body{padding:9px 12px}
+
+/* 概览里的迷你 Token 趋势（替换原「累计请求」卡片） */
+.m-trend{border:1px solid var(--line);border-radius:var(--r-md);padding:9px 12px 4px;background:#fff}
+.m-trend-hd{display:flex;align-items:center;gap:7px;font-size:var(--f4);font-weight:600}
+.m-trend-hd .ic{width:14px;height:14px;color:#3569D6}
+.m-trend-hd .peak{margin-left:auto;font-size:var(--f5);color:var(--ink3);font-weight:400}
+.m-trend svg{width:100%;height:60px;display:block}
+
+/* 查看详情弹窗：整窗不滚，只有「最近请求」在面板内滑，三张表一眼都能看到 */
+#mUsageModal{padding:12px}
+.m-dialog.m-detail{width:min(880px,100%);max-height:94vh;overflow:hidden;
+  padding:12px 18px 10px;gap:10px}
+.m-dialog.m-detail .m-dialog-ft{padding-top:7px}
+.m-dialog.m-detail .m-dialog-ft .u-btn{height:28px}
+.m-detail-body{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0;
+  overflow:auto;scrollbar-width:thin;padding-right:2px}
+.m-detail-body::-webkit-scrollbar{width:6px}
+.m-detail-body::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:4px}
+.m-tbl-scroll{max-height:120px;overflow:auto}
+.m-tbl-scroll::-webkit-scrollbar{width:6px}
+.m-tbl-scroll::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:4px}
+.m-tbl.grow{display:flex;flex-direction:column;flex:1 1 auto;min-height:88px}
+.m-recent-scroll{max-height:250px;overflow:auto;flex:1 1 auto;min-height:0}
+.m-recent-scroll::-webkit-scrollbar{width:6px}
+.m-recent-scroll::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:4px}
+.m-recent-scroll table{width:100%;border-collapse:collapse;font-size:var(--f5);table-layout:fixed}
+.m-recent-scroll th,.m-recent-scroll td{padding-left:9px;padding-right:9px}
+.m-recent-scroll th{position:sticky;top:0;background:#FBFCFE;z-index:1}
+.m-tbl-scroll th{position:sticky;top:0;background:#FBFCFE;z-index:1}
+.m-detail-body .m-dialog-ft{flex:0 0 auto}
+
+/* 危险操作二次确认 */
+.m-confirm .m-dialog{width:min(430px,92vw)}
+.m-confirm-txt{font-size:var(--f4);color:var(--ink2);line-height:1.75}
+.m-confirm-txt b{color:#B45B5B}
+.m-confirm-row{display:flex;gap:7px;align-items:center}
+.m-confirm-row .u-input{flex:1;min-width:0;height:36px}
+.m-confirm-row .u-input input{height:100%;font-size:var(--f4)}
+.m-confirm .m-dialog-ft .u-btn.danger{background:#FFF1F1;border-color:#E4C7C7;color:#B45B5B}
+.m-confirm .m-dialog-ft .u-btn.danger:disabled{opacity:.45;cursor:default;filter:grayscale(.4)}
+
+.compact .m-dialog{width:min(470px,94vw)}
+.compact .m-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.tiny .m-dialog{width:94vw;padding:14px}
+.tiny .m-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+</style>
+
+<section class="page" data-page="models">
+  <div class="u-head">
+    <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-sliders"/></svg>模型管理中心</div>
+      <div class="u-sub">分「文本 / 多模态 / 视频 / 生图」四类 · 首页只选文本和多模态 · 生图 / 视频由 AI 导演自动调用</div></div>
+    <div class="u-actions">
+      <button class="u-btn" id="mRefresh"><svg class="ic"><use href="#i-refresh"/></svg>重新检测</button>
+      <button class="u-btn gold" id="mAddToggle"><svg class="ic"><use href="#i-plus"/></svg>添加模型</button>
+    </div>
+  </div>
+
+  <div class="m-main">
+    <!-- 添加 / 编辑模型：悬浮弹窗（不占页面空间） -->
+    <div class="m-modal" id="mModal" role="dialog" aria-modal="true" aria-label="添加模型">
+      <div class="m-dialog">
+        <div class="m-dialog-hd">
+          <svg class="ic" style="width:17px;height:17px;color:var(--gold-deep)"><use href="#i-plus"/></svg>
+          <b id="mFormTitle">添加模型</b>
+          <button class="m-x" id="mCloseX" title="关闭" aria-label="关闭">×</button>
+        </div>
+
+        <div class="m-f">
+          <label for="mfPreset">供应商 <span class="u-tag gold" style="margin-left:4px">选一家自动填好接口</span>
+            <span style="font-weight:400;color:var(--ink3);margin-left:6px">密钥要自己填，软件不带密钥</span></label>
+          <div class="u-select"><select id="mfPreset">
+            <optgroup label="免费额度 · 注册就能用，不用充值">
+              <option value="bailu">白鹿 BailuCode（每天领 500 万 Tokens）</option>
+              <option value="agnes-cn">Agnes 国内（免费档 · 10 rpm · 能读图）</option>
+              <option value="agnes-intl">Agnes 国际（免费档 · 20 rpm · 吞吐翻倍）</option>
+            </optgroup>
+            <optgroup label="其他">
+              <option value="deepseek">DeepSeek</option>
+              <option value="openai">OpenAI / GPT</option>
+              <option value="openrouter">OpenRouter（open code）</option>
+              <option value="anthropic">Anthropic Claude</option>
+              <option value="zhipu">智谱 GLM</option>
+              <option value="kimi">Kimi</option>
+              <option value="minimax">MiniMax</option>
+              <option value="custom" selected>自定义（需填接口地址）</option>
+            </optgroup>
+          </select><svg class="ic"><use href="#i-chev"/></svg></div>
+        </div>
+
+        <!-- 预设说明 + 去注册：密钥不在软件里，用户得自己注册一个 -->
+        <div class="m-preset" id="mPresetBox" style="display:none">
+          <div class="m-preset-hd">
+            <b id="mPresetName">—</b>
+            <span class="u-tag gray" id="mPresetVendor">—</span>
+            <span class="u-tag free" id="mPresetFree">免费额度</span>
+          </div>
+          <div class="m-preset-free" id="mPresetFreeLine"></div>
+          <div class="m-preset-note" id="mPresetNote"></div>
+          <div class="m-preset-act">
+            <button type="button" class="u-btn sm gold" id="mPresetReg">
+              <svg class="ic"><use href="#i-upload"/></svg>去注册，拿 API Key
+            </button>
+            <button type="button" class="u-btn sm" id="mPresetConsole">控制台 / 查余额</button>
+          </div>
+          <div class="m-preset-inv">
+            <label for="mPresetInvite">推广码（可选，填了注册链接会自动带上）</label>
+            <div class="m-inline">
+              <div class="u-input"><input id="mPresetInvite" placeholder="例如 INV-ABCD-1234，没有就留空" spellcheck="false"></div>
+              <button type="button" class="u-btn sm" id="mPresetInviteSave">保存</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="m-f">
+          <label for="mfUrl">接口地址 <span class="u-tag gold" style="margin-left:4px">自定义必填</span></label>
+          <div class="m-inline">
+            <div class="u-input"><input id="mfUrl" placeholder="https://api.example.com/v1" spellcheck="false"></div>
+            <button class="m-paste" data-paste="mfUrl" title="粘贴接口地址"><svg class="ic"><use href="#i-copy"/></svg></button>
+          </div>
+        </div>
+
+        <div class="m-f">
+          <label for="mfKey">API Key</label>
+          <div class="m-inline">
+            <div class="u-input"><input id="mfKey" type="password" placeholder="输入或粘贴你的 API Key" spellcheck="false"></div>
+            <button class="m-paste" data-paste="mfKey" title="粘贴 API Key"><svg class="ic"><use href="#i-copy"/></svg></button>
+            <button class="u-btn sm" id="mTestBtn"><svg class="ic"><use href="#i-refresh"/></svg>测试连接</button>
+          </div>
+        </div>
+
+        <div class="m-f">
+          <label for="mfModel">模型名称 / 模型 ID <span style="font-weight:400;color:var(--ink3)">· 手动填一个，或从下面读取后勾选多个</span></label>
+          <div class="m-inline">
+            <div class="u-input"><input id="mfModel" placeholder="例如 gpt-4o 或 openai/gpt-4o 或 deepseek-chat" spellcheck="false"></div>
+            <button class="m-paste" data-paste="mfModel" title="粘贴模型 ID"><svg class="ic"><use href="#i-copy"/></svg></button>
+          </div>
+        </div>
+
+        <!-- 一个 Key 下可能有很多可用模型：读出来，手动勾要添加哪几个 -->
+        <div class="m-scan" id="mScanWrap">
+          <div class="m-scan-hd">
+            <button class="u-btn sm" id="mFetchBtn"><svg class="ic"><use href="#i-refresh"/></svg>读取可用模型</button>
+            <span class="m-note">用上面的接口地址 + API Key 拉取这个 Key 下所有模型，勾选要添加哪几个</span>
+          </div>
+          <div id="mScanBody" style="display:none"></div>
+        </div>
+
+        <div class="m-f">
+          <label for="mfName">显示名称 <span style="font-weight:400;color:var(--ink3)">· 可留空，默认用模型 ID</span></label>
+          <div class="u-input"><input id="mfName" placeholder="例如：我的 DeepSeek"></div>
+        </div>
+
+        <div class="m-adv">
+          <div class="m-adv-t">高级配置</div>
+          <div class="m-checks">
+            <label class="m-check"><input type="checkbox" id="mfVision">图片输入（多模态模型，能看画面、挑镜头）</label>
+            <label class="m-check"><input type="checkbox" id="mfImage">生图模型（文生图，做封面 / Logo）</label>
+            <label class="m-check"><input type="checkbox" id="mfVideo">视频模型（文生视频 / 图生视频）</label>
+            <label class="m-check off"><input type="checkbox" disabled>工具调用 · 即将支持</label>
+            <label class="m-check off"><input type="checkbox" disabled>思考模式 · 即将支持</label>
+          </div>
+          <div class="m-protocol"><span>接口协议</span>
+            <div class="u-select"><select id="mfVendor"><option>OpenAI 兼容</option><option>Anthropic 风格</option></select><svg class="ic"><use href="#i-chev"/></svg></div>
+          </div>
+        </div>
+
+        <div class="m-hint" id="mFormHint">⌘V 可直接粘贴；也可点输入框旁的粘贴按钮。填错不会假装成功，测试连接会真实报错。</div>
+
+        <div class="m-dialog-ft">
+          <button class="u-btn sm" id="mCancelBtn">取消</button>
+          <button class="u-btn sm gold" id="mSaveBtn"><svg class="ic"><use href="#i-check"/></svg>保存并启用</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 我的模型（一个列表，勾了支持图片的会标出来） -->
+    <div class="m-groups" id="mGroups"></div>
+
+    <!-- 模型使用量 概览：主页面只留 5 个统计面板 + 一条 Token 趋势，详细内容收进弹窗 -->
+    <div class="u-card m-mon" id="mUsageCard">
+      <div class="m-mon-hd">
+        <svg class="ic"><use href="#i-chart"/></svg>
+        <b>模型使用量 概览</b>
+        <span class="u-tag blue">本机真实数据</span>
+        <div class="m-mon-tabs" id="mUsageTabs">
+          <button data-period="today" class="on">今日</button>
+          <button data-period="24h">24 小时</button>
+          <button data-period="7d">7 天</button>
+          <button data-period="30d">30 天</button>
+        </div>
+        <div class="m-mon-right">
+          <span class="life" id="mUsageLife">累计 0 次</span>
+          <button class="u-btn sm" id="mUsageRefresh"><svg class="ic"><use href="#i-refresh"/></svg>刷新</button>
+          <button class="u-btn sm gold" id="mUsageDetail"><svg class="ic"><use href="#i-list"/></svg>查看详情</button>
+        </div>
+      </div>
+      <div class="m-mon-body">
+        <div class="m-stats" id="mUsageStats"></div>
+        <!-- 原来的「累计请求」卡片改成 Token 趋势 -->
+        <div class="m-trend">
+          <div class="m-trend-hd"><svg class="ic"><use href="#i-chart"/></svg>Token 趋势
+            <span class="peak" id="mUsagePeakSmall">—</span></div>
+          <svg id="mUsageChartSmall" viewBox="0 0 720 60" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+      <div class="m-mon-ft">
+        <span class="m-note" id="mUsageNote">总调用量永久保留。Token 优先取接口返回的 usage，上游没给才估算标「~」。</span>
+      </div>
+    </div>
+
+    <!-- 查看详情弹窗：完整趋势 + 两个独立表格 + 最近 50 条（面板内滑动） -->
+    <div class="m-modal" id="mUsageModal" role="dialog" aria-modal="true" aria-label="模型使用量详情">
+      <div class="m-dialog m-detail">
+        <div class="m-dialog-hd">
+          <svg class="ic" style="width:17px;height:17px;color:var(--gold-deep)"><use href="#i-chart"/></svg>
+          <b>模型使用量 · 详情</b>
+          <button class="m-x" id="mUsageDetailClose" title="关闭" aria-label="关闭">×</button>
+        </div>
+        <div class="m-detail-body">
+          <div class="m-chart">
+            <div class="m-chart-hd"><b>Token 趋势</b>
+              <span class="peak" id="mUsagePeak">—</span></div>
+            <svg id="mUsageChart" viewBox="0 0 720 26" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="m-tbl">
+            <div class="hd"><svg class="ic"><use href="#i-sliders"/></svg>按模型
+              <span>只统计成功调用，失败与零 token 不计入</span></div>
+            <div class="m-tbl-scroll"><table><thead><tr><th style="width:34%">名称</th><th style="width:12%">请求</th>
+              <th style="width:18%">输入</th><th style="width:18%">输出</th><th style="width:18%">最近</th></tr></thead>
+              <tbody id="mUsageRankModel"></tbody></table></div>
+          </div>
+          <div class="m-tbl">
+            <div class="hd"><svg class="ic"><use href="#i-cube"/></svg>按供应商
+              <span>只统计成功调用，失败与零 token 不计入</span></div>
+            <div class="m-tbl-scroll"><table><thead><tr><th style="width:34%">名称</th><th style="width:12%">请求</th>
+              <th style="width:18%">输入</th><th style="width:18%">输出</th><th style="width:18%">最近</th></tr></thead>
+              <tbody id="mUsageRankSupplier"></tbody></table></div>
+          </div>
+          <div class="m-tbl grow">
+            <div class="hd"><svg class="ic"><use href="#i-clock"/></svg>最近请求
+              <span>最近 50 条 · 可在面板内滑动</span></div>
+            <div class="m-recent-scroll">
+              <table><thead><tr><th style="width:15%">时间</th><th style="width:22%">模型</th>
+                <th style="width:16%">用途</th><th style="width:19%">IN / OUT</th>
+                <th style="width:12%">耗时</th><th style="width:16%">状态</th></tr></thead>
+                <tbody id="mUsageRecent"></tbody></table>
+            </div>
+          </div>
+        </div>
+        <div class="m-dialog-ft"><button class="u-btn sm" id="mUsageDetailDone">关闭</button></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 通用确认框已移到 shell.html 全局区：任意页面都能弹出，不受 page 隐藏影响 -->
+</section>

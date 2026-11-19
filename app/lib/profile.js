@@ -1,0 +1,295 @@
+// 内核 profile 生成器。
+//
+// 三件事：
+//   1. bundles 选 dsh-base + dsh-web-app —— web-app 才带插件市场/自动化任务/设置面板，
+//      这是用户明确要保留的原生能力，不能用 sdk-app（那只有 stdio 没界面）。
+//   2. 模型路由从旧软件的模型配置翻译过来（v0 先用 agnes，v1 接 models.json）。
+//   3. patch 里插我们的剪辑预设 + MCP 视频工具 + 技能目录。
+const { existsSync, mkdirSync, writeFileSync, readFileSync, symlinkSync, lstatSync } = require('node:fs')
+const { join } = require('node:path')
+
+// 三个 bundle 缺一不可：
+//   dsh-base     —— 内核本体（agent 循环、工具、会话、沙箱）
+//   dsh-sdk-app  —— stdio JSON-RPC 通道。没有它，我们起子进程后
+//                   `initialize` 永远等不到响应（界面壳靠这条通道说话）
+//   dsh-web-app  —— 原生 Web 界面（插件市场、自动化任务、设置面板）。
+//                   用户明确要保留的 DSH 原生能力都在这里；
+//                   它和 sdk-app 各起各的服务，互不冲突（实测同时装能起来）。
+const BUNDLES = [
+  '@deepseek-ai/dsh-base',
+  '@deepseek-ai/dsh-sdk-app',
+  '@deepseek-ai/dsh-web-app',
+]
+
+function q(s) { return JSON.stringify(String(s)) }
+
+function ensureDir(p) { if (!existsSync(p)) mkdirSync(p, { recursive: true }); return p }
+
+/**
+ * 从我们自己的模型表读（lib/models.js），只取能对话的。
+ * 以前读的是旧软件那份 json —— 那个路径在新版里根本不存在，
+ * 结果永远是空、永远回落内置 agnes，用户在界面上配的模型一点用不上。
+ */
+function readModels() {
+  try {
+    const M = require('./models')
+    const ms = M.models()
+    const out = []
+    for (const [mid, m] of Object.entries(ms)) {
+      if (!m || !m.chat) continue
+      if (!M.usable(m)) continue
+      // 本机 tts/asr 不走 llm 路由
+      if (m.kind === 'tts' || m.kind === 'asr') continue
+      if (!m.url) continue
+      const key = String(m.key || '').trim()
+      if (!key) continue
+      out.push({ id: mid, name: m.name || m.model, model: m.model, url: m.url, key, kind: m.kind })
+    }
+    return out
+  } catch { return [] }
+}
+
+function agnesKey() {
+  if (process.env.AGNES_API_KEY) return process.env.AGNES_API_KEY
+  const f = join(process.env.HOME || '', '.dsh', '.credentials.yaml')
+  try {
+    const t = readFileSync(f, 'utf8')
+    const m = t.match(/AGNES_API_KEY:\s*(wk-[A-Za-z0-9_-]+)/)
+    if (m) return m[1]
+  } catch {}
+  return ''
+}
+
+/** 生成 cordis.patch.yml 的正文。 */
+function patchYaml({ models, env, homeDir }) {
+  const lines = []
+  // ── 模型路由：一个 llm-pi-ai 装全部 provider（多个同名条目会互相顶掉）
+  lines.push('- id: llm-pi-ai')
+  lines.push('  name: "@deepseek-ai/dsh-llm-pi-ai"')
+  lines.push('  config:')
+  lines.push('    providers:')
+
+  const provs = []
+  if (models.length) {
+    models.forEach((m, i) => {
+      const pid = 'velora-m' + i
+      const envName = 'RiffCut_KEY_' + i
+      env[envName] = m.key
+      provs.push({ pid, envName, m })
+      lines.push(`      ${pid}:`)
+      lines.push(`        displayName: ${q(m.name || m.model)}`)
+      lines.push(`        apiKeyEnv: ${envName}`)
+      lines.push(`        api: openai-completions`)
+      lines.push(`        baseURL: ${q(String(m.url).replace(/\/chat\/completions\/?$/, '').replace(/\/+$/, ''))}`)
+      lines.push('        models:')
+      lines.push(`          - id: ${q(m.model)}`)
+      lines.push(`            name: ${q(m.name || m.model)}`)
+      lines.push('            input: [text, image]')
+    })
+  } else {
+    const k = agnesKey()
+    if (k) env.AGNES_API_KEY = k
+    provs.push({ pid: 'velora-m0', envName: 'AGNES_API_KEY', m: { model: 'agnes-2.5-flash', name: 'Agnes' } })
+    lines.push('      velora-m0:')
+    lines.push('        displayName: "Agnes"')
+    lines.push('        apiKeyEnv: AGNES_API_KEY')
+    lines.push('        api: openai-completions')
+    lines.push('        baseURL: "https://apihub.agnes-ai.com/v1"')
+    lines.push('        models:')
+    lines.push('          - id: "agnes-2.5-flash"')
+    lines.push('            name: "agnes-2.5-flash"')
+    lines.push('            input: [text, image]')
+  }
+
+  const first = provs[0]
+  lines.push('- id: agent-default-model')
+  lines.push('  name: "@deepseek-ai/dsh-agent-default-model"')
+  lines.push('  config:')
+  lines.push(`    provider: ${first.pid}`)
+  lines.push(`    model: ${q(first.m.model)}`)
+
+  // ── 插件市场：接 DSH 社区真实索引（6112 个）
+  // ★ dsh-base 里没有 plugin-market，裸写 - id: 会被当成「修改已有条目」静默丢弃，
+  //   必须用 - insert: 才是新增。
+  lines.push('- insert:')
+  // 界面定制插件（纯 client 包）：
+  //   ★ 不能进 bundles —— bundles 要求 package.json 里有 dsh.bundle，
+  //     我们只有 dsh.client，加了会报
+  //     `skipping profile bundle "@velora/client": declares no dsh.bundle`。
+  //   ★ 作为普通插件条目 insert 即可：dsh-client-modules 会扫 loader 的
+  //     entries，发现 dsh.client 声明就把它的 ./client 装进前端。
+  const pluginDir = join(__dirname, '..', '..', 'plugins', 'velora-client')
+  if (existsSync(pluginDir)) {
+    lines.push('    - id: velora-client')
+    lines.push('      name: "@velora/client"')
+  }
+  lines.push('    - id: plugin-market')
+  lines.push('      name: "@deepseek-ai/dsh-plugin-market"')
+  lines.push('      config:')
+  lines.push('        indexes:')
+  lines.push('          - "https://awesome-dsh-plugin.com/index.json"')
+  lines.push('          - "https://dshmarket.com/index.json"')
+  lines.push('        cacheTtlMs: 21600000')
+  lines.push('    - id: tool-plugin-market')
+  lines.push('      name: "@deepseek-ai/dsh-plugin-market/tools"')
+  lines.push('    - id: tool-plugin-manager')
+  lines.push('      name: "@deepseek-ai/dsh-plugin-manager/tools"')
+  lines.push('    - id: plugin-manager')
+  lines.push('      name: "@deepseek-ai/dsh-plugin-manager"')
+
+  // ── Web 服务器：内核自带的界面（含插件市场/自动化任务/设置）
+  //    ★ host 与 port 都是 required；host 不接受通配地址。
+  //    ★ port 必须能变：写死一个值，第二个实例（或用户机器上撞了）直接
+  //      `listen EADDRINUSE` → required plugin 不激活 → 整个内核起不来。
+  //    ★ 端口必须在 Node 侧读好、把字面数字写进 YAML —— 别把文件 IO 塞进
+  //      `!!js`：实测 cordis 求值拿到的是 [object Object]，报
+  //      `$.port expected number but got [object Object]`。
+  // ★ 用传进来的 homeDir，不是模块常量 P.HOME —— 后者是「真实数据目录」，
+  //   拿它读端口会让所有临时 home（测试、多实例）都去抢同一个端口，
+  //   症状是第二次启动必然 EADDRINUSE。
+  const portFile = join(homeDir || require('./paths').HOME, '配置', 'port.txt')
+  let webPort = 0
+  try {
+    const n = parseInt(readFileSync(portFile, 'utf8').trim(), 10)
+    if (Number.isFinite(n) && n > 1024 && n < 65535) webPort = n
+  } catch {}
+  // ★ 关掉「自动用系统浏览器打开界面」。
+  //   界面就在我们自己的 Electron 窗口里 —— 它再弹一个 Chrome，
+  //   用户第一反应就是「你怎么用浏览器打开」。注意这不是命令行参数
+  //   （`--no-open` 会报 unknown option），是 web-app 插件的配置项。
+  //   插件 id 是 web-runtime（不是 web-app），它的 openBrowser 默认取
+  //   `ctx.webStartup.openBrowser`，我们直接覆盖成 false。
+  lines.push('- id: web-runtime')
+  lines.push('  config:')
+  lines.push('    openBrowser: false')
+  lines.push('    printUrl: true')
+  lines.push('- id: webserver')
+  lines.push('  config:')
+  lines.push('    host: 127.0.0.1')
+  // 0 = 让内核自己挑空闲端口（只有连 port.txt 都没有时才会走到这里）
+  lines.push(`    port: ${webPort || 0}`)
+
+  // ── 沙箱：完全托管（桌面软件，用户自己的机器）
+  lines.push('- id: sandbox-policy')
+  lines.push('  config:')
+  lines.push('    mode: danger-full-access')
+  lines.push('    workspaceRoot: !!js process.cwd()')
+  lines.push('- id: approval')
+  lines.push('  config:')
+  lines.push('    policy: never')
+
+  // ── MCP：把我们的 42 个工具挂给内核（AI 靠这个真正动手）
+  // ★ dsh-base 里没有 mcp-client，裸写 - id: 会被当成「修改已有条目」静默丢弃，
+  //   必须用 - insert: 且条目缩进 4 空格。踩过两次，别再改回去。
+  const mcpEntry = join(__dirname, 'mcp.js')
+  // ★ 必须用内核自带那个 node，不能用 process.execPath：
+  //   打包后用户机器上不一定有 Homebrew，而 kernel/dsh/node 是我们随包带的、
+  //   只链 /usr/lib 的那份（已经验过不依赖 /opt/homebrew）。
+  const K = require('./kernel')
+  const nodeBin = existsSync(join(K.KERNEL_DIR, 'node')) ? join(K.KERNEL_DIR, 'node') : process.execPath
+  lines.push('- insert:')
+  lines.push('    - id: mcp-client')
+  lines.push('      name: "@deepseek-ai/dsh-mcp-client"')
+  lines.push('      config:')
+  lines.push('        transport: stdio')
+  lines.push('        serverName: velora-video')
+  lines.push(`        command: ${q(nodeBin)}`)
+  lines.push('        args:')
+  lines.push(`          - ${q(mcpEntry)}`)
+  lines.push('        env:')
+  lines.push('          RiffCut_CUSTOMER: !!js process.env.RiffCut_CUSTOMER || ""')
+  lines.push('        toolCallTimeoutMs: 1800000')
+  lines.push('        failOnStartupError: false')
+
+  // ── 技能：把我们的 41 个导演技能挂进去
+  const P = require('./paths')
+  const skillDirs = [
+    join(P.HOME, '配置', '导演技能'),
+    join(P.RES, '技能'),
+  ].filter(existsSync)
+  if (skillDirs.length) {
+    lines.push('- id: skill-filesystem')
+    lines.push('  config:')
+    lines.push('    customSkillDirs:')
+    for (const d of skillDirs.slice(0, 1)) lines.push(`      - ${q(d)}`)
+  }
+
+  return lines.join('\n') + '\n'
+}
+
+/**
+ * 写 profile 并返回 {provider, model, env}。
+ * 幂等：只在内容确实变了时才写盘，避免内核每次启动都重载。
+ */
+function buildProfile({ kernelDir, homeDir, profile }) {
+  const dir = join(homeDir, 'profiles', profile)
+  ensureDir(dir)
+
+  // ── 界面定制插件：只换侧栏左上品牌 + 首页 hero 标记，其余保持 DSH 原样。
+  //    ★ 必须走官方 slots 机制，绝不注入 DOM —— 注入的东西下一次 React
+  //      重渲染就没了，还得跟着它的 hashed 类名改（踩过一次）。
+  //    ★ 插件放在 <ROOT>/plugins/ 而不是内核 node_modules 里：内核整体换版本时
+  //      它不受影响。profile 的 node_modules 里做软链让 DSH 能解析到它。
+  const rootDir = join(__dirname, '..', '..')
+  const pluginSrc = join(rootDir, 'plugins', 'velora-client')
+  const bundles = BUNDLES.slice()
+  if (existsSync(pluginSrc)) {
+    try {
+      const linkDir = ensureDir(join(dir, 'node_modules', '@velora'))
+      const linkPath = join(linkDir, 'client')
+      const st = lstatSync(linkPath, { throwIfNoEntry: false })
+      if (!st) symlinkSync(pluginSrc, linkPath, 'dir')
+    } catch (e) {
+      process.stderr.write('[profile] 插件软链失败: ' + e.message + '\n')
+    }
+  } else {
+    process.stderr.write('[profile] 没找到界面插件: ' + pluginSrc + '\n')
+  }
+
+  const env = {}
+  const models = readModels()
+  const patch = patchYaml({ models, env, homeDir })
+
+  /* ★ 不能整体重写 package.json —— 会把用户装的插件抹掉。
+     踩过的坑：这个函数每次 /api/chat 都跑一次，原来直接写
+     `{name, private, dsh:{profile:{bundles}}}`，于是 plugins() 里
+     pnpm 装好的 dependencies 和用户加进 bundles 的插件，下次启动全没了。
+     症状：插件市场里显示「已装」，但 AI 完全用不到它 —— 因为 profile 里那条记录被冲掉了。
+     正解：读旧文件，把 dependencies 原样带上，bundles 做并集（内置的在前，用户加的在后）。 */
+  let oldPkg = {}
+  try { oldPkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) } catch (e) { oldPkg = {} }
+  const oldBundles = ((oldPkg.dsh || {}).profile || {}).bundles || []
+  const mergedBundles = Array.from(new Set(bundles.concat(oldBundles.filter((x) => !bundles.includes(x)))))
+  const pkg = {
+    name: 'velora-profile',
+    private: true,
+    dsh: { profile: { bundles: mergedBundles } },
+  }
+  if (oldPkg.dependencies && Object.keys(oldPkg.dependencies).length) pkg.dependencies = oldPkg.dependencies
+
+  const files = {
+    'package.json': JSON.stringify(pkg, null, 2) + '\n',
+    'cordis.yml': '[]\n',
+    'cordis.patch.yml': patch,
+    'pnpm-workspace.yaml': 'packages:\n  - .\nnodeLinker: hoisted\nautoInstallPeers: false\n',
+  }
+  for (const [name, body] of Object.entries(files)) {
+    const p = join(dir, name)
+    let old = null
+    try { old = readFileSync(p, 'utf8') } catch {}
+    if (old !== body) writeFileSync(p, body, 'utf8')
+  }
+
+  // 插件软链目录（我们的定制插件放这里；DSH 从 profile 下解析）
+  ensureDir(join(dir, 'node_modules'))
+
+  return {
+    provider: models.length ? 'velora-m0' : 'velora-m0',
+    model: models.length ? models[0].model : 'agnes-2.5-flash',
+    env,
+    patchPath: join(dir, 'cordis.patch.yml'),
+    profileDir: dir,
+  }
+}
+
+module.exports = { buildProfile, BUNDLES }

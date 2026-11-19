@@ -1,0 +1,607 @@
+<style>
+/* ══ Skill 技能中心 ════════════════════════ */
+.k-body{flex:1;min-height:0;display:grid;grid-template-columns:clamp(150px,16%,205px) minmax(0,1fr) clamp(150px,16%,205px);gap:clamp(8px,1%,14px)}
+.k-col{display:flex;flex-direction:column;min-height:0;padding:12px}
+/* 左右两栏只是标题清单，不套卡片边框 */
+.k-side{background:transparent;border:0;box-shadow:none;padding:12px 4px}
+.k-hd{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-bottom:10px}
+.k-hd b{font-size:var(--f3)}
+.k-search{flex:0 0 auto;height:30px;margin-bottom:9px}
+.k-search input{height:100%;font-size:var(--f5)}
+.k-scroll{flex:1;min-height:0}
+.k-foot{flex:0 0 auto;margin-top:9px;font-size:var(--f5);color:var(--ink3);line-height:1.6}
+/* 技能可能成百上千条，一行只放名字：卡片会把可用面积吃掉一半，
+   标签和开关挤得名字只剩三个字（「AI剪…」）。启停和删除都在中间正文区。 */
+.k-line{display:flex;align-items:center;gap:5px;padding:4px 7px;border-radius:4px;
+  font-size:var(--f5);line-height:1.5;color:#3E4655;cursor:pointer}
+.k-line:hover{background:#F4F6FA}
+.k-line.on{background:#EAF5F3;color:#147567;font-weight:600}
+.k-line.off .nm{color:#A8AFBC}
+.k-line .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.k-empty{padding:26px 10px;text-align:center;color:var(--ink3);font-size:var(--f5);line-height:1.8}
+.k-edit-hd{display:flex;align-items:center;gap:8px;padding-bottom:11px;border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap}
+.k-edit-hd .k-title{flex:1;min-width:150px;height:32px}
+.k-edit-hd .k-title input{height:100%;font-size:var(--f3);font-weight:600}
+.k-edit-hd .u-actions{margin-left:auto}
+.k-meta{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap;align-items:center}
+.k-meta label{display:flex;align-items:center;gap:6px;font-size:var(--f5);color:var(--ink3)}
+.k-meta .u-input{width:140px;height:28px}
+.k-meta .u-input input{height:100%;font-size:var(--f5)}
+.k-sw-row{cursor:pointer;user-select:none}
+.k-code{flex:1;min-height:0;width:100%;resize:none;border:0;outline:none;padding:14px 16px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--f5);line-height:1.85;
+  color:#3A4252;background:#FCFDFE;tab-size:2}
+.k-edit-ft{flex:0 0 auto;display:flex;gap:10px;padding-top:8px;border-top:1px solid var(--line);
+  font-size:var(--f5);color:var(--ink3)}
+/* 技能正文默认按 markdown 排出来看，点「编辑」才是文本框。
+   以前一直是个 textarea，## 和 ** 原样摆在那儿，读一条技能像读源码。 */
+.k-view{flex:1;min-height:0;overflow:auto;padding:14px 18px;background:#FCFDFE;
+  font-size:var(--f5);line-height:1.85;color:#3A4252}
+.k-view h2{font-size:calc(var(--f5) + 2px);font-weight:700;color:#1F2735;
+  margin:14px 0 6px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.k-view h2:first-child{margin-top:0}
+.k-view h3{font-size:var(--f5);font-weight:700;color:#2A3242;margin:12px 0 5px}
+.k-view p{margin:6px 0}
+.k-view ul{margin:6px 0 6px 2px;padding-left:16px}
+.k-view li{margin:3px 0}
+.k-view strong{font-weight:700;color:#1F2735}
+.k-view code{background:#F1F4F9;border-radius:4px;padding:1px 5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:calc(var(--f5) - 1px)}
+.k-view hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+.k-view .em{color:var(--ink3)}
+.k-edit-ft span:last-child{margin-left:auto}
+.k-right{overflow:auto;scrollbar-width:none}
+.k-right::-webkit-scrollbar{display:none}
+.k-sec{margin-bottom:13px}
+.k-sec h4{font-size:var(--f4);font-weight:600;margin:0 0 9px;display:flex;align-items:center;gap:7px}
+.k-sec h4 .u-tag{margin-left:auto}
+.k-line .ic{width:12px;height:12px;color:#2E9B62;flex:0 0 auto}
+.k-info{font-size:var(--f5);color:var(--ink2);line-height:1.8;word-break:break-all}
+.k-info b{color:var(--ink);font-weight:600}
+.k-note{font-size:var(--f5);color:var(--ink3);line-height:1.75}
+.k-check{display:flex;align-items:flex-start;gap:7px;font-size:var(--f5);color:#4A5262;margin-bottom:6px;line-height:1.5}
+.k-check .ic{width:13px;height:13px;color:#2E9B62;flex:0 0 auto;margin-top:1px}
+.compact .k-body{grid-template-columns:clamp(130px,15%,180px) minmax(0,1fr) clamp(130px,15%,180px)}
+.tiny .k-body{grid-template-columns:1fr 1.3fr}
+.tiny .k-right{display:none}
+
+/* ── 弹窗 ── */
+.k-modal{position:fixed;inset:0;z-index:320;display:none;align-items:center;justify-content:center}
+.k-modal.open{display:flex}
+.k-shade{position:absolute;inset:0;background:rgba(24,30,42,.36);backdrop-filter:blur(2px)}
+.k-dialog{position:relative;width:min(460px,92vw);max-height:88vh;display:flex;flex-direction:column;
+  background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 24px 70px rgba(20,28,44,.28);overflow:hidden}
+.k-dialog-wide{width:min(780px,94vw)}
+.k-dialog-hd{display:flex;align-items:center;gap:9px;padding:14px 17px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.k-dialog-hd b{font-size:var(--f2)}
+.k-dialog-hd .k-x{margin-left:auto}
+.k-x{width:26px;height:26px;border:0;background:transparent;color:#8A92A2;font-size:20px;line-height:1;cursor:pointer;border-radius:8px}
+.k-x:hover{background:#F2F4F8;color:#3A4252}
+.k-dialog-bd{padding:15px 17px;overflow:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:11px}
+.k-dialog-ft{display:flex;align-items:center;gap:8px;padding:12px 17px;border-top:1px solid var(--line);flex:0 0 auto}
+.k-dialog-ft .u-btn:first-child{margin-right:auto}
+.k-f{display:flex;flex-direction:column;gap:6px}
+.k-f label{font-size:var(--f5);color:var(--ink2);font-weight:600}
+.k-f .u-input{height:34px}
+.k-f .u-input input{height:100%;font-size:var(--f4)}
+.k-inline{display:flex;gap:6px;align-items:center}
+.k-inline .u-input{flex:1;min-width:0}
+.k-paste{flex:0 0 auto;width:34px;height:34px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:#fff;color:#7A8292;display:grid;place-items:center;cursor:pointer}
+.k-paste .ic{width:15px;height:15px}
+.k-paste:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
+.k-tip{font-size:var(--f5);color:var(--ink3);line-height:1.7;background:#F8FAFD;border:1px solid var(--line);
+  border-radius:8px;padding:9px 11px}
+.k-src-hd{display:flex;align-items:center;gap:8px;font-size:var(--f4);font-weight:600}
+.k-src-hd span{font-size:var(--f5);color:var(--ink3);font-weight:400}
+.k-src-list{max-height:132px;overflow:auto;display:flex;flex-direction:column;gap:5px}
+.k-src-list::-webkit-scrollbar{width:6px}
+.k-src-list::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:4px}
+.k-src{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:var(--f5)}
+.k-src .nm{font-weight:600;flex:0 0 auto}
+.k-src .pth{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink3)}
+.k-src .k-x{width:19px;height:19px;font-size:15px;flex:0 0 auto}
+.k-src-add{display:flex;gap:6px;align-items:center}
+.k-src-add .u-input{flex:1;min-width:0;height:32px}
+.k-src-add .u-input input{height:100%;font-size:var(--f5)}
+.k-scan-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
+.k-scan-bar b{font-size:var(--f5);color:var(--ink2);font-weight:600;flex:0 0 auto}
+.k-scan-bar .u-input{width:170px;height:28px}
+.k-scan-bar .u-input input{height:100%;font-size:var(--f5)}
+.k-scan-list{max-height:240px;min-height:90px;overflow:auto;display:flex;flex-direction:column;gap:5px;
+  border:1px solid var(--line);border-radius:8px;padding:8px;background:#FBFCFE}
+.k-scan-list::-webkit-scrollbar{width:6px}
+.k-scan-list::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:4px}
+.k-row{display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:8px;background:#fff;border:1px solid var(--line)}
+.k-row:hover{background:#F7F9FC}
+.k-row.done{opacity:.55}
+.k-row input[type=checkbox]{width:15px;height:15px;flex:0 0 auto;accent-color:#1B8B7E;margin-top:2px}
+.k-row .txt{flex:1;min-width:0}
+.k-row .t{font-size:var(--f4);font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.k-row .d{font-size:var(--f5);color:var(--ink3);margin-top:3px;line-height:1.55;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.k-ver{display:flex;align-items:center;gap:8px;padding:8px 9px;border:1px solid var(--line);border-radius:8px;font-size:var(--f5)}
+.k-ver span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+
+<section class="page" data-page="skill">
+  <div class="u-head">
+    <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-cube"/></svg>Skill 技能中心</div>
+      <div class="u-sub">兼容 Markdown SKILL.md · 手动添加 / 删除 / 编辑 / 启停 · 扫描本机智能体技能一键添加</div></div>
+    <div class="u-actions">
+      <button class="u-btn" id="kImportBtn"><svg class="ic"><use href="#i-upload"/></svg>导入 SKILL.md</button>
+      <button class="u-btn" id="kExportBtn"><svg class="ic"><use href="#i-download"/></svg>导出</button>
+      <button class="u-btn gold" id="kScanBtn"><svg class="ic"><use href="#i-search"/></svg>扫描本机技能</button>
+      <button class="u-btn gold" id="kNewBtn"><svg class="ic"><use href="#i-plus"/></svg>新建技能</button>
+    </div>
+  </div>
+
+  <div class="k-body">
+    <div class="k-col k-side">
+      <div class="k-hd"><b>技能</b><span class="u-tag" id="kCount">0 个</span></div>
+      <div class="u-input k-search"><input id="kSearch" placeholder="搜索技能名 / 分类" autocomplete="off"></div>
+      <div class="u-scroll k-scroll" id="kList"></div>
+      <div class="k-foot">技能都存在软件自己的数据目录里。点名字在中间看正文，启停和删除也在那里。</div>
+    </div>
+
+    <div class="u-card k-col" id="kEditor">
+      <div class="k-edit-hd">
+        <div class="u-input k-title"><input id="kTitle" placeholder="先选左侧技能，或点右上「新建技能」" autocomplete="off"></div>
+        <span class="u-tag gold">SKILL.md</span>
+        <div class="u-actions">
+          <button class="u-btn sm" id="kVerBtn">版本历史</button>
+          <button class="u-btn sm" id="kDelBtn">删除</button>
+          <button class="u-btn sm gold" id="kSaveBtn">保存</button>
+        </div>
+      </div>
+      <div class="k-meta">
+        <label>分类 <div class="u-input"><input id="kTag" placeholder="例如：品牌 / 宣传" autocomplete="off"></div></label>
+        <label class="k-sw-row">启用 <span class="u-switch on" id="kSwitch" data-live="1"></span></label>
+        <span class="u-tag" id="kSrcTag">本机技能</span>
+        <span class="u-tag gray" id="kVerTag">v —</span>
+      </div>
+      <div id="kView" class="k-view"></div>
+      <textarea id="kBody" class="k-code" spellcheck="false" style="display:none" placeholder="在这里写清楚「怎么剪」：节奏、转场、字幕、镜头数、质检规则…"></textarea>
+      <div class="k-edit-ft"><span id="kSaveHint">选一个技能后可直接改正文</span>
+        <button class="u-btn ghost sm" id="kEditBtn" type="button">编辑</button>
+        <span id="kLen">0 字</span></div>
+    </div>
+
+    <div class="k-col k-side k-right">
+      <div class="k-sec"><h4>当前组合 <span class="u-tag gold">已启用</span></h4><div id="kStack"></div></div>
+      <div class="u-divider"></div>
+      <div class="k-sec"><h4>技能信息</h4><div id="kInfo" class="k-info">先在左侧选一个技能。</div></div>
+      <div class="u-divider"></div>
+      <div class="k-sec"><h4>默认技能包 <span class="u-tag gray" id="kDefaultTag">待提供</span></h4>
+        <div class="k-note">你给的一批默认 SKILL.md，放进同一个文件夹，用「导入 SKILL.md」填文件夹路径就能一次加进来；也可以把该文件夹加进扫描来源，以后一键扫描添加。</div>
+        <button class="u-btn sm" id="kDefaultBtn" style="width:100%;margin-top:8px">从文件夹导入默认技能</button>
+      </div>
+      <div class="u-divider"></div>
+      <div class="k-sec"><h4>通用质检项 <span class="u-tag gray">参考</span></h4>
+        <div class="k-check"><svg class="ic"><use href="#i-check"/></svg>清晰度、曝光、黑屏、抖动</div>
+        <div class="k-check"><svg class="ic"><use href="#i-check"/></svg>重复镜头、镜头跳跃、主体连续性</div>
+        <div class="k-check"><svg class="ic"><use href="#i-check"/></svg>字幕错别字、越界、时间同步</div>
+        <div class="k-check"><svg class="ic"><use href="#i-check"/></svg>配音完整性、音量、音乐压人声</div>
+        <div class="k-check"><svg class="ic"><use href="#i-check"/></svg>分辨率、帧率、编码、可播放</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 新建技能 -->
+<div class="k-modal" id="kFormModal" role="dialog" aria-modal="true" aria-label="新建技能">
+  <div class="k-shade" data-close="kFormModal"></div>
+  <div class="k-dialog">
+    <div class="k-dialog-hd"><b>新建技能</b><button class="k-x" data-close="kFormModal">×</button></div>
+    <div class="k-dialog-bd">
+      <div class="k-f"><label>技能名称</label>
+        <div class="k-inline"><div class="u-input"><input id="kNewName" placeholder="例如：企业品牌宣传片" autocomplete="off"></div>
+          <button class="k-paste" data-paste="kNewName" title="粘贴"><svg class="ic"><use href="#i-copy"/></svg></button></div></div>
+      <div class="k-f"><label>分类标签（选填）</label>
+        <div class="u-input"><input id="kNewTag" placeholder="例如：品牌 / 宣传" autocomplete="off"></div></div>
+      <div class="k-f"><label>说明 / 正文开头（选填）</label>
+        <div class="u-input"><input id="kNewDesc" placeholder="一句话说明这个技能怎么剪" autocomplete="off"></div></div>
+      <div class="k-tip">创建后会自动生成一份 SKILL.md，中间编辑区可以直接改正文、分类和启停，改完点「保存」。也可以导入现成的 SKILL.md。</div>
+    </div>
+    <div class="k-dialog-ft"><button class="u-btn" data-close="kFormModal">取消</button><button class="u-btn gold" id="kNewOk">创建技能</button></div>
+  </div>
+</div>
+
+<!-- 导入 SKILL.md -->
+<div class="k-modal" id="kImportModal" role="dialog" aria-modal="true" aria-label="导入技能">
+  <div class="k-shade" data-close="kImportModal"></div>
+  <div class="k-dialog">
+    <div class="k-dialog-hd"><b>导入 SKILL.md</b><button class="k-x" data-close="kImportModal">×</button></div>
+    <div class="k-dialog-bd">
+      <div class="k-f"><label>本机路径（文件 / 文件夹 / zip 备份）</label>
+        <div class="k-inline"><div class="u-input"><input id="kImpPath" placeholder="/Users/…/SKILL.md 或 文件夹路径" autocomplete="off"></div>
+          <button class="k-paste" data-paste="kImpPath" title="粘贴"><svg class="ic"><use href="#i-copy"/></svg></button></div></div>
+      <div class="k-tip">填<b>单个 SKILL.md</b> 导入一个；填<b>文件夹</b> 会一次性导入里面所有 SKILL.md（含子目录），正好用来加你给的默认技能包；填<b> zip</b> 恢复之前导出的备份。<br>路径可直接粘贴，或按 ⌘V。</div>
+      <div class="k-hint" id="kImpHint" style="font-size:var(--f5);color:var(--ink3)">导入只把技能写进软件自己的技能库，不会改动原文件。</div>
+    </div>
+    <div class="k-dialog-ft"><button class="u-btn" data-close="kImportModal">取消</button><button class="u-btn gold" id="kImpOk">开始导入</button></div>
+  </div>
+</div>
+
+<!-- 扫描本机已安装技能 -->
+<div class="k-modal" id="kScanModal" role="dialog" aria-modal="true" aria-label="扫描本机技能">
+  <div class="k-shade" data-close="kScanModal"></div>
+  <div class="k-dialog k-dialog-wide">
+    <div class="k-dialog-hd"><b>扫描本机已安装技能</b><button class="k-x" data-close="kScanModal">×</button></div>
+    <div class="k-dialog-bd">
+      <div class="k-tip">只读扫描 WorkBuddy / CodeBuddy / Claude Code 等智能体装在电脑上的 <b>SKILL.md</b>，按真实路径去重后勾选，一键添加进软件技能库。<b>不会改动、不会删除任何外部文件。</b></div>
+      <div class="k-src-hd">扫描来源 <span id="kSrcCount"></span></div>
+      <div class="k-src-list" id="kSrcList"></div>
+      <div class="k-src-add">
+        <div class="u-input"><input id="kSrcPath" placeholder="再加一个文件夹路径（可粘贴）" autocomplete="off"></div>
+        <button class="k-paste" data-paste="kSrcPath" title="粘贴"><svg class="ic"><use href="#i-copy"/></svg></button>
+        <button class="u-btn sm" id="kSrcAddBtn">添加来源</button>
+      </div>
+      <div class="k-scan-bar">
+        <b id="kScanStat">尚未扫描</b>
+        <div class="u-input"><input id="kScanSearch" placeholder="筛选技能名 / 描述" autocomplete="off"></div>
+        <button class="u-btn sm" id="kSelAll">全选可添加</button>
+        <button class="u-btn sm" id="kSelNone">清空选择</button>
+        <button class="u-btn sm" id="kRescanBtn">重新扫描</button>
+      </div>
+      <div class="k-scan-list" id="kScanList"></div>
+    </div>
+    <div class="k-dialog-ft"><button class="u-btn" data-close="kScanModal">关闭</button><button class="u-btn gold" id="kAddBtn">一键添加选中的 0 个技能</button></div>
+  </div>
+</div>
+
+<!-- 版本历史 -->
+<div class="k-modal" id="kVerModal" role="dialog" aria-modal="true" aria-label="版本历史">
+  <div class="k-shade" data-close="kVerModal"></div>
+  <div class="k-dialog">
+    <div class="k-dialog-hd"><b>版本历史</b><button class="k-x" data-close="kVerModal">×</button></div>
+    <div class="k-dialog-bd"><div class="k-tip">每次点「保存」都会自动留一份旧版本，可随时恢复。</div><div id="kVerList"></div></div>
+    <div class="k-dialog-ft"><button class="u-btn" data-close="kVerModal">关闭</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)},$$=function(s){return [].slice.call(document.querySelectorAll(s))};
+  var A=function(p,d){return window.api(p,d)},say=function(m){if(window.say)window.say(m)};
+  var SKILLS=[],CUR=null,SCAN={sources:[],items:[],sel:{}};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function askConfirm(o){
+    if(window.confirmAction){window.confirmAction(o);return}
+    if(window.confirm((o.title||'确认')+'：'+String(o.html||'').replace(/<[^>]+>/g,''))) {if(o.onOk)o.onOk()}
+  }
+  function openM(id){var m=document.getElementById(id);if(m){m.classList.add('open');document.body.classList.add('modal-open')}}
+  function closeM(id){var m=document.getElementById(id);if(m)m.classList.remove('open');document.body.classList.remove('modal-open')}
+  function pasteTo(id){
+    var inp=document.getElementById(id);if(!inp)return;
+    if(navigator.clipboard&&navigator.clipboard.readText){
+      navigator.clipboard.readText().then(function(t){inp.value=(t||'').trim();inp.focus();say('已粘贴到输入框')})
+        .catch(function(){inp.focus();say('请按 ⌘V 粘贴')});
+    }else{inp.focus();say('请按 ⌘V 粘贴')}
+  }
+  function find(id){for(var i=0;i<SKILLS.length;i++)if(SKILLS[i].id===id)return SKILLS[i];return null}
+  function countOn(){return SKILLS.filter(function(s){return s.enabled}).length}
+
+  /* ── 技能列表 ── */
+  function renderList(){
+    var box=$('#kList');if(!box)return;
+    var q=($('#kSearch')?$('#kSearch').value:'').trim().toLowerCase();
+    var arr=SKILLS.filter(function(s){
+      return !q||((s.title||'')+' '+(s.tag||'')+' '+(s.id||'')).toLowerCase().indexOf(q)>=0});
+    $('#kCount').textContent=SKILLS.length+' 个 · '+countOn()+' 个启用';
+    if(!arr.length){box.innerHTML='<div class="k-empty">'+(SKILLS.length?'没有匹配的技能':'技能库是空的，点右上「新建技能」或「扫描本机技能」')+'</div>';return}
+    box.innerHTML=arr.map(function(s){
+      var on=CUR&&CUR.id===s.id;
+      return '<div class="k-line'+(on?' on':'')+(s.enabled?'':' off')+'" data-id="'+esc(s.id)+'">'+
+        '<span class="nm">'+esc(s.title)+'</span></div>';
+    }).join('');
+  }
+  function renderStack(){
+    var box=$('#kStack');if(!box)return;
+    var on=SKILLS.filter(function(s){return s.enabled});
+    box.innerHTML=on.length?on.map(function(s){
+      return '<div class="k-line" data-id="'+esc(s.id)+'">'+
+        '<span class="nm">'+esc(s.title)+'</span></div>';
+    }).join(''):'<div class="k-note">还没有启用的技能，点中间正文区的「启用」开关。</div>';
+  }
+  function fillEditor(){
+    var s=CUR,p=s?s.params||{}:{};
+    $('#kTitle').value=s?s.title:'';$('#kTag').value=s?s.tag:'';
+    $('#kBody').value=s?s.body:'';
+    renderBody();
+    $('#kSwitch').classList.toggle('on',!!(s&&s.enabled));
+    $('#kSrcTag').textContent=p.source||'本机技能';
+    $('#kVerTag').textContent=p.version?('v'+p.version):(p.origin_name?p.origin_name:'v —');
+    $('#kInfo').innerHTML=s?(
+      '<b>名称</b>：'+esc(s.title)+'<br>'+
+      '<b>分类</b>：'+esc(s.tag)+'<br>'+
+      '<b>状态</b>：'+(s.enabled?'已启用':'已停用')+'<br>'+
+      '<b>来源</b>：'+esc(p.source||'手动创建')+'<br>'+
+      (p.origin_name?'<b>原名</b>：'+esc(p.origin_name)+'<br>':'')+
+      (p.version?'<b>版本</b>：'+esc(p.version)+'<br>':'')+
+      (p.source_path?'<b>原始路径</b>：'+esc(p.source_path)+'<br>':'')+
+      '<b>文件</b>：'+esc(s.id)+'.md'
+    ):'先在左侧选一个技能。';
+    $('#kSaveHint').textContent=s?('最后更新：'+(p.updated||'—')):'选一个技能后可直接改正文';
+    updateLen();
+  }
+  /* 技能正文是 markdown。这里只认技能里真正会用到的几种写法：
+     ## 标题 / ### 小标题 / **粗体** / `代码` / - 列表 / 1. 列表 / --- 分隔线。
+     不做链接、图片、表格 —— 技能正文里基本不出现，做了也没人受益，
+     反而给一个 500 行渲染器埋 bug 的机会。 */
+  function mdToHtml(src){
+    var esc=function(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')};
+    var inline=function(t){
+      return esc(t)
+        .replace(/`([^`]+)`/g,'<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+    };
+    var out=[], list=null, para=[], liOpen=false;
+    function flushPara(){ if(para.length){ out.push('<p>'+inline(para.join(' '))+'</p>'); para=[]; } }
+    function flushList(){ if(list){ out.push('</'+list+'>'); list=null; liOpen=false; } }
+    String(src||'').split(/\r?\n/).forEach(function(ln){
+      var t=ln.replace(/\s+$/,'');
+      if(!t.trim()){ flushPara(); flushList(); return; }
+      var m;
+      // 缩进续行：列表项换行接着写是常见写法，别当成新段落把列表打断
+      if(/^\s{2,}\S/.test(ln) && liOpen && list){
+        out[out.length-1]=out[out.length-1].replace(/<\/li>$/,' '+inline(t.trim())+'</li>');
+        return;
+      }
+      if((m=t.match(/^#\s+(.*)$/))){ flushPara(); flushList(); out.push('<h2>'+inline(m[1])+'</h2>'); return; }
+      if((m=t.match(/^##\s+(.*)$/))){ flushPara(); flushList(); out.push('<h2>'+inline(m[1])+'</h2>'); return; }
+      if((m=t.match(/^###\s+(.*)$/))){ flushPara(); flushList(); out.push('<h3>'+inline(m[1])+'</h3>'); return; }
+      if(/^---+$/.test(t.trim())){ flushPara(); flushList(); out.push('<hr>'); return; }
+      if((m=t.match(/^[-*+]\s+(.*)$/))){
+        flushPara();
+        if(list!=='ul'){ flushList(); out.push('<ul>'); list='ul'; }
+        out.push('<li>'+inline(m[1])+'</li>'); liOpen=true; return;
+      }
+      if((m=t.match(/^\d+[.)]\s+(.*)$/))){
+        flushPara();
+        if(list!=='ol'){ flushList(); out.push('<ol>'); list='ol'; }
+        out.push('<li>'+inline(m[1])+'</li>'); liOpen=true; return;
+      }
+      flushList(); para.push(t.trim());
+    });
+    flushPara(); flushList();
+    return out.join('');
+  }
+  var EDITING=false;
+  function renderBody(){
+    var txt=$('#kBody').value||'';
+    $('#kView').innerHTML=txt.trim()?mdToHtml(txt):'<p class="em">这条技能还没有正文。</p>';
+    $('#kView').style.display=EDITING?'none':'';
+    $('#kBody').style.display=EDITING?'':'none';
+    $('#kEditBtn').textContent=EDITING?'完成':'编辑';
+    $('#kLen').textContent=txt.length+' 字';
+  }
+    function updateLen(){var v=$('#kBody').value||'';$('#kLen').textContent=v.length+' 字'}
+  function select(id){CUR=find(id);renderList();fillEditor();renderStack()}
+
+  function refreshList(){
+    return A('/api/skills',{action:'list'}).then(function(list){
+      SKILLS=list||[];
+      CUR=CUR?(find(CUR.id)||null):null;
+      if(!CUR)CUR=SKILLS[0]||null;
+      renderList();renderStack();
+    });
+  }
+  /* resetEditor=true 才重填编辑区：切换启用 / 保存时不要把用户正在打的正文冲掉 */
+  function loadSkills(resetEditor){
+    return refreshList().then(function(){if(resetEditor)fillEditor()})
+      .catch(function(e){say(e.message)});
+  }
+  function saveSkill(){
+    if(!CUR){say('先选一个技能，或点「新建技能」');return}
+    var t=$('#kTitle').value.trim();if(!t){say('技能名称不能为空');return}
+    var p={};for(var k in CUR.params)p[k]=CUR.params[k];
+    p.enabled=CUR.enabled;
+    A('/api/skills',{action:'save',id:CUR.id,title:t,tag:$('#kTag').value.trim()||'自定义',params:p,body:$('#kBody').value})
+      .then(function(){say('已保存「'+t+'」');return loadSkills(false)})
+      .catch(function(e){say(e.message)});
+  }
+  function toggleSkill(id){
+    var s=find(id);if(!s)return;
+    A('/api/skills',{action:'toggle',id:id}).then(function(){say(s.enabled?'已停用':'已启用');return loadSkills(false)})
+      .catch(function(e){say(e.message)});
+  }
+  function delSkill(id){
+    var s=find(id);if(!s)return;
+    askConfirm({title:'删除技能',okText:'确认删除',
+      html:'确定从技能库删除「<b>'+esc(s.title)+'</b>」吗？<br>只移除软件里的副本，磁盘上原始的 SKILL.md 不会动。',
+      onOk:function(){
+        A('/api/skills',{action:'delete',id:id}).then(function(){
+          say('已删除「'+s.title+'」');CUR=null;return loadSkills(true);
+        }).catch(function(e){say(e.message)});
+      }});
+  }
+  function newSkill(){
+    var n=$('#kNewName').value.trim();if(!n){say('先填技能名称');return}
+    var t=$('#kNewTag').value.trim()||'自定义',d=$('#kNewDesc').value.trim();
+    var body='# '+n+'\n\n'+(d?d+'\n\n':'')+'## 使用建议\n- 在这里写清楚节奏、转场、字幕、镜头数与质检规则。\n- 保存后 AI 导演会按这份规范挑镜头、出片。\n';
+    A('/api/skills',{action:'save',title:n,tag:t,params:{},body:body}).then(function(r){
+      closeM('kFormModal');say('已新建技能「'+n+'」');
+      return loadSkills(true).then(function(){if(r&&r.id)select(r.id)});
+    }).catch(function(e){say(e.message)});
+  }
+  function openImport(prefill){
+    $('#kImpPath').value=prefill||'';$('#kImpHint').textContent='导入只把技能写进软件自己的技能库，不会改动原文件。';
+    openM('kImportModal');setTimeout(function(){$('#kImpPath').focus()},60);
+  }
+  function doImport(){
+    var p=$('#kImpPath').value.trim();if(!p){say('先填路径，或点粘贴按钮');return}
+    $('#kImpHint').textContent='正在导入…';
+    A('/api/skills',{action:'import',path:p}).then(function(n){
+      $('#kImpHint').textContent='已导入 '+n+' 个技能。';say('已导入 '+n+' 个技能');
+      closeM('kImportModal');return loadSkills(true);
+    }).catch(function(e){$('#kImpHint').textContent=e.message;say(e.message)});
+  }
+  function doExport(){
+    A('/api/skills',{action:'export'}).then(function(p){
+      say('技能备份已导出：'+String(p).split('/').pop());
+      return A('/api/reveal',{path:p}).catch(function(){});
+    }).catch(function(e){say(e.message)});
+  }
+  function openVersions(){
+    if(!CUR){say('先选一个技能');return}
+    A('/api/skills',{action:'versions',id:CUR.id}).then(function(v){
+      var box=$('#kVerList');
+      box.innerHTML=(v&&v.length)?v.map(function(x){
+        return '<div class="k-ver"><span>'+esc(x)+'</span><button class="u-btn sm" data-ver="'+esc(x)+'">恢复此版本</button></div>';
+      }).join(''):'<div class="k-note">还没有历史版本。第一次点「保存」后会自动留一份。</div>';
+      openM('kVerModal');
+    }).catch(function(e){say(e.message)});
+  }
+  function restoreVersion(v){
+    askConfirm({title:'恢复历史版本',okText:'确认恢复',
+      html:'确定恢复到 <b>'+esc(v)+'</b> 吗？当前内容会先自动留一份历史版本。',
+      onOk:function(){
+        A('/api/skills',{action:'restore',id:CUR.id,version:v}).then(function(){
+          say('已恢复 '+v);closeM('kVerModal');return loadSkills(true);
+        }).catch(function(e){say(e.message)});
+      }});
+  }
+
+  /* ── 扫描本机技能 ── */
+  function renderSources(){
+    var box=$('#kSrcList');if(!box)return;
+    $('#kSrcCount').textContent='共 '+SCAN.sources.length+' 处';
+    if(!SCAN.sources.length){box.innerHTML='<div class="k-note">还没发现技能目录，可以在下面手动加一个文件夹。</div>';return}
+    box.innerHTML=SCAN.sources.map(function(s){
+      return '<div class="k-src"><span class="nm">'+esc(s.label)+'</span>'+
+        '<span class="pth">'+esc(s.path)+'</span><span class="u-tag'+(s.exists?'':' gray')+'">'+s.count+' 个</span>'+
+        (s.kind==='custom'?'<button class="k-x" data-src="'+esc(s.path)+'" title="移除这个来源">×</button>':'')+'</div>';
+    }).join('');
+  }
+  function renderScanList(){
+    var box=$('#kScanList');if(!box)return;
+    var q=($('#kScanSearch')?$('#kScanSearch').value:'').trim().toLowerCase();
+    var arr=SCAN.items.filter(function(x){
+      return !q||((x.title||'')+' '+(x.name||'')+' '+(x.description||'')+' '+(x.source_label||'')).toLowerCase().indexOf(q)>=0});
+    var sel=SCAN.items.filter(function(x){return SCAN.sel[x.key]&&!x.imported}).length;
+    var done=SCAN.items.filter(function(x){return x.imported}).length;
+    $('#kScanStat').textContent='共 '+SCAN.items.length+' 个 · 已导入 '+done+' 个 · 可添加 '+(SCAN.items.length-done)+' 个 · 已选 '+sel+' 个';
+    $('#kAddBtn').textContent='一键添加选中的 '+sel+' 个技能';
+    $('#kAddBtn').disabled=!sel;
+    if(!arr.length){box.innerHTML='<div class="k-note" style="padding:18px;text-align:center">'+(SCAN.items.length?'没有匹配的技能':'没扫到技能，点「重新扫描」或手动加一个来源文件夹')+'</div>';return}
+    box.innerHTML=arr.map(function(x){
+      var ck=SCAN.sel[x.key]?' checked':'';
+      return '<label class="k-row'+(x.imported?' done':'')+'">'+
+        '<input type="checkbox" data-key="'+esc(x.key)+'"'+(x.imported?' disabled':'')+ck+'>'+
+        '<span class="txt"><span class="t">'+esc(x.title)+
+          '<span class="u-tag'+(x.imported?' gray':' blue')+'">'+esc(x.source_label)+'</span>'+
+          (x.version?'<span class="u-tag gray">v'+esc(x.version)+'</span>':'')+
+          (x.imported?'<span class="u-tag green">已在库</span>':'')+'</span>'+
+        '<span class="d">'+esc(x.description||x.name||'—')+'</span></span></label>';
+    }).join('');
+  }
+  function doScan(){
+    $('#kScanStat').textContent='正在扫描本机…';
+    A('/api/skills',{action:'scan'}).then(function(r){
+      SCAN.sources=r.sources||[];SCAN.items=r.items||[];SCAN.sel={};
+      SCAN.items.forEach(function(x){if(!x.imported)SCAN.sel[x.key]=true});
+      renderSources();renderScanList();
+      say('扫描完成：发现 '+SCAN.items.length+' 个技能');
+    }).catch(function(e){$('#kScanStat').textContent=e.message;say(e.message)});
+  }
+  function openScan(){openM('kScanModal');doScan()}
+  function addSelected(){
+    var items=SCAN.items.filter(function(x){return SCAN.sel[x.key]&&!x.imported}).map(function(x){
+      return {skill_path:x.skill_path,source_label:x.source_label,title:x.title}});
+    if(!items.length){say('先勾选要添加的技能');return}
+    $('#kAddBtn').textContent='正在添加…';
+    A('/api/skills',{action:'import_scanned',items:items}).then(function(r){
+      say('已添加 '+r.added+' 个技能'+(r.skipped?'，跳过 '+r.skipped+' 个':''));
+      closeM('kScanModal');return loadSkills(true);
+    }).catch(function(e){$('#kAddBtn').textContent='一键添加选中的技能';say(e.message)});
+  }
+  function addSource(){
+    var p=$('#kSrcPath').value.trim();if(!p){say('先填文件夹路径');return}
+    A('/api/skills',{action:'source_add',path:p}).then(function(s){
+      SCAN.sources=s||[];$('#kSrcPath').value='';renderSources();say('已添加扫描来源，正在重新扫描');doScan();
+    }).catch(function(e){say(e.message)});
+  }
+  function delSource(p){
+    askConfirm({title:'移除扫描来源',okText:'确认移除',
+      html:'确定不再扫描这个文件夹吗？<br><span style="color:var(--ink3)">'+esc(p)+'</span><br>只会移出扫描清单，磁盘文件不动。',
+      onOk:function(){
+        A('/api/skills',{action:'source_del',path:p}).then(function(s){
+          SCAN.sources=s||[];renderSources();say('已移除扫描来源');
+        }).catch(function(e){say(e.message)});
+      }});
+  }
+
+  /* ── 事件绑定 ── */
+  $('#kSearch').addEventListener('input',renderList);
+  $('#kBody').addEventListener('input',updateLen);
+  $('#kEditBtn').addEventListener('click',function(){
+    if(EDITING){ // 从编辑切回阅读：先存，再渲染
+      saveSkill();
+    }
+    EDITING=!EDITING;renderBody();
+    if(EDITING)$('#kBody').focus();
+  });
+  $('#kList').addEventListener('click',function(e){
+    var it=e.target.closest('.k-line');if(it)openSkill(it.getAttribute('data-id'));
+  });
+  $('#kStack').addEventListener('click',function(e){
+    var it=e.target.closest('.k-line');if(it)openSkill(it.getAttribute('data-id'));
+  });
+  /* 点标题 = 在中间正文区打开这一条。启停是前面那个小开关，跟点击分开。 */
+  function openSkill(id){ select(id) }
+  $('#kSwitch').addEventListener('click',function(){if(CUR)toggleSkill(CUR.id)});
+  $('#kSaveBtn').addEventListener('click',saveSkill);
+  $('#kDelBtn').addEventListener('click',function(){if(CUR)delSkill(CUR.id);else say('先选一个技能')});
+  $('#kNewBtn').addEventListener('click',function(){
+    $('#kNewName').value='';$('#kNewTag').value='';$('#kNewDesc').value='';
+    openM('kFormModal');setTimeout(function(){$('#kNewName').focus()},60);
+  });
+  $('#kNewOk').addEventListener('click',newSkill);
+  $('#kNewName').addEventListener('keydown',function(e){if(e.key==='Enter')newSkill()});
+  $('#kImportBtn').addEventListener('click',function(){openImport('')});
+  $('#kDefaultBtn').addEventListener('click',function(){
+    openImport('');$('#kImpHint').textContent='把默认技能包文件夹的路径粘进来，一次导入全部 SKILL.md。';
+  });
+  $('#kImpOk').addEventListener('click',doImport);
+  $('#kImpPath').addEventListener('keydown',function(e){if(e.key==='Enter')doImport()});
+  $('#kExportBtn').addEventListener('click',doExport);
+  $('#kVerBtn').addEventListener('click',openVersions);
+  $('#kVerList').addEventListener('click',function(e){
+    var b=e.target.closest('[data-ver]');if(b&&CUR)restoreVersion(b.getAttribute('data-ver'));
+  });
+  $('#kScanBtn').addEventListener('click',openScan);
+  $('#kRescanBtn').addEventListener('click',doScan);
+  $('#kScanSearch').addEventListener('input',renderScanList);
+  $('#kScanList').addEventListener('change',function(e){
+    var c=e.target.closest('input[type=checkbox]');if(!c)return;
+    var k=c.getAttribute('data-key');if(c.checked)SCAN.sel[k]=true;else delete SCAN.sel[k];
+    renderScanList();
+  });
+  $('#kSelAll').addEventListener('click',function(){
+    SCAN.items.forEach(function(x){if(!x.imported)SCAN.sel[x.key]=true});renderScanList();
+  });
+  $('#kSelNone').addEventListener('click',function(){SCAN.sel={};renderScanList()});
+  $('#kAddBtn').addEventListener('click',addSelected);
+  $('#kSrcAddBtn').addEventListener('click',addSource);
+  $('#kSrcPath').addEventListener('keydown',function(e){if(e.key==='Enter')addSource()});
+  $('#kSrcList').addEventListener('click',function(e){
+    var b=e.target.closest('[data-src]');if(b)delSource(b.getAttribute('data-src'));
+  });
+  document.addEventListener('click',function(e){
+    if(!e.target.closest('.k-modal'))return;
+    var c=e.target.closest('[data-close]');if(c){closeM(c.getAttribute('data-close'));return}
+    var p=e.target.closest('[data-paste]');if(p){pasteTo(p.getAttribute('data-paste'));return}
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape')$$('.k-modal.open').forEach(function(m){m.classList.remove('open');document.body.classList.remove('modal-open')});
+  });
+  /* 页面片段比 shell 里定义 window.api 的脚本更早解析，
+     所以首次拉数据必须等事件 / 延时，不能在解析时直接调，否则整段绑定会中断。*/
+  var booted=false;
+  function init(){if(booted)return;booted=true;loadSkills(true)}
+  document.addEventListener('riffcut-ready',init);
+  setTimeout(init,350);
+})();
+</script>

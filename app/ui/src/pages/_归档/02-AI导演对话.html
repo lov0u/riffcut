@@ -1,0 +1,746 @@
+<style>
+/* ══ AI 导演：完整创作流程（按客户/项目归档的每个对话各自一份状态） ══ */
+.d-body{flex:1;min-height:0;display:grid;grid-template-columns:clamp(190px,20%,250px) minmax(0,1fr) clamp(246px,26%,320px);gap:clamp(8px,1%,14px)}
+.d-col{min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px}
+.d-sessions{padding:12px;display:flex;flex-direction:column;min-height:0}
+.d-sessions .u-head{flex:0 0 auto;align-items:center;gap:8px}
+/* 新建对话：跟「对话历史」同一排，贴在最右边；淡黄白渐变，不许抢标题的视线 */
+.d-new{margin-left:auto;flex:0 0 auto;height:24px;padding:0 9px;border-radius:8px;
+  font-size:var(--f5);font-weight:600;color:#33405A;gap:4px;
+  background:linear-gradient(180deg,#FFFFFF 0%,#FDF3E1 100%);
+  border:1px solid #F4F6FA;
+  box-shadow:0 1px 2px rgba(190,145,70,.10),inset 0 1px 0 rgba(255,255,255,.9);
+  transition:background .16s,box-shadow .16s,border-color .16s}
+.d-new .ic{width:11px;height:11px;opacity:.85}
+.d-new:hover{background:linear-gradient(180deg,#FCFDFE 0%,#F4F6FA 100%);
+  border-color:#EAF5F3;box-shadow:0 2px 6px rgba(190,145,70,.16),inset 0 1px 0 rgba(255,255,255,.9);
+  transform:none}
+.d-new:active{background:linear-gradient(180deg,#F6F8FB 0%,#F4F6FA 100%)}
+.d-slist{overflow:auto;scrollbar-width:none;margin-top:10px;display:flex;flex-direction:column;gap:2px;min-height:0}
+.d-slist::-webkit-scrollbar{display:none}
+.d-grp{margin-bottom:4px}
+.d-grp-hd{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:var(--r-sm);
+  cursor:pointer;user-select:none;font-size:var(--f4);font-weight:600;color:var(--ink)}
+.d-grp-hd:hover{background:#F7F9FC}
+.d-grp-hd .arw{display:inline-block;width:11px;font-size:10.5px;color:var(--ink3);
+  transition:transform .15s;flex:0 0 auto}
+.d-grp.open .d-grp-hd .arw{transform:rotate(90deg)}
+.d-grp-hd .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-grp-hd .cnt{font-size:var(--f5);color:var(--ink3);font-weight:400;flex:0 0 auto}
+.d-grp-sub{font-size:var(--f5);color:var(--ink3);padding:0 8px 4px 26px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-grp-bd{padding-left:8px}
+/* 每条对话只占一行：标题一行 + 右侧删除；时间/进度等全部移到悬停详情卡 */
+.d-sitem{position:relative;padding:7px 26px 7px 10px;border-radius:var(--r-md);
+  border:1px solid transparent;cursor:pointer}
+.d-sitem:hover{background:#F7F9FC}
+.d-sitem.on{background:#EAF5F3;border-color:#BFE0DA}
+.d-sitem b{font-size:var(--f4);font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 副信息：消息条数 + 更新时间。两行结构让人一眼确认「这是真记录」而不是空壳 */
+.d-sitem .tx{min-width:0;display:flex;flex-direction:column;gap:2px}
+.d-sitem .sub{font-size:var(--f5);color:var(--ink3);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.d-sitem .d-del{position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  width:20px;height:20px;border:0;background:transparent;color:var(--ink3);
+  cursor:pointer;border-radius:4px;font-size:15px;line-height:1;padding:0}
+.d-sitem .d-del:hover{background:#FBE4E4;color:#C04848}
+/* 悬停详情卡：字段全部来自 /api/conversations 的真数据，不编造占位信息 */
+.d-tip{position:fixed;z-index:260;width:264px;max-width:80vw;display:none;
+  padding:12px 13px;border-radius:12px;background:#fff;border:1px solid var(--line);
+  box-shadow:0 12px 34px rgba(24,32,48,.16);font-size:var(--f5);color:var(--ink2);
+  pointer-events:none}
+.d-tip.on{display:block}
+.d-tip .tt{font-size:var(--f3);font-weight:700;color:var(--ink);
+  line-height:1.45;word-break:break-word;margin-bottom:8px}
+.d-tip .rr{display:flex;gap:8px;padding:3px 0;line-height:1.5}
+.d-tip .rr .k{flex:0 0 54px;color:var(--ink3)}
+.d-tip .rr .v{flex:1;min-width:0;word-break:break-all}
+.d-tip .hr{height:1px;background:var(--line);margin:8px 0}
+.d-empty{padding:20px 10px;text-align:center;font-size:var(--f5);color:var(--ink3);line-height:1.8}
+.d-chat{display:flex;flex-direction:column;min-height:0;padding:0}
+.d-chat-head{display:flex;align-items:center;gap:9px;padding:12px 16px;border-bottom:1px solid var(--line);flex:0 0 auto}
+/* AI 头像全软件统一：用首页欢迎页那个吉祥物原图（透明底），
+   垫一层和首页 .h-greet 一样的淡青光晕，不再用旧的蓝色小机器人 */
+.d-chat-head .av{width:36px;height:36px;object-fit:contain;border-radius:50%;
+  background:radial-gradient(circle,rgba(213,243,239,.95) 0%,rgba(233,250,247,.45) 58%,rgba(255,255,255,0) 76%);
+  padding:2px;box-sizing:border-box;flex:0 0 auto}
+.d-chat-head b{font-size:var(--f2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-chat-head .u-tag{margin-left:auto;flex:0 0 auto}
+.d-msgs{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:16px;display:flex;flex-direction:column;gap:14px}
+.d-msgs::-webkit-scrollbar{display:none}
+.d-msg{display:flex;gap:9px;max-width:92%}
+.d-msg.me{align-self:flex-end;flex-direction:row-reverse}
+.d-msg .who{width:28px;height:28px;border-radius:50%;background:#E8EDF6;color:#4A5670;
+  display:grid;place-items:center;font-size:10.5px;flex:0 0 auto;font-weight:600;overflow:hidden}
+/* AI 消息头像：吉祥物原图 + 首页同款淡青底，替换原来写死的「AI」两个字母 */
+.d-msg .who.ai{position:relative;background:radial-gradient(circle at 50% 42%,#F2FBF9 0%,#DDF3EE 62%,#CFEBE5 100%);
+  border:1px solid #D3EDE7;box-sizing:border-box}
+.d-msg .who.ai::before{content:"";position:absolute;inset:1px;
+  background:url("assets/vmark.png") center/56% no-repeat}
+.d-msg.me .who{background:#252B36;color:#fff}
+.d-msg .bubble{padding:10px 13px;border-radius:12px;background:#F5F7FB;font-size:var(--f4);
+  line-height:1.65;color:#3A4252;white-space:pre-wrap;word-break:break-word}
+.d-msg.me .bubble{background:#252B36;color:#F5F7FB}
+.d-plan{border:1px solid var(--line);border-radius:var(--r-md);background:#FFFFFF;
+  box-shadow:var(--sh-1);overflow:hidden;margin-top:2px}
+/* 工具执行轨迹：做没做一眼看得见，不靠模型嘴上说 */
+.d-steps{display:flex;flex-direction:column;gap:6px;margin:2px 0 8px;
+  padding:9px 11px;border-radius:8px;background:#FBFCFE;border:1px solid #EDF0F6}
+.d-steps-h{font-size:var(--f5);color:#6A7385;letter-spacing:.02em}
+.d-step{display:flex;align-items:flex-start;gap:7px;flex-wrap:wrap;
+  font-size:var(--f5);line-height:1.5;color:#3A4252}
+.d-step .ic{width:14px;text-align:center;color:#3F9E7A;font-weight:600}
+.d-step.bad .ic{color:#C04848}
+.d-step .nm{font-weight:600}
+.d-step .dt{color:#8A93A6;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.d-step-out{flex-basis:100%;padding-left:21px;color:#8A93A6;font-size:10.5px;
+  line-height:1.5;white-space:pre-wrap;word-break:break-all;overflow-wrap:anywhere;
+  max-height:60px;overflow:hidden}
+/* 失败步骤：默认只露一行原因，点「看看详情」才展开 */
+.d-step.fold .d-step-out{max-height:16px;overflow:hidden;white-space:nowrap;
+  text-overflow:ellipsis;word-break:normal;color:#A5766F}
+.d-step-more{flex-basis:auto;margin-left:21px;padding:0;border:0;background:none;
+  color:#7A8399;font-size:10.5px;cursor:pointer;text-decoration:underline;
+  text-underline-offset:2px}
+.d-step-more:hover{color:#3A4252}
+/* 执行记录里的长路径：宁可横向截断也不许把气泡撑爆、也不许挤成竖排单字 */
+.d-steps{max-width:100%;overflow:hidden;box-sizing:border-box}
+.d-step{max-width:100%;min-width:0}
+.d-step .nm,.d-step .dt{min-width:0}
+.d-plan .ph{display:flex;align-items:center;gap:8px;padding:9px 12px;
+  background:linear-gradient(180deg,#F8FAFC,#F8FAFC);border-bottom:1px solid var(--line)}
+.d-plan .ph b{font-size:var(--f4)}
+.d-plan .ph .u-tag{margin-left:auto}
+.d-plan .pl{padding:6px 12px}
+.d-plan .plrow{display:flex;align-items:flex-start;gap:10px;padding:7px 0;
+  border-bottom:1px dashed #EEF1F5;font-size:var(--f5)}
+.d-plan .plrow:last-child{border-bottom:0}
+.d-plan .plrow .k{width:52px;color:var(--ink3);flex:0 0 auto}
+.d-plan .plrow .val{flex:1;color:#3E4655;word-break:break-all}
+.d-plan .pf{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.d-input{flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:11px 14px;border-top:1px solid var(--line)}
+.d-input .u-input{flex:1}
+
+/* ── 右栏：真实流程面板 ── */
+.d-side{padding:12px;display:flex;flex-direction:column;min-height:0;overflow:auto;scrollbar-width:none}
+.d-side::-webkit-scrollbar{display:none}
+.d-flow-top{font-size:var(--f5);color:var(--ink3);line-height:1.7;background:#F8FAFD;
+  border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:12px}
+.d-flow-top b{color:var(--ink)}
+.d-sec{margin-bottom:13px}
+.d-sec h4{font-size:var(--f4);font-weight:600;margin:0 0 8px;display:flex;align-items:center;gap:7px}
+.d-sec h4 .u-tag{margin-left:auto}
+.d-clar{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;border:1px solid var(--line);
+  border-radius:8px;margin-bottom:6px;background:#fff}
+.d-clar.no{border-style:dashed;background:#FCFDFE}
+.d-clar .ci{width:16px;height:16px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+  font-size:10.5px;font-weight:700;margin-top:1px;background:#E7F4EB;color:#2E7D52}
+.d-clar.no .ci{background:#F1F3F7;color:#A6ADBB}
+.d-clar .tx{flex:1;min-width:0;line-height:1.5}
+.d-clar .tx b{font-size:var(--f5);font-weight:600;color:var(--ink)}
+.d-clar .tx .val{font-size:var(--f5);color:#3E4655;margin-left:5px;word-break:break-all}
+.d-clar .tx .src{font-size:10.5px;color:#9AA2B1;margin-left:5px}
+.d-clar .tx .miss{display:block;font-size:var(--f5);color:#A6ADBB;margin-top:2px;line-height:1.5}
+.d-clar .edit{flex:0 0 auto;height:22px;padding:0 7px;font-size:10.5px}
+.d-confirm{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff}
+.d-confirm .st{font-size:var(--f4);font-weight:600;color:var(--ink);display:flex;align-items:center;gap:7px}
+.d-confirm .st .dot{width:7px;height:7px;border-radius:50%;background:#1B8B7E;flex:0 0 auto}
+.d-confirm .st .dot.ok{background:#2E7D52}.d-confirm .st .dot.bad{background:#B04A4A}
+.d-confirm .hint{font-size:var(--f5);color:var(--ink3);line-height:1.65;margin:6px 0 9px}
+.d-confirm .btns{display:flex;gap:7px;flex-wrap:wrap}
+.d-confirm .btns .u-btn{flex:1;min-width:130px}
+.d-step{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:var(--f5);color:#A6ADBB}
+.d-step .si{width:16px;height:16px;flex:0 0 auto;display:grid;place-items:center;font-size:10.5px;
+  border-radius:50%;background:#F1F3F7;color:#A6ADBB}
+.d-step.done{color:#2E7D52}.d-step.done .si{background:#E7F4EB;color:#2E7D52}
+.d-step.active{color:#147567;font-weight:600}.d-step.active .si{background:#EAF5F3;color:#147567}
+.d-bar{margin:9px 0 6px}
+.d-tasklog{font-size:var(--f5);color:var(--ink3);line-height:1.65;background:#F7F9FC;
+  border-radius:8px;padding:7px 9px;margin-top:7px;word-break:break-all}
+.d-tasklog b{color:var(--ink2)}
+.d-link{font-size:var(--f5);color:#3D63A6;background:none;border:0;padding:6px 0 0;cursor:pointer;text-align:left}
+.d-link:hover{text-decoration:underline}
+.d-tags{display:flex;gap:6px;flex-wrap:wrap}
+.d-tag{border:1px solid var(--line);background:#F7F9FC;color:#4A5262;border-radius:12px;
+  padding:4px 10px;font-size:var(--f5);cursor:pointer}
+.d-tag:hover{border-color:#BFE0DA;background:#F8FAFC;color:#33405A}
+.d-tag.blue{background:#EDF3FB;color:#3D63A6;border-color:#D9E5F6}
+.d-tag.off{color:#A6ADBB}
+.d-side-act{display:flex;gap:7px;flex-wrap:wrap}
+.compact .d-body{grid-template-columns:clamp(160px,18%,210px) minmax(0,1fr) clamp(210px,24%,270px)}
+.tiny .d-body{grid-template-columns:1fr 1.4fr}
+.tiny .d-side{display:none}
+</style>
+
+<section class="page" data-page="director">
+  <div class="u-head">
+    <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px;color:#2F6BFF"><use href="#i-spark"/></svg>AI 导演</div>
+      <div class="u-sub">完整创作流程 · 需求澄清 → 方案确认 → 执行进度 → 归档；每个对话独立记录</div></div>
+    <!-- 顶部不再重复放「导出记录 / 新建对话」：左侧有新建，右栏「操作」有导出与删除 -->
+  </div>
+
+  <div class="d-body">
+    <!-- 左：按客户分组的对话列表，每条带自己的澄清进度与阶段 -->
+    <div class="u-card d-sessions">
+      <div class="u-head">
+        <div class="txt"><div class="u-title" style="font-size:var(--f3)">对话历史</div></div>
+        <button class="u-btn d-new" id="dNewBtn2" data-live="1" title="新建对话"><svg class="ic"><use href="#i-plus"/></svg>新建对话</button>
+      </div>
+      <div class="d-slist" id="dSlist"><div class="d-empty">读取对话存档…</div></div>
+    </div>
+
+    <!-- 中：选中对话的完整记录 -->
+    <div class="u-card d-chat">
+      <div class="d-chat-head"><img class="av" src="assets/vmark.png" alt="VOLENA 流影 AI 导演"><b id="dChatTitle">选一个对话</b>
+        <span class="u-tag gray" id="dChatTag">对话存档</span></div>
+      <div class="d-msgs" id="dMsgs"><div class="d-empty">从左侧按客户展开，点一个对话查看完整记录。</div></div>
+      <div class="d-input">
+        <div class="u-input"><svg class="ic"><use href="#i-clip"/></svg><input id="dInput" placeholder="继续这个对话，例如：开头换一个画面…" autocomplete="off"></div>
+        <button class="u-btn dark" id="dSend" data-live="1"><svg class="ic"><use href="#i-send"/></svg>发送</button>
+      </div>
+    </div>
+
+    <!-- 右：跟随当前对话的真实流程面板（不是写死的展示卡片） -->
+    <div class="u-card d-side" id="dSide"><div class="d-empty">选一个对话后，这里显示这个对话自己的需求澄清、确认机制、执行进度与上下文。</div></div>
+  </div>
+  <!-- 悬停详情卡：JS 按视口定位，内容全部来自当前对话的真实字段 -->
+  <div class="d-tip" id="dTip" role="tooltip"></div>
+</section>
+
+<!-- 新建对话：全软件统一悬浮框 -->
+<div class="v-modal" id="dNewModal" role="dialog" aria-modal="true" aria-label="新建对话">
+  <div class="v-shade" data-close="dNewModal"></div>
+  <div class="v-dialog">
+    <div class="v-dhd"><b>新建对话</b><button class="v-x" data-close="dNewModal">×</button></div>
+    <div class="v-dbd">
+      <div class="v-f"><label>归属客户</label><select class="v-sel" id="dNewCust"></select></div>
+      <div class="v-f"><label>对话标题</label><div class="u-input"><input id="dNewTitle" placeholder="例如：秋季新品发布片"></div></div>
+      <div class="v-tip">对话会按客户归档。需求、方案、澄清清单和执行任务都跟着这个对话走，<b>每个对话一份独立状态</b>。开始创作前建议先在「客户与素材库」选好素材文件夹。</div>
+    </div>
+    <div class="v-dft"><button class="u-btn" data-close="dNewModal">取消</button>
+      <button class="u-btn gold" id="dNewGo">创建对话</button></div>
+  </div>
+</div>
+
+<!-- 补充需求澄清：全软件统一悬浮框 -->
+<div class="v-modal" id="dBriefModal" role="dialog" aria-modal="true" aria-label="补充需求澄清">
+  <div class="v-shade" data-close="dBriefModal"></div>
+  <div class="v-dialog">
+    <div class="v-dhd"><b id="dBriefTitle">补充需求澄清</b><button class="v-x" data-close="dBriefModal">×</button></div>
+    <div class="v-dbd">
+      <div class="v-tip" id="dBriefHint"></div>
+      <div class="v-f"><label>这一项的内容</label><div class="u-input"><input id="dBriefVal" autocomplete="off"></div></div>
+      <div class="v-tip">补充后会写进当前对话，并在<b>下一次生成方案</b>时作为约束交给 AI 导演；留空保存等于清空这一项。支持 ⌘V 粘贴。</div>
+    </div>
+    <div class="v-dft"><button class="u-btn" data-side="clear-brief" style="color:#B05252">清空此项</button>
+      <button class="u-btn" data-close="dBriefModal">取消</button>
+      <button class="u-btn gold" data-side="save-brief">保存</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)},$$=function(s){return [].slice.call(document.querySelectorAll(s))};
+  var CUR=null,FLOW=null,GROUPS=[],OPEN={},inited=false,BRIEF_KEY='',
+      CONV_INFO={},LAST_EXPORT='',AUTO_PICKED={};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function A(p,d){return window.api(p,d)}
+  function say(m){if(window.say)window.say(m)}
+  function openM(id){var m=$('#'+id);if(m){m.classList.add('open');document.body.classList.add('modal-open')}}
+  function closeM(id){var m=$('#'+id);if(m){m.classList.remove('open');document.body.classList.remove('modal-open')}}
+
+  /* 本页脚本早于 shell.html 的 window.api，等 riffcut-ready 再初始化 */
+  function init(){
+    if(inited)return;inited=true;
+    bind();loadList();renderChat();renderSide();
+  }
+  document.addEventListener('riffcut-ready',init);
+  setTimeout(init,1200);
+
+  function bind(){
+    $$('#dNewBtn2').forEach(function(b){b.addEventListener('click',openNew)});
+    var s=$('#dSend'),i=$('#dInput');
+    if(s)s.addEventListener('click',send);
+    if(i)i.addEventListener('keydown',function(ev){if(ev.key==='Enter')send()});
+    var l=$('#dSlist');
+    if(l)l.addEventListener('click',function(ev){
+      var del=ev.target.closest('[data-del]');
+      if(del){ev.stopPropagation();delConv(del.getAttribute('data-del'));return}
+      var hd=ev.target.closest('.d-grp-hd');
+      if(hd){
+        var g=hd.closest('.d-grp'),name=g.getAttribute('data-c');
+        OPEN[name]=!(OPEN[name]!==false);renderList();return;
+      }
+      var it=ev.target.closest('.d-sitem');
+      if(it)openConv(it.getAttribute('data-id'));
+    });
+    if(l){
+      l.addEventListener('mouseover',function(ev){
+        var it=ev.target.closest('.d-sitem');if(it)showTip(it.getAttribute('data-id'),it);
+      });
+      l.addEventListener('mouseout',function(ev){
+        var it=ev.target.closest('.d-sitem');
+        if(it&&(!ev.relatedTarget||!it.contains(ev.relatedTarget)))hideTip();
+      });
+    }
+    /* 切到别的页面时收起详情卡，避免卡片残留在屏幕上 */
+    $$('.nav a').forEach(function(a){a.addEventListener('click',hideTip)});
+    document.addEventListener('click',function(ev){
+      var t=ev.target,c=t.closest&&t.closest('[data-close]');
+      if(c){var id=c.getAttribute('data-close');
+        if(id==='dNewModal'||id==='dBriefModal'){closeM(id);return}}
+      var a=t.closest&&t.closest('[data-side]');
+      if(!a)return;
+      /* 右栏在页面里，两个悬浮框在页面外，两边都要能触发 */
+      if(!a.closest('[data-page="director"]')&&!a.closest('#dNewModal,#dBriefModal'))return;
+      var act=a.getAttribute('data-side');
+      if(act==='edit-brief')editBrief(a.getAttribute('data-k'));
+      if(act==='save-brief')saveBrief();
+      if(act==='clear-brief'){$('#dBriefVal').value='';saveBrief()}
+      if(act==='confirm')confirmPlan(a);
+      if(act==='replan')replan(a);
+      if(act==='export')exportConv();
+      if(act==='delete'&&CUR)delConv(CUR.id,CUR.title);
+      if(act==='go'&&window.goPage)window.goPage(a.getAttribute('data-go'));
+      if(act==='tasks'&&window.goPage)window.goPage('tasks');
+    });
+    document.addEventListener('keydown',function(ev){
+      if(ev.key==='Escape'){$$('.v-modal.open').forEach(function(m){m.classList.remove('open')});
+        document.body.classList.remove('modal-open')}
+    });
+    document.addEventListener('taskchange',function(e){
+      /* P0-3：首页通话把活派出来后，pollTask 会广播 taskchange。
+         这里找「通话派活」且还在跑的任务，自动把对应对话切到前台，
+         用户一进 AI 导演就看见这条片子的工作流程，不用自己翻列表。 */
+      var list=(e&&e.detail&&e.detail.tasks)||[];
+      var hit=null;
+      for(var i=list.length-1;i>=0;i--){
+        var t=list[i],m=t&&t.meta||{};
+        if(m.via==='通话派活'&&m.conv_id&&
+           ['排队中','运行中','等待中'].indexOf(t.state)>=0){hit=m;break}
+      }
+      if(hit&&hit.conv_id&&!AUTO_PICKED[hit.conv_id]){
+        AUTO_PICKED[hit.conv_id]=1;
+        if(!CUR||CUR.id!==hit.conv_id){
+          loadList(function(){openConv(hit.conv_id)});
+          return;
+        }
+      }
+      if(CUR&&CUR.task)refreshFlow();
+    });
+  }
+
+  /* ── 左栏：每个对话都带自己的进度 ── */
+  function loadList(cb){
+    if(!A){if(cb)cb();return}
+    A('/api/conversations',{action:'list'}).then(function(d){
+      GROUPS=d.groups||[];renderList();renderSide();if(cb)cb();
+    }).catch(function(e){say(e.message);renderList()});
+  }
+  function renderList(){
+    var box=$('#dSlist');if(!box)return;
+    var total=GROUPS.reduce(function(n,g){return n+(g.count||0)},0);
+    if(!total){
+      CONV_INFO={};hideTip();
+      box.innerHTML='<div class="d-empty">还没有对话存档。<br>在首页聊天、或点「新建对话」开始，<br>会自动按客户归档到这里。</div>';return;
+    }
+    var html='',info={};
+    GROUPS.forEach(function(g){
+      /* 默认全部展开。以前默认收起，用户看到只有一个“▸ 流影 1 个对话”的标题，
+         以为历史是空的（实际有 11 条消息）。历史列表第一屏必须能看见对话本身。 */
+      var open=OPEN[g.customer]!==false;
+      html+='<div class="d-grp'+(open?' open':'')+'" data-c="'+esc(g.customer)+'">'
+        +'<div class="d-grp-hd"><span class="arw">▸</span><span class="nm">'+esc(g.customer)+'</span>'
+        +'<span class="cnt">'+g.count+' 个对话</span></div>'
+        +(g.folder_name?'<div class="d-grp-sub">📁 '+esc(g.folder_name)+'</div>':'')
+        +'<div class="d-grp-bd" style="'+(open?'':'display:none')+'">';
+      (g.convs||[]).forEach(function(c){
+        info[c.id]=c;
+        var sub=[];
+        if(c.msg_count)sub.push(c.msg_count+' 条');
+        if(c.updated)sub.push(String(c.updated).slice(5,16));
+        html+='<div class="d-sitem'+(CUR&&CUR.id===c.id?' on':'')+'" data-id="'+esc(c.id)+'">'
+          +'<div class="tx"><b>'+esc(c.title||'新对话')+'</b>'
+          +(sub.length?'<span class="sub">'+esc(sub.join(' · '))+'</span>':'')+'</div>'
+          +'<button class="d-del" data-del="'+esc(c.id)+'" title="删除这个对话（会弹确认框）">×</button></div>';
+      });
+      html+='</div></div>';
+    });
+    box.innerHTML=html;CONV_INFO=info;
+  }
+  /* 悬停详情卡：字段全部来自 /api/conversations 真实返回，不写死占位信息 */
+  function tipRow(k,v){return '<div class="rr"><span class="k">'+k+'</span><span class="v">'+esc(v==null||v===''?'—':v)+'</span></div>'}
+  function showTip(id,el){
+    var tip=$('#dTip'),c=CONV_INFO[id];if(!tip||!c)return;
+    if(tip.classList.contains('on')&&tip.getAttribute('data-id')===id)return;
+    var h='<div class="tt">'+esc(c.title||'新对话')+'</div>';
+    h+=tipRow('客户',c.customer||'流影');
+    h+=tipRow('素材夹',c.folder||'未选择');
+    h+=tipRow('模型',c.model||'未指定');
+    h+=tipRow('消息',(c.msg_count||0)+' 条 · '+(c.status||'进行中'));
+    h+=tipRow('澄清',(c.brief||'0/6')+' · 第 '+(c.stage||1)+' 步');
+    h+=tipRow('方案',c.plan_title||(c.has_plan?'已生成':'暂无'));
+    h+=tipRow('任务',c.task||'未关联');
+    h+='<div class="hr"></div>'+tipRow('创建',c.created||'')+tipRow('更新',c.updated||'');
+    if(c.requirement)h+='<div class="hr"></div>'+tipRow('需求',c.requirement);
+    tip.innerHTML=h;tip.setAttribute('data-id',id);tip.classList.add('on');
+    var r=el.getBoundingClientRect(),w=tip.offsetWidth||264,ht=tip.offsetHeight||200;
+    var left=r.right+10;
+    if(left+w>window.innerWidth-8)left=Math.max(8,r.left-w-10);
+    var top=Math.min(Math.max(8,r.top-6),Math.max(8,window.innerHeight-ht-8));
+    tip.style.left=left+'px';tip.style.top=top+'px';
+  }
+  function hideTip(){var t=$('#dTip');if(t){t.classList.remove('on');t.removeAttribute('data-id')}}
+
+  function openConv(id){
+    A('/api/conversations',{action:'get',id:id}).then(function(c){
+      CUR=c;FLOW=c.flow||null;renderList();renderChat();renderSide();
+    }).catch(function(e){say(e.message)});
+  }
+  function refreshFlow(){
+    if(!CUR)return;
+    A('/api/conversations',{action:'flow',id:CUR.id}).then(function(f){FLOW=f;renderSide()})
+      .catch(function(){});
+  }
+
+  /* ── 中栏：真实消息 + 方案确认卡 ── */
+  /* AI 头像统一走 .who.ai（吉祥物 + 淡青底），自己发的消息仍用「我」文字圆头像 */
+  function aiWho(){var w=document.createElement('div');w.className='who ai';return w}
+  function msgNode(who,text){
+    var d=document.createElement('div');d.className='d-msg'+(who==='我'?' me':'');
+    var w;
+    if(who==='我'){w=document.createElement('div');w.className='who';w.textContent='我'}
+    else w=aiWho();
+    var b=document.createElement('div');b.className='bubble';b.textContent=text;
+    d.appendChild(w);d.appendChild(b);return d;
+  }
+  function planNode(p,status){
+    var d=document.createElement('div');d.className='d-msg';
+    var w=aiWho();
+    var wrap=document.createElement('div');wrap.style.cssText='flex:1;min-width:0';
+    var done=(status==='已确认方案'||status==='已完成'),out=p.output||{};
+    wrap.innerHTML='<div class="d-plan"><div class="ph"><b>制作方案 V1</b>'
+      +'<span class="u-tag '+(done?'green':'gold')+'">'+(done?'已确认':'待你确认')+'</span></div>'
+      +'<div class="pl">'
+      +'<div class="plrow"><span class="k">片名</span><span class="val">'+esc(p.title||'未命名')+'</span></div>'
+      +'<div class="plrow"><span class="k">规模</span><span class="val">'+(p.shots||[]).length+' 个分镜 · 约 '+(p.duration||'—')+' 秒</span></div>'
+      +'<div class="plrow"><span class="k">规格</span><span class="val">'+esc((out.width||'1920')+'×'+(out.height||'1080')+' · '+(out.fps||'30')+'fps')+'</span></div>'
+      +'</div><div class="pf"><button class="u-btn sm gold" data-side="confirm" style="flex:1"'
+      +(done?' disabled':'')+'>'+(done?'✓ 已确认':'✓ 确认方案并开始执行')+'</button></div></div>';
+    d.appendChild(w);d.appendChild(wrap);return d;
+  }
+  function renderChat(){
+    var box=$('#dMsgs'),t=$('#dChatTitle'),tag=$('#dChatTag');if(!box)return;
+    box.innerHTML='';
+    if(!CUR){
+      if(t)t.textContent='选一个对话';if(tag)tag.textContent='对话存档';
+      box.innerHTML='<div class="d-empty">从左侧按客户展开，点一个对话查看完整记录。</div>';return;
+    }
+    if(t)t.textContent=CUR.title||'新对话';
+    if(tag)tag.textContent=CUR.status||'进行中';
+    (CUR.messages||[]).forEach(function(m){
+      var n=msgNode(m.who,m.text);
+      /* 打开历史对话也要看得到当时动过什么手，否则像"它只是嘴上说说" */
+      if(m.steps&&m.steps.length)n.insertBefore(stepsNode(m.steps),n.lastChild);
+      box.appendChild(n);
+    });
+    if(CUR.plan)box.appendChild(planNode(CUR.plan,CUR.status));
+    box.scrollTop=box.scrollHeight;
+  }
+
+  /* ── 右栏：四块全部来自当前对话的真实数据 ── */
+  function renderSide(){
+    var box=$('#dSide');if(!box)return;
+    if(!CUR){
+      box.innerHTML='<div class="d-empty">选一个对话后，这里显示这个对话自己的需求澄清、确认机制、执行进度与上下文。</div>';return;
+    }
+    var f=FLOW;
+    if(!f){box.innerHTML='<div class="d-empty">读取这个对话的流程状态…</div>';return}
+    var ctx=f.context||{},cf=f.confirm||{},task=f.task;
+    var total=GROUPS.reduce(function(n,g){return n+(g.count||0)},0);
+    var planned=GROUPS.reduce(function(n,g){return n+(g.convs||[]).filter(function(c){return c.has_plan}).length},0);
+
+    /* 1 · 需求澄清 */
+    var clar='';
+    (f.brief||[]).forEach(function(x){
+      clar+='<div class="d-clar'+(x.filled?'':' no')+'">'
+        +'<span class="ci">'+(x.filled?'✓':'○')+'</span>'
+        +'<div class="tx"><b>'+esc(x.label)+'</b>'
+        +(x.filled?'<span class="val">'+esc(x.value)+'</span><span class="src">'+esc(x.source)+'</span>'
+                  :'<span class="miss">待补充 · '+esc(x.hint)+'</span>')
+        +'</div><button class="u-btn sm d-clar-edit edit" data-side="edit-brief" data-k="'+esc(x.key)+'">'
+        +(x.filled?'改':'补')+'</button></div>';
+    });
+
+    /* 2 · 用户确认机制 */
+    var dotCls=cf.state==='confirmed'?'ok':(cf.state==='failed'?'bad':'');
+    var confirmBtn=cf.can_confirm
+      ? '<button class="u-btn sm gold" data-side="confirm">✓ 确认方案并开始执行</button>'
+      : '<button class="u-btn sm" disabled>'+esc(cf.label||'—')+'</button>';
+    var conf='<div class="d-confirm"><div class="st"><span class="dot '+dotCls+'"></span>'
+      +esc(cf.label||'—')+'</div><div class="hint">'+esc(cf.hint||'')+'</div>'
+      +'<div class="btns">'+confirmBtn
+      +'<button class="u-btn sm" data-side="replan">按澄清清单重新生成方案</button></div></div>';
+
+    /* 3 · 执行进度 */
+    var steps='';
+    (f.steps||[]).forEach(function(s){
+      var ic=s.state==='done'?'✓':(s.state==='active'?'◷':'○');
+      steps+='<div class="d-step '+s.state+'"><span class="si">'+ic+'</span>'+esc(s.name)+'</div>';
+    });
+    var log='';
+    if(task){
+      log='<div class="d-tasklog"><b>'+esc(task.name||'关联任务')+'</b> · '+esc(task.state||'')
+        +' · '+(task.progress||0)+'%'
+        +((task.logs||[]).length?'<br>'+(task.logs||[]).slice(-2).map(function(x){return esc(x)}).join('<br>'):'')
+        +(task.error?'<br>错误：'+esc(task.error):'')+'</div>'
+        +'<button class="d-link" data-side="tasks">到任务中心看完整日志 →</button>';
+    }else{
+      log='<div class="d-tasklog">还没有关联剪辑任务。方案确认后会自动进入任务队列。</div>';
+    }
+    var prog='<div class="u-progress d-bar"><i style="width:'+(f.progress||0)+'%"></i></div>'+steps+log;
+
+    /* 4 · 上下文（每个标签都能点进对应页面，不是摆设） */
+    var modName='';
+    var vid=ctx.model||'';
+    if(vid){var ms=(window.VOLENA||{}).models||[];var hit=ms.filter(function(m){return m.id===vid})[0];
+      modName=hit?(hit.name||vid):vid}
+    function tag(label,go,cls){return '<button class="d-tag '+(cls||'')+'" data-side="go" data-go="'+go+'">'+esc(label)+'</button>'}
+    var tags=tag('客户：'+(ctx.customer||'流影'),'assets','blue')
+      +tag(ctx.library_bound?('素材库：'+(ctx.folder_name||'已绑定')+(ctx.assets?' · '+ctx.assets+' 个文件':'')):'素材库未绑定','assets')
+      +tag(ctx.has_brand?('品牌：'+(ctx.kit||'')):'品牌套件未配置','brand')
+      +tag(modName?('模型：'+modName):'模型未指定','models','blue')
+      +tag('技能：'+(ctx.skill_count||0)+' 个可用','skill')
+      +'<span class="d-tag off">消息：'+(ctx.messages||0)+' 条 · '+esc(ctx.status||'进行中')+'</span>';
+
+    box.innerHTML='<div class="d-flow-top">跟随<b>当前选中的对话</b>：'+esc(CUR.title||'新对话')
+      +'<br>共 <b>'+total+'</b> 个对话 · <b>'+planned+'</b> 个已生成方案；左侧每条都带自己的澄清进度与阶段。</div>'
+      +'<div class="d-sec"><h4>需求澄清 <span class="u-tag '+(f.done===f.total?'green':'gold')+'">'+f.done+' / '+f.total+'</span></h4>'+clar+'</div>'
+      +'<div class="u-divider"></div>'
+      +'<div class="d-sec"><h4>用户确认机制 <span class="u-tag gold">P0</span></h4>'+conf+'</div>'
+      +'<div class="u-divider"></div>'
+      +'<div class="d-sec"><h4>执行进度 <span class="u-tag">'+(f.progress||0)+'%</span></h4>'+prog+'</div>'
+      +'<div class="u-divider"></div>'
+      +'<div class="d-sec"><h4>上下文</h4><div class="d-tags">'+tags+'</div></div>'
+      +'<div class="u-divider"></div>'
+      +'<div class="d-sec"><h4>操作</h4><div class="d-side-act">'
+      +'<button class="u-btn sm" data-side="export">导出记录</button>'
+      +'<button class="u-btn sm" data-side="delete" style="color:#B05252">删除对话</button>'
+      +'</div><div class="d-task" id="dExportNote" style="margin-top:8px;color:var(--ink3);font-size:var(--f5);word-break:break-all">'
+      +(LAST_EXPORT?esc(LAST_EXPORT):'导出为 txt 存到当前客户「产出/对话记录」；删除会先弹确认框，不可恢复。')
+      +'</div></div>';
+  }
+
+  /* ── 需求澄清补充 ── */
+  function editBrief(k){
+    if(!CUR||!FLOW)return;
+    var item=(FLOW.brief||[]).filter(function(x){return x.key===k})[0];
+    if(!item)return;
+    BRIEF_KEY=k;
+    $('#dBriefTitle').textContent='补充需求澄清 · '+item.label;
+    $('#dBriefHint').innerHTML='<b>'+esc(item.label)+'</b>：'+esc(item.hint)
+      +(item.filled?'<br>当前：<b>'+esc(item.value)+'</b>（'+esc(item.source)+'）':'<br>当前：待补充');
+    $('#dBriefVal').value=item.filled?item.value:'';
+    openM('dBriefModal');
+    setTimeout(function(){var i=$('#dBriefVal');if(i)i.focus()},60);
+  }
+  function saveBrief(){
+    if(!CUR||!BRIEF_KEY)return;
+    var patch={};patch[BRIEF_KEY]=$('#dBriefVal').value.trim();
+    A('/api/conversations',{action:'save',id:CUR.id,brief_patch:patch}).then(function(c){
+      FLOW=c.flow||FLOW;closeM('dBriefModal');renderSide();loadList();
+      say(patch[BRIEF_KEY]?'已补充需求澄清，下次生成方案会按它来':'已清空这一项');
+    }).catch(function(e){say(e.message)});
+  }
+
+  /* ── 生成 / 确认 / 对话操作 ── */
+  function openNew(){
+    var sel=$('#dNewCust');if(!sel)return;
+    var names=GROUPS.map(function(g){return g.customer});
+    var cur=(window.VOLENA||{}).customer||'流影';
+    if(names.indexOf(cur)<0)names.unshift(cur);
+    sel.innerHTML=names.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>'}).join('');
+    sel.value=cur;$('#dNewTitle').value='';
+    openM('dNewModal');setTimeout(function(){$('#dNewTitle').focus()},60);
+  }
+  function createConv(){
+    var v=window.VOLENA||{};
+    A('/api/conversations',{action:'save',customer:$('#dNewCust').value,
+      title:$('#dNewTitle').value.trim()||'新对话',status:'进行中',
+      folder:(v.library||{}).root||'',model:v.currentModelId||''}).then(function(c){
+        CUR=c;FLOW=c.flow||null;closeM('dNewModal');
+        OPEN[$('#dNewCust').value]=true;
+        loadList();renderChat();renderSide();
+        var i=$('#dInput');if(i)i.focus();say('已新建对话，直接输入即可开始');
+      }).catch(function(e){say(e.message)});
+  }
+  function send(){
+    var inp=$('#dInput'),v=inp?inp.value.trim():'';
+    if(!v){say('先输入内容');return}
+    if(!CUR){say('先点「新建对话」或从左侧选一个对话');return}
+    if(inp)inp.value='';
+    var box=$('#dMsgs');if(box){box.appendChild(msgNode('我',v));box.scrollTop=box.scrollHeight}
+    A('/api/conversations',{action:'save',id:CUR.id,
+      append:[{who:'我',text:v}]}).then(function(c){CUR=c;FLOW=c.flow||FLOW;renderSide();loadList()}).catch(function(){});
+    var mid=(window.VOLENA||{}).currentModelId||'';
+    /* 带历史，模型才知道「让 logo 动起来」是在接上一句 */
+    var hist=(CUR.messages||[]).filter(function(m){return (m.text||'').trim()}).map(function(m){
+      return {role:(m.who==='我'?'user':'assistant'),content:m.text};
+    });
+    if(!hist.length||hist[hist.length-1].content!==v)hist.push({role:'user',content:v});
+    var wait=null;
+    if(box){wait=msgNode('AI 导演','正在思考…');box.appendChild(wait);box.scrollTop=box.scrollHeight}
+    if(!mid){
+      if(wait)wait.remove();
+      if(box){box.appendChild(msgNode('AI 导演','还没有对话模型。到「模型管理」填好 API Key 就能真正对话。'));box.scrollTop=box.scrollHeight}
+      return;
+    }
+    /* agent:true → 后端走真·工具循环：模型能 ls / probe / 出片，
+       每轮都拿真实执行结果，最后才写总结。以前是单轮文本，
+       所以它只会「讲 ffmpeg 命令」甚至编一个不存在的路径说已生成。 */
+    A('/api/chat',{model:mid,agent:true,customer:CUR.customer,messages:hist}).then(function(r){
+      if(wait)wait.remove();
+      var txt=r.text||'（模型没有返回内容）';
+      var node=msgNode('AI 导演',txt);
+      if(r.steps&&r.steps.length)node.insertBefore(stepsNode(r.steps),node.lastChild);
+      if(box){box.appendChild(node);box.scrollTop=box.scrollHeight}
+      A('/api/conversations',{action:'save',id:CUR.id,
+        append:[{who:'AI 导演',text:txt,steps:(r.steps||[]).slice(0,12)}]})
+        .then(function(c){CUR=c;FLOW=c.flow||FLOW;renderSide();loadList()}).catch(function(){});
+      /* 出过片就把首页时间线/成片列表刷一遍，用户切回首页能直接看到 */
+      if((r.steps||[]).some(function(x){return x.ok&&/render_clip|make_slideshow|add_music/.test(x.tool)})){
+        try{if(window.refreshTimeline)window.refreshTimeline()}catch(e){}
+      }
+    }).catch(function(e){
+      if(wait)wait.remove();
+      if(box){box.appendChild(msgNode('AI 导演','没连上模型：'+e.message));box.scrollTop=box.scrollHeight}
+    });
+  }
+  /* 工具执行轨迹：用户能看见它到底动没动手，而不是又讲了一遍道理 */
+  var TOOL_CN={ls:'看目录',read:'读文件',grep:'搜内容',probe:'看素材',
+    probe_media:'看素材',capabilities:'查能力',kb_search:'查知识库',
+    render_clip:'出片',make_slideshow:'多图成片',add_music:'配乐',
+    verify_media:'核实成片',transcribe_media:'转字幕',add_caption:'烧字幕',
+    add_voiceover:'配音',write:'写文件',copy:'复制',move:'移动',note:'记笔记',
+    think:'理解意图',self_note:'沉淀经验',self_rules:'读经验',
+    self_inspect:'看自身配置',self_patch:'改自己规则'};
+  function stepsNode(steps){
+    var d=document.createElement('div');d.className='d-steps';
+    var head=document.createElement('div');head.className='d-steps-h';
+    var okN=steps.filter(function(x){return x.ok}).length;
+    var badN=steps.length-okN;
+    head.textContent=badN? ('动手记录 · 成功 '+okN+' 步，另外 '+badN+' 次没成（已自动重试）')
+                         : ('动手记录 · '+okN+' 步全部成功');
+    d.appendChild(head);
+    steps.forEach(function(x){
+      var r=document.createElement('div');r.className='d-step'+(x.ok?'':' bad');
+      var name=TOOL_CN[x.tool]||x.tool;
+      var detail=x.tool==='render_clip'?(x.args&&(x.args.name||x.args.source)||''):
+                 x.tool==='make_slideshow'?(x.args&&x.args.folder||''):
+                 x.tool==='probe_media'?(x.args&&x.args.path||''):
+                 x.tool==='verify_media'?(x.args&&x.args.path||''):
+                 x.tool==='think'?(x.args&&x.args.goal||''):'';
+      r.innerHTML='<span class="ic">'+(x.ok?'✓':'✕')+'</span>'
+        +'<span class="nm">'+esc(name)+'</span>'
+        +'<span class="dt">'+esc(String(detail).split('/').pop())+'</span>';
+      var out=document.createElement('div');out.className='d-step-out';
+      /* 失败的那几步收起大段英文堆栈：用户不需要看，点"看看"才展开。
+         成功步骤保持原样（那是他真正关心的产物路径）。 */
+      if(!x.ok){
+        out.textContent=plainWhy(x.out);
+        r.classList.add('fold');
+        var more=document.createElement('button');
+        more.className='d-step-more';more.textContent='看看详情';
+        more.onclick=function(){
+          var open=r.classList.toggle('fold')===false;
+          more.textContent=open?'收起':'看看详情';
+          if(open)out.textContent=String(x.out||'').slice(0,600);
+        };
+        r.appendChild(out);r.appendChild(more);d.appendChild(r);return;
+      }
+      out.textContent=String(x.out||'').slice(0,600);
+      r.appendChild(out);d.appendChild(r);
+    });
+    return d;
+  }
+  /* 把技术性报错翻成一句话：只留"因为什么"，去掉路径堆砌和"发给工程师"那类吓人话。 */
+  function plainWhy(t){
+    var s=String(t||'').replace(/^[❌⛔]\s*/,'').replace(/\s+/g,' ');
+    var m=s.match(/^(.*?)。|^(.*?)\n/);
+    var one=(m&&(m[1]||m[2]))||s;
+    one=one.replace(/可以把下面这行发给工程师排查[:：]?/,'');
+    return one.slice(0,90);
+  }
+  function replan(btn){
+    if(!CUR){say('先选一个对话');return}
+    var root=(window.VOLENA||{}).library&&(window.VOLENA||{}).library.root||CUR.folder||'';
+    if(!root){say('先在「客户与素材库」选好素材文件夹，再生成方案');return}
+    btn.disabled=true;btn.textContent='生成中…';
+    var req=CUR.requirement||((CUR.messages||[]).filter(function(m){return m.who==='我'})[0]||{}).text||'生成产品宣传片';
+    A('/api/plan',{requirement:req,tracks:CUR.tracks||{},customer:CUR.customer,
+      model:(window.VOLENA||{}).currentModelId||'',use_ai:true,conversation_id:CUR.id})
+      .then(function(d){
+        window.pollTask(d.task_id,function(result){
+          btn.disabled=false;btn.textContent='按澄清清单重新生成方案';
+          if(!result)return;
+          A('/api/conversations',{action:'save',id:CUR.id,status:'方案待确认',plan:result,
+            requirement:req,folder:root}).then(function(c){
+              CUR=c;FLOW=c.flow||FLOW;renderChat();renderSide();loadList();
+              say('方案已按澄清清单重新生成，请确认后执行');
+            }).catch(function(){});
+        });
+      }).catch(function(e){btn.disabled=false;btn.textContent='按澄清清单重新生成方案';say(e.message)});
+  }
+  function confirmPlan(btn){
+    if(!CUR||!CUR.plan){say('这个对话还没有方案');return}
+    var root=CUR.folder||'';
+    btn.disabled=true;btn.textContent='提交中…';
+    A('/api/render',{plan:CUR.plan,name:CUR.plan.title,root:root,conversation_id:CUR.id,
+      customer:CUR.customer}).then(function(r){
+      say('已提交剪辑任务，到「任务中心」看进度');
+      A('/api/conversations',{action:'save',id:CUR.id,status:'已确认方案',task:r.task_id})
+        .then(function(c){CUR=c;FLOW=c.flow||FLOW;renderChat();renderSide();loadList()}).catch(function(){});
+      window.pollTask(r.task_id,function(res){
+        A('/api/conversations',{action:'save',id:CUR.id,
+          status:(res&&res.files)?'已完成':'任务失败'})
+          .then(function(c){CUR=c;FLOW=c.flow||FLOW;renderChat();renderSide()}).catch(function(){});
+      });
+    }).catch(function(e){btn.disabled=false;btn.textContent='✓ 确认方案并开始执行';say(e.message)});
+  }
+  function delConv(id,title){
+    title=title||'这个对话';
+    var go=function(){
+      A('/api/conversations',{action:'delete',id:id}).then(function(){
+        if(CUR&&CUR.id===id){CUR=null;FLOW=null}
+        say('已删除对话「'+title+'」');loadList();renderChat();renderSide();
+      }).catch(function(e){say(e.message)});
+    };
+    if(window.confirmAction)window.confirmAction({
+      title:'删除对话',okText:'确认删除',
+      html:'将删除「<b>'+esc(title)+'</b>」的全部消息、方案、澄清清单与任务记录，<b>不可恢复</b>。',onOk:go});
+    else if(window.confirm&&window.confirm('删除对话「'+title+'」？'))go();
+  }
+  function exportConv(){
+    if(!CUR){say('先选一个对话');return}
+    A('/api/conversations',{action:'export',id:CUR.id}).then(function(d){
+      if(d.saved&&d.path){
+        /* 后端真写盘并在 Finder 定位，这里把真实路径显示出来 */
+        LAST_EXPORT='已导出到：'+d.path;
+        var n=$('#dExportNote');if(n)n.textContent=LAST_EXPORT;
+        say('已导出到 '+d.path+'（已在 Finder 定位）');
+      }else{
+        var a=document.createElement('a');
+        a.href=URL.createObjectURL(new Blob([d.text],{type:'text/plain;charset=utf-8'}));
+        a.download=d.filename;a.click();say('对话记录已导出');
+      }
+    }).catch(function(e){say(e.message)});
+  }
+
+  /* 悬浮框里的「创建对话」「保存」也要接上 */
+  document.addEventListener('click',function(ev){
+    if(ev.target.closest('#dNewGo'))createConv();
+  });
+})();
+</script>

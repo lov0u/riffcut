@@ -1,0 +1,390 @@
+<style>
+/* ══ 知识库（AI 的记忆） ════════════════════════ */
+.b-body{flex:1;min-height:0;display:grid;grid-template-columns:clamp(220px,24%,300px) minmax(0,1fr) clamp(200px,22%,270px);gap:clamp(8px,1%,14px)}
+.b-col{display:flex;flex-direction:column;min-height:0;padding:12px}
+.b-hd{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-bottom:10px}
+.b-hd b{font-size:var(--f3)}
+.b-search{flex:0 0 auto;height:30px;margin-bottom:9px}
+.b-search input{height:100%;font-size:var(--f5)}
+.b-scroll{flex:1;min-height:0}
+.b-foot{flex:0 0 auto;margin-top:9px;font-size:var(--f5);color:var(--ink3);line-height:1.6}
+.b-item{position:relative;border:1px solid var(--line);border-radius:var(--r-md);padding:9px 30px 9px 11px;margin-bottom:8px;box-shadow:var(--sh-btn);cursor:pointer}
+.b-item:hover{background:#FAFBFD}
+.b-item.on{background:#EFF4FB;border-color:#CBDCEE}
+.b-item .r1{display:flex;align-items:center;gap:6px;font-size:var(--f4);font-weight:600;min-width:0}
+.b-item .r1 .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-item .r2{font-size:var(--f5);color:var(--ink3);margin-top:5px;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.b-item .r2 .ds{flex-basis:100%;margin-top:1px;font-size:var(--f6);color:#939BAA}
+.b-item .r2 .ds{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.b-del{position:absolute;right:7px;top:8px;width:19px;height:19px;border:1px solid transparent;border-radius:8px;
+  background:transparent;color:#A8AFBC;font-size:12px;line-height:1;display:grid;place-items:center;cursor:pointer;opacity:0}
+.b-item:hover .b-del{opacity:1}
+.b-del:hover{border-color:#E4C7C7;background:#FFF1F1;color:#B45B5B}
+.b-empty{padding:26px 10px;text-align:center;color:var(--ink3);font-size:var(--f5);line-height:1.8}
+.b-edit-hd{display:flex;align-items:center;gap:8px;padding-bottom:11px;border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap}
+.b-edit-hd .b-title{flex:1;min-width:150px;height:32px}
+.b-edit-hd .b-title input{height:100%;font-size:var(--f3);font-weight:600}
+.b-edit-hd .u-actions{margin-left:auto}
+.b-meta{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap;align-items:center}
+.b-meta label{display:flex;align-items:center;gap:6px;font-size:var(--f5);color:var(--ink3)}
+.b-meta .u-input{width:150px;height:28px}
+.b-meta .u-input input{height:100%;font-size:var(--f5)}
+.b-code{flex:1;min-height:0;width:100%;resize:none;border:0;outline:none;padding:14px 16px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--f5);line-height:1.85;
+  color:#3A4252;background:#FCFDFE;tab-size:2}
+.b-edit-ft{flex:0 0 auto;display:flex;gap:10px;padding-top:8px;border-top:1px solid var(--line);
+  font-size:var(--f5);color:var(--ink3)}
+.b-edit-ft span:last-child{margin-left:auto}
+.b-right{overflow:auto;scrollbar-width:none}
+.b-right::-webkit-scrollbar{display:none}
+.b-sec{margin-bottom:13px}
+.b-sec h4{font-size:var(--f4);font-weight:600;margin:0 0 9px;display:flex;align-items:center;gap:7px}
+.b-sec h4 .u-tag{margin-left:auto}
+.b-note{font-size:var(--f5);color:var(--ink3);line-height:1.75}
+.b-cat{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:var(--r-sm);
+  margin-bottom:4px;font-size:var(--f5);cursor:pointer;color:#3E4655}
+.b-cat:hover{background:#F5F7FB}
+.b-cat.on{background:#EFF4FB;font-weight:600}
+.b-cat .n{margin-left:auto;font-size:var(--f6);color:var(--ink3)}
+.b-log{max-height:220px;overflow:auto;scrollbar-width:none}
+.b-log::-webkit-scrollbar{display:none}
+.b-lr{display:flex;align-items:flex-start;gap:7px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:var(--f5);line-height:1.55}
+.b-lr:last-child{border-bottom:0}
+.b-lr .d{width:6px;height:6px;border-radius:50%;background:#2E9B62;flex:0 0 auto;margin-top:6px}
+.b-lr .d.no{background:#C86B5A}
+.b-lr .bd{flex:1;min-width:0}
+.b-lr .bd .t1{color:#3A4252;font-weight:600;word-break:break-all}
+.b-lr .bd .t2{color:var(--ink3);word-break:break-all}
+.b-pend{border:1px solid #BFE0DA;background:#FDF7EA;border-radius:var(--r-md);padding:9px 10px;margin-bottom:8px}
+.b-pend .t{font-size:var(--f5);font-weight:600;color:#147567;word-break:break-all}
+.b-pend .w{font-size:var(--f6);color:#5A6272;margin-top:4px;line-height:1.55}
+.b-pend .a{display:flex;gap:6px;margin-top:8px}
+.compact .b-body{grid-template-columns:clamp(185px,23%,250px) minmax(0,1fr) clamp(180px,21%,230px)}
+.tiny .b-body{grid-template-columns:1fr 1.3fr}
+.tiny .b-right{display:none}
+</style>
+
+<section class="page" data-page="kb">
+  <div class="u-head">
+    <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-book"/></svg>知识库</div>
+      <div class="u-sub">AI 的记忆 · 每次做方案前先读、做完自动写回 · 一个知识点一个文件，索引自动重建</div></div>
+    <div class="u-actions">
+      <button class="u-btn" id="bOpenBtn"><svg class="ic"><use href="#i-folder"/></svg>打开目录</button>
+      <button class="u-btn" id="bIndexBtn"><svg class="ic"><use href="#i-task"/></svg>看索引</button>
+      <button class="u-btn" id="bRebuildBtn"><svg class="ic"><use href="#i-refresh"/></svg>重建索引</button>
+      <button class="u-btn gold" id="bNewBtn"><svg class="ic"><use href="#i-plus"/></svg>新建条目</button>
+    </div>
+  </div>
+
+  <div class="b-body">
+    <div class="u-card b-col">
+      <div class="b-hd"><b>全部条目</b><span class="u-tag" id="bCount">0 条</span></div>
+      <div class="u-input b-search"><input id="bSearch" placeholder="搜标题 / 标签 / 正文" autocomplete="off"></div>
+      <div class="b-scroll" id="bList"></div>
+      <div class="b-foot">AI 学到的新东西会自动加到「按分类」里；你在这里改的内容，下次 AI 读到的就是改后的。</div>
+    </div>
+
+    <div class="u-card b-col">
+      <div class="b-edit-hd">
+        <div class="u-input b-title"><input id="bTitle" placeholder="先选左侧条目，或点右上「新建条目」" autocomplete="off"></div>
+        <span class="u-tag" id="bIdTag">KB —</span>
+        <div class="u-actions">
+          <button class="u-btn sm" id="bDelBtn">删除</button>
+          <button class="u-btn sm gold" id="bSaveBtn">保存</button>
+        </div>
+      </div>
+      <div class="b-meta">
+        <label>分类
+          <div class="u-input"><input id="bCat" list="bCats" placeholder="例如：03-剪辑技法" autocomplete="off"></div>
+        </label>
+        <label>标签
+          <div class="u-input"><input id="bTags" placeholder="逗号分隔" autocomplete="off"></div>
+        </label>
+        <datalist id="bCats"></datalist>
+      </div>
+      <textarea id="bBody" class="b-code" spellcheck="false" placeholder="正文按两类写就行：
+· 踩坑 / 问题 → 现象 → 原因 → 怎么解决 → 怎么验证
+· 规律 / 偏好 → 规则 → 为什么 → 什么情况算违反"></textarea>
+      <div class="b-edit-ft"><span id="bSaveHint">选一条后可直接改正文</span><span id="bLen">0 字</span></div>
+    </div>
+
+    <div class="u-card b-col b-right">
+      <div class="b-sec"><h4>按分类 <span class="u-tag gray" id="bCatTag">全部</span></h4><div id="bCatList"></div></div>
+      <div class="u-divider"></div>
+      <div class="b-sec"><h4>AI 最近做了什么 <span class="u-tag" id="bLogTag">—</span></h4>
+        <div id="bLog" class="b-log"></div>
+      </div>
+      <div class="u-divider"></div>
+      <div class="b-sec"><h4>等 AI 等你确认 <span class="u-tag gold" id="bPendTag">0 件</span></h4>
+        <div id="bPend"></div>
+      </div>
+      <div class="u-divider"></div>
+      <div class="b-sec"><h4>写库规矩</h4>
+        <div class="b-note">· 一个知识点一个文件，不写流水账<br>
+          · 同主题改原来那条，不新建重复的<br>
+          · 索引自动生成，手改下次会丢</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 看索引 -->
+<div class="k-modal" id="bIdxModal" role="dialog" aria-modal="true" aria-label="知识库索引">
+  <div class="k-shade" data-close="bIdxModal"></div>
+  <div class="k-dialog k-dialog-wide">
+    <div class="k-dialog-hd"><b>知识库索引</b><button class="k-x" data-close="bIdxModal">×</button></div>
+    <div class="k-dialog-bd">
+      <div class="k-tip">这就是 AI 每次动手前读的那份索引：最近更新 → 按分类 → 标签反查。由程序自动生成。</div>
+      <pre id="bIdxBody" style="margin:0;padding:13px 15px;background:#FCFDFE;border:1px solid var(--line);border-radius:var(--r-sm);
+        font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--f5);line-height:1.8;
+        color:#3A4252;white-space:pre-wrap;word-break:break-word;max-height:52vh;overflow:auto">正在读…</pre>
+    </div>
+    <div class="k-dialog-ft"><button class="u-btn" data-close="bIdxModal">关闭</button></div>
+  </div>
+</div>
+
+<!-- 新建条目 -->
+<div class="k-modal" id="bNewModal" role="dialog" aria-modal="true" aria-label="新建知识条目">
+  <div class="k-shade" data-close="bNewModal"></div>
+  <div class="k-dialog">
+    <div class="k-dialog-hd"><b>新建条目</b><button class="k-x" data-close="bNewModal">×</button></div>
+    <div class="k-dialog-bd">
+      <div class="k-f"><label>标题</label>
+        <div class="u-input"><input id="bNewTitle" placeholder="一句话说清这条知识是什么" autocomplete="off"></div></div>
+      <div class="k-f"><label>分类</label>
+        <div class="u-input"><input id="bNewCat" list="bCats2" placeholder="选一个或直接写" autocomplete="off"></div>
+        <datalist id="bCats2"></datalist></div>
+      <div class="k-f"><label>标签（选填）</label>
+        <div class="u-input"><input id="bNewTags" placeholder="逗号分隔，例如：节奏, 卡点" autocomplete="off"></div></div>
+      <div class="k-f"><label>正文</label>
+        <textarea id="bNewBody" class="b-code" style="flex:none;height:180px;border:1px solid var(--line);border-radius:var(--r-sm)"
+          spellcheck="false" placeholder="规则 → 为什么 → 什么情况算违反"></textarea></div>
+      <div class="k-tip">创建后会自动重建索引，AI 下一次做方案就能读到。</div>
+    </div>
+    <div class="k-dialog-ft"><button class="u-btn" data-close="bNewModal">取消</button><button class="u-btn gold" id="bNewOk">创建</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)},$$=function(s){return [].slice.call(document.querySelectorAll(s))};
+  var A=function(p,d){return window.api(p,d)},say=function(m){if(window.say)window.say(m)};
+  var ITEMS=[],CATS=[],CUR=null,FILTER={cat:''};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function askConfirm(o){
+    if(window.confirmAction){window.confirmAction(o);return}
+    if(window.confirm((o.title||'确认')+'：'+String(o.html||'').replace(/<[^>]+>/g,''))){
+      if(o.onOk)o.onOk()}
+  }
+  function openM(id){var m=document.getElementById(id);if(m){m.classList.add('open');document.body.classList.add('modal-open')}}
+  function closeM(id){var m=document.getElementById(id);if(m)m.classList.remove('open');document.body.classList.remove('modal-open')}
+  function find(id){for(var i=0;i<ITEMS.length;i++)if(ITEMS[i].id===id)return ITEMS[i];return null}
+  function padded(n){return n<10?'0'+n:''+n}
+
+  function renderCats(){
+    var box=$('#bCatList');if(!box)return;
+    var all=ITEMS.length;
+    var h='<div class="b-cat'+(FILTER.cat?'':' on')+'" data-cat=""><svg class="ic" style="width:13px;height:13px"><use href="#i-book"/></svg>全部分类<span class="n">'+all+'</span></div>';
+    CATS.forEach(function(c){
+      var n=ITEMS.filter(function(x){return x.category===c}).length;
+      h+='<div class="b-cat'+(FILTER.cat===c?' on':'')+'" data-cat="'+esc(c)+'">'+esc(c.replace(/^\d+-/,''))+
+        '<span class="n">'+n+'</span></div>';
+    });
+    box.innerHTML=h;
+    $('#bCatTag').textContent=FILTER.cat?FILTER.cat.replace(/^\d+-/,''):'全部';
+    var dl1=$('#bCats'),dl2=$('#bCats2');
+    if(dl1)dl1.innerHTML=CATS.map(function(c){return '<option value="'+esc(c)+'">'}).join('');
+    if(dl2)dl2.innerHTML=dl1?dl1.innerHTML:'';
+  }
+
+  function renderList(){
+    var box=$('#bList');if(!box)return;
+    var q=($('#bSearch')?$('#bSearch').value:'').trim().toLowerCase();
+    var arr=ITEMS.filter(function(x){
+      if(FILTER.cat&&x.category!==FILTER.cat)return false;
+      if(!q)return true;
+      return ((x.title||'')+' '+(x.tags||[]).join(' ')+' '+(x.body||'')+' '+x.id).toLowerCase().indexOf(q)>=0;
+    });
+    $('#bCount').textContent=ITEMS.length+' 条'+(arr.length!==ITEMS.length?(' · 筛出 '+arr.length):'');
+    if(!arr.length){
+      box.innerHTML='<div class="b-empty">'+(ITEMS.length?'没有匹配的条目':'知识库还是空的。点右上「新建条目」，或者让 AI 在做项目时自己记。</div>');
+      return;
+    }
+    box.innerHTML=arr.map(function(x){
+      return '<div class="b-item'+(CUR&&CUR.id===x.id?' on':'')+'" data-id="'+esc(x.id)+'">'+
+        '<div class="r1"><span class="nm">'+esc(x.title)+'</span></div>'+
+        '<div class="r2"><span class="u-tag">'+esc(x.category.replace(/^\d+-/,''))+'</span>'+
+          (x.source?'<span class="u-tag gray">'+esc(x.source==='AI'?'AI 记的':(x.source==='预设'?'预设':'你写的'))+'</span>':'')+
+          '<span class="ds">'+esc((x.body||'').replace(/[#*\n>-]+/g,' ').trim().slice(0,30))+'</span></div>'+
+        '<button class="b-del" data-id="'+esc(x.id)+'" title="删除条目">×</button></div>';
+    }).join('');
+  }
+
+  function fillEditor(){
+    var d=CUR;
+    $('#bTitle').value=d?d.title:'';
+    $('#bCat').value=d?d.category:'';
+    $('#bTags').value=d?(d.tags||[]).join(', '):'';
+    $('#bBody').value=d?d.body:'';
+    $('#bIdTag').textContent=d?d.id:'KB —';
+    $('#bSaveHint').textContent=d?('最后更新：'+(d.updated||'—')+(d.source==='AI'?'（AI 记的）':'')):'选一条后可直接改正文';
+    updateLen();
+  }
+  function updateLen(){$('#bLen').textContent=($('#bBody').value||'').length+' 字'}
+  function select(id){CUR=find(id);renderList();fillEditor()}
+
+  function load(keep){
+    var want=keep&&CUR?CUR.id:null;
+    return A('/api/kb',{action:'list'}).then(function(d){
+      ITEMS=(d&&d.items)||[];CATS=(d&&d.cats)||[];
+      if(want)CUR=find(want)||null;
+      if(!CUR)CUR=ITEMS[0]||null;
+      renderCats();renderList();fillEditor();
+    }).catch(function(e){say(e.message)});
+  }
+
+  function save(){
+    if(!CUR){say('先选一条，或点「新建条目」');return}
+    var t=$('#bTitle').value.trim();
+    if(!t){say('标题不能为空');return}
+    A('/api/kb',{action:'update',id:CUR.id,title:t,category:$('#bCat').value.trim()||CUR.category,
+      tags:$('#bTags').value,tags_keep:false,body:$('#bBody').value})
+      .then(function(){say('已保存「'+t+'」');return load(true).then(function(){select(CUR?CUR.id:'')})})
+      .catch(function(e){say(e.message)});
+  }
+  function del(id){
+    var d=find(id);if(!d)return;
+    askConfirm({title:'删除条目',okText:'确认删除',
+      html:'确定删除「<b>'+esc(d.title)+'</b>」（'+d.id+'）吗？<br>会移到 知识库/_废弃/ 留底，不会真的丢。',
+      onOk:function(){
+        A('/api/kb',{action:'delete',id:id}).then(function(){
+          if(CUR&&CUR.id===id)CUR=null;
+          say('已删除 '+id);return load(false);
+        }).catch(function(e){say(e.message)});
+      }});
+  }
+  function create(){
+    var t=$('#bNewTitle').value.trim(),b=$('#bNewBody').value.trim();
+    if(!t){say('先填标题');return}
+    if(!b){say('正文写一点，别留空');return}
+    A('/api/kb',{action:'add',title:t,category:$('#bNewCat').value.trim()||CATS[0]||'02-项目经验',
+      tags:$('#bNewTags').value,body:b}).then(function(msg){
+      closeM('bNewModal');say(String(msg));
+      return load(false).then(function(){
+        var hit=ITEMS.filter(function(x){return x.title===t})[0];
+        if(hit)select(hit.id);
+      });
+    }).catch(function(e){say(e.message)});
+  }
+
+  /* AI 操作记录 + 待确认提案：让用户看得见 AI 到底动了什么 */
+  function renderLog(){
+    A('/api/agent',{action:'log',limit:8}).then(function(arr){
+      var box=$('#bLog');if(!box)return;
+      arr=arr||[];
+      $('#bLogTag').textContent=arr.length?('最近 '+arr.length+' 次'):'还没干活';
+      if(!arr.length){
+        box.innerHTML='<div class="b-note">AI 还没动过手。等它在出片时自己查技能、读素材，这里会一条条记下来。</div>';
+        return;
+      }
+      box.innerHTML=arr.map(function(r){
+        var who={ls:'看目录',read:'读文件',grep:'搜关键词',probe:'探素材',note:'记知识',
+          kb_index:'读知识索引',kb_search:'查知识库',write:'写文件',copy:'复制素材',move:'移动素材'}[r.tool]||r.tool;
+        return '<div class="b-lr"><span class="d'+(r.ok?'':' no')+'"></span><div class="bd">'+
+          '<div class="t1">'+esc(who)+' '+esc(String(r.t||'').slice(11,19))+'</div>'+
+          '<div class="t2">'+esc(String(r.out||'').replace(/\n/g,' ').slice(0,58))+'</div></div></div>';
+      }).join('');
+    }).catch(function(){});
+  }
+  function renderPending(){
+    A('/api/agent',{action:'pending'}).then(function(arr){
+      var box=$('#bPend');if(!box)return;
+      arr=arr||[];
+      $('#bPendTag').textContent=arr.length+' 件';
+      if(!arr.length){
+        box.innerHTML='<div class="b-note">没有等着的操作。AI 想写文件或移动素材时，会先在这里排队。</div>';
+        return;
+      }
+      box.innerHTML=arr.map(function(x){
+        return '<div class="b-pend" data-id="'+esc(x.id)+'">'+
+          '<div class="t">'+esc(x.display)+'</div>'+
+          (x.why?'<div class="w">'+esc(x.why)+'</div>':'')+
+          '<div class="a"><button class="u-btn sm gold" data-ok="'+esc(x.id)+'">同意</button>'+
+          '<button class="u-btn sm" data-no="'+esc(x.id)+'">不用了</button></div></div>';
+      }).join('');
+    }).catch(function(){});
+  }
+  function act(id,ok){
+    A('/api/agent',{action:ok?'approve':'reject',id:id}).then(function(){
+      say(ok?'已执行':'已取消');renderPending();renderLog();return load(true);
+    }).catch(function(e){say(e.message)});
+  }
+
+  function showIndex(){
+    openM('bIdxModal');
+    $('#bIdxBody').textContent='正在读…';
+    A('/api/kb',{action:'index',max_chars:60000}).then(function(t){
+      $('#bIdxBody').textContent=String(t||'（索引是空的）');
+    }).catch(function(e){$('#bIdxBody').textContent=e.message});
+  }
+  function rebuild(){
+    A('/api/kb',{action:'rebuild'}).then(function(r){
+      say('索引已重建，共 '+r.count+' 条');renderLog();
+    }).catch(function(e){say(e.message)});
+  }
+  function openDir(){
+    A('/api/kb',{action:'open'}).then(function(){say('已在访达里打开知识库目录')})
+      .catch(function(e){say(e.message)});
+  }
+
+  /* ── 事件 ── */
+  $('#bSearch').addEventListener('input',renderList);
+  $('#bBody').addEventListener('input',updateLen);
+  $('#bList').addEventListener('click',function(e){
+    var d=e.target.closest('.b-del');if(d){del(d.getAttribute('data-id'));return}
+    var it=e.target.closest('.b-item');if(it)select(it.getAttribute('data-id'));
+  });
+  $('#bCatList').addEventListener('click',function(e){
+    var c=e.target.closest('.b-cat');if(!c)return;
+    FILTER.cat=c.getAttribute('data-cat')||'';renderCats();renderList();
+  });
+  $('#bSaveBtn').addEventListener('click',save);
+  $('#bDelBtn').addEventListener('click',function(){if(CUR)del(CUR.id);else say('先选一条')});
+  $('#bNewBtn').addEventListener('click',function(){
+    $('#bNewTitle').value='';$('#bNewCat').value='';$('#bNewTags').value='';$('#bNewBody').value='';
+    openM('bNewModal');setTimeout(function(){$('#bNewTitle').focus()},60);
+  });
+  $('#bNewOk').addEventListener('click',create);
+  $('#bNewTitle').addEventListener('keydown',function(e){if(e.key==='Enter')create()});
+  $('#bIndexBtn').addEventListener('click',showIndex);
+  $('#bRebuildBtn').addEventListener('click',rebuild);
+  $('#bOpenBtn').addEventListener('click',openDir);
+  $('#bPend').addEventListener('click',function(e){
+    var ok=e.target.closest('[data-ok]');if(ok){act(ok.getAttribute('data-ok'),true);return}
+    var no=e.target.closest('[data-no]');if(no){act(no.getAttribute('data-no'),false);return}
+  });
+  document.addEventListener('click',function(e){
+    if(!e.target.closest('.k-modal'))return;
+    var c=e.target.closest('[data-close]');if(c)closeM(c.getAttribute('data-close'));
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape')$$('.k-modal.open').forEach(function(m){m.classList.remove('open');document.body.classList.remove('modal-open')});
+    if((e.metaKey||e.ctrlKey)&&e.key==='s'&&document.querySelector('.page[data-page="kb"]').classList.contains('on')){
+      e.preventDefault();save();
+    }
+  });
+  var booted=false;
+  function init(){
+    if(booted)return;booted=true;
+    load(false);renderLog();renderPending();
+  }
+  document.addEventListener('riffcut-ready',init);
+  /* 切到本页时刷新一次：AI 可能刚在别的页面记了新知识 */
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('.nav a[data-page="kb"]');
+    if(a)setTimeout(function(){load(true);renderLog();renderPending()},120);
+  });
+  setTimeout(init,420);
+})();
+</script>

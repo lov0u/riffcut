@@ -1,0 +1,267 @@
+<style>
+/* 内核能力。
+   这一页存在的唯一理由：让「软件到底能干什么」可验证。
+   90 个工具、41 条技能、18 个随包扩展，散在五个模块里，
+   界面上一个都看不见 —— 用户只能听我说「都移植齐了」，那不叫可验证。 */
+.ka-top{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:clamp(6px,0.8%,10px);margin-bottom:10px}
+.ka-kpi{background:#FFF;border:1px solid var(--line);border-radius:var(--r-md);padding:11px 13px}
+.ka-kpi .n{font-size:21px;font-weight:700;color:#1E2430;line-height:1.1;font-variant-numeric:tabular-nums}
+.ka-kpi .l{font-size:var(--f5);color:#8A92A2;margin-top:3px}
+.ka-kpi .u{font-size:11px;color:#A6ADBB;font-weight:400;margin-left:2px}
+.ka-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.ka-search{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:#FFF;box-shadow:var(--sh-in);flex:1;min-width:180px;max-width:360px}
+.ka-search input{border:0;outline:none;background:none;font-size:var(--f4);color:#333B49;width:100%;min-width:0}
+.ka-search .ic{width:13px;height:13px;color:#9AA2B1;flex:0 0 auto}
+.ka-chip{height:27px;padding:0 11px;border:1px solid var(--line);border-radius:12px;background:#FFF;
+  font-size:var(--f5);color:#5A6272;cursor:pointer;transition:all .15s;white-space:nowrap}
+.ka-chip:hover{border-color:#BFE0DA}
+.ka-chip.on{background:#EAF5F3;border-color:#BFE0DA;color:#33405A;font-weight:600}
+.ka-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) clamp(270px,23vw,330px);gap:clamp(8px,1%,12px)}
+.ka-rows{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:8px 12px 16px;display:flex;flex-direction:column;gap:12px}
+.ka-rows::-webkit-scrollbar{display:none}
+.ka-grp{flex:0 0 auto}
+.ka-grp-h{display:flex;align-items:center;gap:7px;font-size:var(--f3);font-weight:600;color:#33405A;
+  padding:2px 0 7px;position:sticky;top:0;background:#FFF;z-index:2}
+.ka-grp-h .u-tag{margin-left:auto;font-weight:400}
+.ka-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:7px}
+.ka-card{border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px;background:#FFF;
+  transition:border-color .14s,box-shadow .14s;cursor:pointer}
+.ka-card:hover{border-color:#BFE0DA;box-shadow:var(--sh-1)}
+.ka-card.deny{opacity:.55;background:#FAFBFC}
+.ka-card .nm{font-size:var(--f5);font-weight:600;color:#2C3340;font-family:ui-monospace,Menlo,monospace;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ka-card .ds{font-size:10.5px;color:#6B7484;line-height:1.45;margin-top:3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ka-card .ft{display:flex;align-items:center;gap:5px;margin-top:5px}
+.ka-lv{font-size:9.5px;padding:1px 5px;border-radius:3px;background:#F1F4F8;color:#7A8496}
+.ka-lv.w{background:#FDF3E8;color:#B57B33}
+.ka-lv.d{background:#FBEDED;color:#B04949}
+.ka-side{display:flex;flex-direction:column;gap:clamp(8px,1%,12px);min-height:0;overflow:auto;scrollbar-width:none}
+.ka-side::-webkit-scrollbar{display:none}
+.ka-note{font-size:var(--f5);color:#5C6478;line-height:1.62;background:#F8FAFC;
+  border:1px solid var(--line);border-radius:var(--r-md);padding:11px 13px}
+.ka-note b{color:#33405A}
+.ka-note code{background:#EEF2F7;border-radius:3px;padding:0 3px;font-size:10.5px}
+.ka-skill{display:flex;align-items:flex-start;gap:7px;padding:6px 0;border-bottom:1px dashed #EEF2F7;font-size:var(--f5)}
+.ka-skill:last-child{border-bottom:0}
+.ka-skill .d{flex:0 0 auto;width:5px;height:5px;border-radius:50%;background:#B9E0D9;margin-top:6px}
+.ka-skill .t{flex:1;min-width:0;color:#4A5364;line-height:1.45}
+.ka-skill .t b{color:#2C3340;font-weight:600}
+.ka-skill .c{flex:0 0 auto;font-size:9.5px;color:#A6ADBB}
+</style>
+
+<section class="page" data-page="abilities">
+  <div class="u-head">
+    <div class="txt">
+      <div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-cube"/></svg>内核能力</div>
+      <div class="u-sub">软件到底能干什么 · 每个工具点开看参数 · AI 也是靠这些动手的</div>
+    </div>
+    <div class="u-actions">
+      <button class="u-btn" id="kaRefresh"><svg class="ic"><use href="#i-refresh"/></svg>刷新</button>
+    </div>
+  </div>
+
+  <div class="ka-top" id="kaTop">
+    <div class="ka-kpi"><div class="n">—</div><div class="l">读取中</div></div>
+  </div>
+
+  <div class="ka-bar" id="kaBar"></div>
+
+  <div class="ka-body">
+    <div class="u-card" style="display:flex;flex-direction:column;min-height:0;padding:0">
+      <div class="ka-rows" id="kaRows">
+        <div class="u-empty"><svg class="ic"><use href="#i-cube"/></svg><div>读能力清单…</div></div>
+      </div>
+    </div>
+
+    <div class="ka-side">
+      <div class="u-card" id="kaDetail" style="padding:11px 13px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:var(--f3);font-weight:600;margin-bottom:7px">
+          <svg class="ic" style="width:14px;height:14px"><use href="#i-cube"/></svg>点一个工具看怎么用
+        </div>
+        <div class="ka-note" style="border:0;background:none;padding:0">
+          左边任何一个卡片，点一下这里会显示它要什么参数、在对话里怎么说才能让它跑起来。
+        </div>
+      </div>
+      <div class="u-card" style="padding:11px 13px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:var(--f3);font-weight:600;margin-bottom:8px">
+          <svg class="ic" style="width:14px;height:14px"><use href="#i-book"/></svg>导演技能
+          <span class="u-tag gray" style="margin-left:auto;font-weight:400" id="kaSkillN">—</span>
+        </div>
+        <div id="kaSkills" style="max-height:240px;overflow:auto;scrollbar-width:none">
+          <div class="ka-note">读取中…</div>
+        </div>
+      </div>
+      <div class="ka-note">
+        <b>这些不是「装饰」。</b>AI 在对话里说的每句「我做了 X」，背后都是这里某一个工具真的跑了一遍。
+        如果你发现某件事它做不到，先来这里查有没有对应工具 —— 没有就是真没有，有就是调用出了问题。
+        <br><br>
+        <b>档位</b>决定 AI 能动手到什么程度：只读 &lt; 建议 &lt; 可整理 &lt; 完全托管。
+        灰掉的是当前档位不允许的。
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  /* 不能在这里把 window.api 存成局部变量：shell.html 先挂的是「排队桩」，
+     真身要等 live.js 装好后 __apiFlush 才换上。存了局部变量 = 永远拿到桩，
+     桩返回的 Promise 没有人来 resolve，页面就永远停在「读取中」。
+     用一层转发，每次调用现取。 */
+  function A(){ return window.api.apply(null, arguments) }
+  /* 自己拿一遍 $：live.js 里的 $ 是它 IIFE 内部的，页面脚本取不到 */
+  var $=function(s){return document.querySelector(s)};
+  var rows=$('#kaRows'), top=$('#kaTop'), bar=$('#kaBar');
+  var data=null, kw='', lvFilter='';
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+  function lvClass(lv){
+    if(lv==='完全托管')return 'd';
+    if(lv==='可整理'||lv==='建议')return 'w';
+    return '';
+  }
+
+  function cardHtml(t){
+    var cls='ka-card'+(t.allowed?'':' deny');
+    var tip=t.allowed?'' : '当前档位不允许（'+esc(t.level)+'）';
+    return '<div class="'+cls+'" title="'+esc(t.desc)+'">'
+      + '<div class="nm">'+esc(t.name)+'</div>'
+      + '<div class="ds">'+esc(t.desc||'（没写说明）')+'</div>'
+      + '<div class="ft"><span class="ka-lv '+lvClass(t.level)+'">'+esc(t.level)+'</span>'
+      + (t.args&&t.args.length?'<span class="ka-lv">'+t.args.length+' 参数</span>':'')
+      + (t.danger?'<span class="ka-lv d">危险</span>':'')
+      + (t.allowed?'':'<span class="ka-lv d">不可用</span>')
+      + '</div></div>';
+  }
+
+  function paint(){
+    if(!data){return}
+    var q=kw.toLowerCase();
+    var html='';
+    data.groups.forEach(function(g){
+      var items=g.items.filter(function(t){
+        if(lvFilter && t.level!==lvFilter) return false;
+        if(!q) return true;
+        return (t.name||'').toLowerCase().indexOf(q)>=0 || (t.desc||'').toLowerCase().indexOf(q)>=0;
+      });
+      if(!items.length) return;
+      html+='<div class="ka-grp"><div class="ka-grp-h">'+esc(g.title)
+        + '<span class="u-tag gray">'+items.length+'</span></div>'
+        + '<div class="ka-grid">'+items.map(cardHtml).join('')+'</div></div>';
+    });
+    rows.innerHTML = html || '<div class="u-empty"><svg class="ic"><use href="#i-search"/></svg>'
+      + '<div>没找到匹配的工具</div></div>';
+  }
+
+  function paintTop(){
+    var tot=data.total||0, denied=0;
+    data.groups.forEach(function(g){g.items.forEach(function(t){if(!t.allowed)denied++})});
+    var groups=data.groups.length;
+    top.innerHTML=
+      '<div class="ka-kpi"><div class="n">'+tot+'</div><div class="l">工具总数</div></div>'
+      +'<div class="ka-kpi"><div class="n">'+groups+'</div><div class="l">能力分组</div></div>'
+      +'<div class="ka-kpi"><div class="n">'+(data.skillTotal||0)+'</div><div class="l">导演技能</div></div>'
+      +'<div class="ka-kpi"><div class="n">'+esc(data.level||'?')+'</div><div class="l">当前授权档</div></div>'
+      +(denied?'<div class="ka-kpi"><div class="n" style="color:#B04949">'+denied+'</div><div class="l">档位不够用不了</div></div>':'')
+      +'<div class="ka-kpi"><div class="n" style="font-size:14px;padding-top:4px">'+esc(data.scope||'?')+'</div><div class="l">可访问范围</div></div>';
+  }
+
+  function paintBar(){
+    var html='<div class="ka-search"><svg class="ic"><use href="#i-search"/></svg>'
+      +'<input id="kaKw" placeholder="搜工具名或说明，如 字幕 / 转场 / 出片" value="'+esc(kw)+'"></div>';
+    html+='<button class="ka-chip'+(lvFilter===''?' on':'')+'" data-lv="">全部</button>';
+    (data.levels||[]).forEach(function(lv){
+      html+='<button class="ka-chip'+(lvFilter===lv?' on':'')+'" data-lv="'+esc(lv)+'">'+esc(lv)+'</button>';
+    });
+    bar.innerHTML=html;
+  }
+
+  function paintSkills(){
+    var box=$('#kaSkills');
+    $('#kaSkillN').textContent=(data.skillTotal||0)+' 条';
+    if(!data.skills||!data.skills.length){
+      box.innerHTML='<div class="ka-note">还没装技能。技能是一条可复用的流程，放在 home/配置/导演技能/ 下。</div>';
+      return;
+    }
+    box.innerHTML=data.skills.map(function(s){
+      return '<div class="ka-skill"><i class="d"></i><div class="t"><b>'+esc(s.title||s.name)+'</b>'
+        +(s.desc?' · '+esc(s.desc):'')+'</div>'
+        +(s.cat?'<span class="c">'+esc(s.cat)+'</span>':'')+'</div>';
+    }).join('');
+  }
+
+  function load(){
+    rows.innerHTML='<div class="u-empty"><svg class="ic"><use href="#i-cube"/></svg><div>读能力清单…</div></div>';
+    A('/api/abilities',{}).then(function(d){
+      data=d||{groups:[]};
+      paintTop(); paintBar(); paint(); paintSkills();
+    }).catch(function(e){
+      rows.innerHTML='<div class="u-empty"><svg class="ic"><use href="#i-cube"/></svg>'
+        +'<div>读不到：'+esc((e&&e.message)||e)+'</div></div>';
+    });
+  }
+
+  bar.addEventListener('click',function(e){
+    var c=e.target.closest('[data-lv]');
+    if(!c)return;
+    lvFilter=c.getAttribute('data-lv')||'';
+    paintBar(); paint();
+  });
+  bar.addEventListener('input',function(e){
+    if(e.target.id!=='kaKw')return;
+    kw=e.target.value.trim();
+    paint();
+  });
+  /* 找到一个工具对象 */
+  function findTool(nm){
+    if(!data)return null;
+    for(var i=0;i<data.groups.length;i++){
+      var g=data.groups[i];
+      for(var j=0;j<g.items.length;j++) if(g.items[j].name===nm) return g.items[j];
+    }
+    return null;
+  }
+
+  /* 点卡片 = 在右边显示怎么用。
+     光列名字没用 —— 用户想知道的是「我在对话里该怎么说，才能让它动起来」。 */
+  rows.addEventListener('click',function(e){
+    var c=e.target.closest('.ka-card');
+    if(!c)return;
+    var nm=((c.querySelector('.nm')||{}).textContent||'').trim();
+    var t=findTool(nm);
+    if(!t)return;
+    var box=$('#kaDetail');
+    var argsHtml = (t.args&&t.args.length)
+      ? '<div style="margin-top:7px"><b style="font-size:var(--f5)">参数</b>'
+        + t.args.map(function(a){return '<div style="font-size:10.5px;color:#5C6478;font-family:ui-monospace,Menlo,monospace;padding:1px 0">· '+esc(a)+'</div>'}).join('')
+        + '</div>'
+      : '<div style="margin-top:7px;font-size:10.5px;color:#8A92A2">不需要参数</div>';
+    var how = t.allowed
+      ? '在首页对话框直接说需求就会调它。要精确指定可以写 <code>'+esc(t.name)+'</code>。'
+      : '当前档位「'+esc(data.level)+'」不允许用（它要 <b>'+esc(t.level)+'</b>）。到「系统设置」把授权档调高，或者让我用别的办法做。';
+    box.innerHTML=
+      '<div style="display:flex;align-items:center;gap:6px;font-size:var(--f3);font-weight:600;margin-bottom:6px">'
+      + '<svg class="ic" style="width:14px;height:14px"><use href="#i-cube"/></svg>'
+      + '<span style="font-family:ui-monospace,Menlo,monospace">'+esc(t.name)+'</span></div>'
+      + '<div style="font-size:var(--f5);color:#5C6478;line-height:1.55">'+esc(t.desc||'（没写说明）')+'</div>'
+      + argsHtml
+      + '<div style="margin-top:8px;font-size:10.5px;color:#5C6478;line-height:1.5;border-top:1px dashed #EEF2F7;padding-top:7px">'
+      + how + '</div>'
+      + '<div style="margin-top:8px;display:flex;gap:6px">'
+      + '<button class="u-btn" id="kaCopy" style="height:26px;font-size:10.5px">复制名字</button></div>';
+    var cb=$('#kaCopy');
+    if(cb) cb.addEventListener('click',function(){
+      try{ navigator.clipboard.writeText(t.name); window.say&&window.say('已复制：'+t.name) }
+      catch(err){ window.say&&window.say(t.name) }
+    });
+  });
+  $('#kaRefresh').addEventListener('click',load);
+
+  document.addEventListener('riffcut-ready',load);
+  if(window.RiffCut) load();
+})();
+</script>

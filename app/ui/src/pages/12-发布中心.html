@@ -1,0 +1,881 @@
+<style>
+/* ══ 发布中心：成片发到抖音/小红书/快手/视频号/B站，带排期与归因 ══ */
+.p-tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.p-tabs button{color:var(--ink3);font-size:var(--f3);position:relative;padding:0 0 9px;
+  white-space:nowrap;background:none;border:0;cursor:pointer;font-weight:500}
+.p-tabs button.on{color:var(--ink);font-weight:600}
+.p-tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+  background:var(--gold-deep);border-radius:4px}
+.p-pane{display:none;flex:1;min-height:0;flex-direction:column;gap:clamp(8px,1%,12px)}
+.p-pane.on{display:flex}
+
+/* ── 发布 ── */
+.p-grid{flex:1;min-height:0;display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(300px,25vw,360px);
+  gap:clamp(8px,1%,12px)}
+.p-form{display:flex;flex-direction:column;gap:10px;padding:14px 16px;overflow:auto;scrollbar-width:none}
+.p-form::-webkit-scrollbar{display:none}
+.p-plats{display:flex;gap:6px;flex-wrap:wrap}
+.p-plat{height:30px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:#FFF;
+  font-size:var(--f5);color:#5A6272;box-shadow:var(--sh-btn);cursor:pointer;transition:all .16s;
+  display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.p-plat:hover{border-color:#BFE0DA}
+.p-plat.on{background:#EAF5F3;border-color:#BFE0DA;color:#33405A;font-weight:600}
+.p-plat .dot{width:5px;height:5px;border-radius:50%;background:#1B8B7E}
+.p-plat .dot.ok{background:#35B26B}
+.p-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.p-spec{display:flex;flex-wrap:wrap;gap:5px;font-size:var(--f5);color:var(--ink3)}
+.p-spec .u-tag{height:20px;font-size:10.5px}
+.p-check{border:1px solid var(--line);border-radius:var(--r-md);padding:9px 12px;font-size:var(--f5);
+  line-height:1.7;background:#FBFCFE;color:var(--ink3);min-height:34px}
+.p-check.bad{border-color:#F0C9C9;background:#FEF7F7;color:#A34A4A}
+.p-check.good{border-color:#C9E8D8;background:#F6FCF9;color:#2E7D52}
+.p-check b{color:inherit}
+.p-side{display:flex;flex-direction:column;gap:clamp(8px,1%,12px);min-height:0}
+.p-log{display:flex;flex-direction:column;min-height:0;flex:1;padding:0}
+.p-log-head{padding:10px 14px;border-bottom:1px solid var(--line);font-size:var(--f3);font-weight:600;
+  display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.p-log-head .ic{width:15px;height:15px;color:var(--gold-deep)}
+.p-log-body{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:11px 14px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--f5);line-height:1.85;
+  color:#4A5262}
+.p-log-body::-webkit-scrollbar{display:none}
+.p-log-body .ok{color:#2E7D52}.p-log-body .bad{color:#B04A4A}.p-log-body .dim{color:#A6ADBB}
+.p-shot{flex:0 0 auto;padding:10px 12px;border-top:1px solid var(--line)}
+.p-shot img{width:100%;border-radius:var(--r-sm);border:1px solid var(--line);display:block}
+.p-shot .cap{font-size:var(--f5);color:var(--ink3);margin-top:6px;word-break:break-all}
+
+/* ── 列表通用 ── */
+.p-list{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:0}
+.p-list::-webkit-scrollbar{display:none}
+.p-list table{width:100%;border-collapse:collapse;font-size:var(--f4)}
+.p-list th{text-align:left;font-size:var(--f5);color:var(--ink3);font-weight:600;padding:10px 13px;
+  border-bottom:1px solid var(--line);position:sticky;top:0;background:#FFF;z-index:2;white-space:nowrap}
+.p-list td{padding:10px 13px;border-bottom:1px solid #F1F3F7;color:#3E4655}
+.p-list tr:last-child td{border-bottom:0}
+.p-list tr:hover td{background:#FAFBFD}
+.p-list .nm{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;flex:0 0 auto}
+.p-stat-row .u-card{padding:12px 14px}
+.p-stat-row b{font-size:20px;font-weight:700;display:block}
+.p-stat-row span{font-size:var(--f5);color:var(--ink3)}
+.p-note{flex:0 0 auto;padding:9px 13px;border:1px solid #BFE0DA;background:#FFFCF5;
+  border-radius:var(--r-md);font-size:var(--f5);color:#5A6272;line-height:1.7}
+.p-note b{color:#33405A}
+/* 只有真正矮屏（<620）才上下排。826 这种常见高度保持双栏 —— 一铺满
+   全宽表单就被拉成 1244px、内容超出去被裁，反而更难填。 */
+.tiny .p-grid{grid-template-columns:1fr;
+  grid-template-rows:minmax(240px,1.15fr) minmax(180px,.85fr);overflow:auto;
+  scrollbar-width:none}
+.tiny .p-grid::-webkit-scrollbar{display:none}
+.tiny .p-side,.tiny .p-log{min-height:180px}
+.tiny .p-row2{grid-template-columns:1fr}
+</style>
+
+<section class="page" data-page="publish">
+  <div class="u-head">
+    <div class="txt">
+      <div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-send"/></svg>发布中心</div>
+      <div class="u-sub">成片发抖音 / 小红书 / 快手 / 视频号 / B站 · 规格预检 · 排期 · 数据归因</div>
+    </div>
+    <div class="u-actions">
+      <button class="u-btn" id="pLogin"><svg class="ic"><use href="#i-user"/></svg>查登录态</button>
+      <button class="u-btn" id="pRefresh"><svg class="ic"><use href="#i-refresh"/></svg>刷新</button>
+    </div>
+  </div>
+
+  <div class="p-tabs" id="pTabs">
+    <button class="on" data-t="send">发布视频</button>
+    <button data-t="article">发图文</button>
+    <button data-t="layout">排版·质检</button>
+    <button data-t="queue">排期</button>
+    <button data-t="history">发布记录</button>
+    <button data-t="stats">数据归因</button>
+    <button data-t="settings">通知渠道</button>
+  </div>
+
+  <!-- ══ 发布 ══ -->
+  <div class="p-pane on" data-pane="send">
+    <div class="p-grid">
+      <div class="u-card p-form">
+        <div class="u-field"><label>发到哪个平台</label>
+          <div class="p-plats" id="pPlats"></div>
+        </div>
+
+        <div class="u-field"><label>视频文件（发图文就留空，在下面填图）</label>
+          <div class="u-row">
+            <input class="u-input" id="pVideo" placeholder="成片绝对路径，可从任务中心或素材库复制" style="flex:1">
+            <button class="u-btn sm" id="pPick">最近成片</button>
+          </div>
+        </div>
+
+        <div class="u-field"><label>标题（各平台上限不同，超了会红）</label>
+          <input class="u-input" id="pTitle" placeholder="标题">
+        </div>
+
+        <div class="u-field"><label>正文 / 简介</label>
+          <textarea class="u-input" id="pBody" rows="4"
+            style="height:auto;padding:9px 11px;resize:vertical;line-height:1.65;font-family:inherit"
+            placeholder="正文。话题写在下面单独一格，会自动拼成 #标签"></textarea>
+        </div>
+
+        <div class="p-row2">
+          <div class="u-field"><label>话题（逗号分隔，不带 # 也行）</label>
+            <input class="u-input" id="pTags" placeholder="AI,剪辑,效率工具">
+          </div>
+          <div class="u-field"><label>图片（发图文用，分号分隔）</label>
+            <input class="u-input" id="pImages" placeholder="/a.png;/b.png">
+          </div>
+        </div>
+
+        <div class="p-spec" id="pSpec"></div>
+        <div class="p-check" id="pCheck">选好平台、填上标题，这里会实时告诉你规格对不对。</div>
+
+        <div class="u-row" style="gap:8px;flex-wrap:wrap">
+          <button class="u-btn gold" id="pGo"><svg class="ic"><use href="#i-send"/></svg>发布（先只填不发）</button>
+          <button class="u-btn dark" id="pExec"><svg class="ic"><use href="#i-upload"/></svg>真的发出去</button>
+          <span class="u-tag gray" id="pMode">当前：演练模式，不会真发</span>
+        </div>
+      </div>
+
+      <div class="p-side">
+        <div class="p-note">
+          <b>默认只填不发。</b>第一次点「发布」只会把标题正文填好、停在发布按钮前并截图给你看；
+          确认没问题再点「真的发出去」。发出去不可撤回。
+        </div>
+        <div class="u-card p-log">
+          <div class="p-log-head"><svg class="ic"><use href="#i-list"/></svg>执行过程</div>
+          <div class="p-log-body" id="pLog">
+            <div class="dim">还没开始。选平台 → 填文件 → 点发布。</div>
+          </div>
+          <div class="p-shot" id="pShot" style="display:none">
+            <img id="pShotImg" alt="预览">
+            <div class="cap" id="pShotCap"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 发图文（头条 / 公众号）══ -->
+  <div class="p-pane" data-pane="article">
+    <div class="p-grid">
+      <div class="u-card p-form">
+        <div class="u-field"><label>走哪条路</label>
+          <div class="p-plats" id="aPlats"></div>
+          <div class="dim" id="aRoute" style="margin-top:6px;line-height:1.6">
+            公众号走官方接口，要 AppID/AppSecret + 本机 IP 在白名单；头条走浏览器，要扫码登录。
+          </div>
+        </div>
+
+        <div class="u-field"><label>文章文件（Markdown，标题取首个 # 或下面手填）</label>
+          <div class="u-row">
+            <input class="u-input" id="aPath" placeholder="/绝对/路径/文章.md" style="flex:1">
+            <button class="u-btn sm" id="aPick">选文件</button>
+          </div>
+        </div>
+
+        <div class="u-field"><label>标题（头条 ≤30 字，公众号 ≤64 字）</label>
+          <input class="u-input" id="aTitle" placeholder="留空则取 Markdown 里的一级标题">
+        </div>
+
+        <div class="u-field"><label>正文（可直接粘 markdown，或选上面的文件）</label>
+          <textarea class="u-input" id="aBody" rows="5"
+            style="height:auto;padding:9px 11px;resize:vertical;line-height:1.65;font-family:inherit"
+            placeholder="支持 markdown：## 小标题、- 列表、> 引用、| 表格 |、**加粗**、==黄底=="></textarea>
+        </div>
+
+        <div class="p-row2">
+          <div class="u-field"><label>封面图（公众号必填，头条可留空取正文首图）</label>
+            <input class="u-input" id="aCover" placeholder="/绝对/路径/封面.png">
+          </div>
+          <div class="u-field"><label>话题（头条用，逗号分隔，最多 5 个）</label>
+            <input class="u-input" id="aTags" placeholder="AI,效率工具">
+          </div>
+        </div>
+
+        <div id="aWxBox" style="display:none">
+          <div class="p-row2">
+            <div class="u-field"><label>公众号 AppID</label>
+              <input class="u-input" id="aWxId" placeholder="wx…">
+            </div>
+            <div class="u-field"><label>AppSecret</label>
+              <input class="u-input" id="aWxSecret" type="password" placeholder="写一次就存进配置（chmod 600）">
+            </div>
+          </div>
+          <div class="u-row" style="gap:8px">
+            <button class="u-btn sm" id="aWxSave">保存公众号配置</button>
+            <button class="u-btn sm" id="aWxStatus">查配置与本机出口 IP</button>
+          </div>
+        </div>
+
+        <div class="p-spec" id="aSpec"></div>
+        <div class="p-check" id="aCheck">选好平台、填上文章，这里会告诉你还差什么。</div>
+
+        <div class="u-row" style="gap:8px;flex-wrap:wrap">
+          <button class="u-btn gold" id="aDraft"><svg class="ic"><use href="#i-send"/></svg>先存草稿</button>
+          <button class="u-btn dark" id="aExec"><svg class="ic"><use href="#i-upload"/></svg>真的发出去</button>
+          <span class="u-tag gray" id="aMode">当前：草稿模式，不会公开</span>
+        </div>
+      </div>
+
+      <div class="p-side">
+        <div class="p-note">
+          <b>公众号不加 exec 只建草稿</b>，你去后台草稿箱能看到、能改、能自己发。
+          <b>头条没有存草稿按钮</b>，草稿是编辑器自动保存的，所以「先存草稿」= 填完不点任何按钮。
+        </div>
+        <div class="u-card p-log">
+          <div class="p-log-head"><svg class="ic"><use href="#i-list"/></svg>执行过程</div>
+          <div class="p-log-body" id="aLog">
+            <div class="dim">还没开始。选平台 → 填文章 → 存草稿。</div>
+          </div>
+          <div class="p-shot" id="aShot" style="display:none">
+            <img id="aShotImg" alt="预览">
+            <div class="cap" id="aShotCap"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 排版 · 质检 ══ -->
+  <div class="p-pane" data-pane="layout">
+    <div class="p-grid">
+      <div class="u-card p-form">
+        <div class="u-field"><label>Markdown 原文</label>
+          <textarea class="u-input" id="lMd" rows="10"
+            style="height:auto;padding:9px 11px;resize:vertical;line-height:1.65;font-family:inherit"
+            placeholder="# 标题&#10;&#10;正文一段，带**重点**和 ==黄底==。&#10;&#10;## 小标题&#10;- 一&#10;- 二"></textarea>
+        </div>
+
+        <div class="p-row2">
+          <div class="u-field"><label>主题</label>
+            <div class="p-plats" id="lThemes"></div>
+          </div>
+          <div class="u-field"><label>卡片成图（查密度与空白）</label>
+            <div class="u-row">
+              <input class="u-input" id="lImg" placeholder="/绝对/路径/卡片.png" style="flex:1">
+              <button class="u-btn sm" id="lAudit">查这张</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="u-row" style="gap:8px;flex-wrap:wrap">
+          <button class="u-btn gold" id="lConvert"><svg class="ic"><use href="#i-text"/></svg>排版成公众号 HTML</button>
+          <button class="u-btn" id="lPreview">生成预览页</button>
+          <button class="u-btn" id="lCopy">复制 HTML</button>
+        </div>
+
+        <div class="p-check" id="lCheck">左边写 Markdown，点「排版」——排版完这里告诉你能不能直接粘进公众号。</div>
+      </div>
+
+      <div class="p-side">
+        <div class="p-note">
+          <b>为什么不能自己写 HTML 塞进公众号</b>：微信粘贴时会剥掉 style/div/class/position/grid。
+          这里排出来的每段文字都包在 <code>&lt;span leaf=""&gt;</code> 里、样式全内联，
+          所以粘过去不丢版。
+        </div>
+        <div class="u-card p-log" style="flex:1">
+          <div class="p-log-head"><svg class="ic"><use href="#i-eye"/></svg>排版结果
+            <span class="u-tag gray" id="lStat">未排版</span></div>
+          <div class="p-log-body" id="lOut" style="font-size:12px;line-height:1.6">
+            <div class="dim">还没排版。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 排期 ══ -->
+  <div class="p-pane" data-pane="queue">
+    <div class="u-card p-form" style="flex:0 0 auto">
+      <div class="p-row2">
+        <div class="u-field"><label>工程 / 内容名</label>
+          <input class="u-input" id="qContent" placeholder="CH-W-对话验收-竖屏">
+        </div>
+        <div class="u-field"><label>发送时间</label>
+          <input class="u-input" id="qAt" placeholder="2026-11-16 09:00">
+        </div>
+      </div>
+      <div class="p-row2">
+        <div class="u-field"><label>平台</label><input class="u-input" id="qPlatform" placeholder="douyin"></div>
+        <div class="u-field"><label>标题</label><input class="u-input" id="qTitle" placeholder="标题"></div>
+      </div>
+      <div class="u-row"><button class="u-btn gold" id="qAdd"><svg class="ic"><use href="#i-plus"/></svg>加进排期</button>
+        <button class="u-btn" id="qDue">看现在该发哪些</button></div>
+    </div>
+    <div class="u-card p-list" id="qList"></div>
+  </div>
+
+  <!-- ══ 记录 ══ -->
+  <div class="p-pane" data-pane="history">
+    <div class="u-card p-list" id="hList"><div class="u-empty"><div>读取发布记录…</div></div></div>
+  </div>
+
+  <!-- ══ 归因 ══ -->
+  <div class="p-pane" data-pane="stats">
+    <div class="p-stat-row" id="sCards"></div>
+    <div class="p-note" id="sHint">样本少于 3 条时不下结论 —— 一条数据的「规律」是噪音。</div>
+    <div class="u-card p-list" id="sList"><div class="u-empty"><div>读取归因数据…</div></div></div>
+  </div>
+
+  <!-- ══ 通知渠道 ══ -->
+  <div class="p-pane" data-pane="settings">
+    <div class="u-card p-form" style="flex:0 0 auto">
+      <div class="p-row2">
+        <div class="u-field"><label>渠道</label>
+          <div class="u-select"><select id="cChannel">
+            <option value="feishu">飞书</option><option value="dingtalk">钉钉</option>
+            <option value="wecom">企业微信</option><option value="telegram">Telegram</option>
+            <option value="slack">Slack</option><option value="generic">通用 Webhook</option>
+          </select></div>
+        </div>
+        <div class="u-field"><label>Webhook 地址</label>
+          <input class="u-input" id="cWebhook" placeholder="https://…"></div>
+      </div>
+      <div class="p-row2">
+        <div class="u-field"><label>加签密钥（钉钉要用）</label>
+          <input class="u-input" id="cSecret" placeholder="SEC…"></div>
+        <div class="u-field"><label>测试文字</label>
+          <input class="u-input" id="cText" value="影创测试通知"></div>
+      </div>
+      <div class="u-row"><button class="u-btn gold" id="cSave">保存渠道</button>
+        <button class="u-btn" id="cTest">发一条测试</button></div>
+    </div>
+    <div class="u-card p-list" id="cList"></div>
+  </div>
+</section>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var $$=function(s){return [].slice.call(document.querySelectorAll(s))};
+  var A=function(p,d){return window.api(p,d)};
+  var say=function(m){if(window.say)window.say(m)};
+  var PLATS=[],CUR='douyin',EXEC=false,inited=false,SPECS={};
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+  // 往某个日志容器里追加一行。容器找不到就当没有（面板没渲染时也不报错）
+  function logLine(sel,text,cls){
+    var box=typeof sel==='string'?$(sel):sel;
+    if(!box)return;
+    var d=document.createElement('div');
+    if(cls)d.className=cls;
+    d.textContent=String(text==null?'':text);
+    box.appendChild(d);
+    box.scrollTop=box.scrollHeight;
+  }
+
+  function init(){if(inited)return;inited=true;bind();renderArts();renderThemes();loadPlats();}
+  document.addEventListener('riffcut-ready',function(){init()});
+  setTimeout(init,1500);
+
+  function bind(){
+    // tabs
+    [].slice.call(document.querySelectorAll('#pTabs button')).forEach(function(b){
+      b.addEventListener('click',function(){
+        $$('#pTabs button').forEach(function(x){x.classList.remove('on')});
+        b.classList.add('on');
+        var t=b.getAttribute('data-t');
+        $$('.p-pane').forEach(function(p){p.classList.toggle('on',p.getAttribute('data-pane')===t)});
+        if(t==='queue')loadQueue();
+        if(t==='history')loadHistory();
+        if(t==='stats')loadStats();
+        if(t==='settings')loadChannels();
+        if(t==='article'){renderArts()}
+        if(t==='layout'){renderThemes()}
+      });
+    });
+
+    var r=$('#pRefresh'); if(r)r.addEventListener('click',function(){loadPlats()});
+    var lo=$('#pLogin'); if(lo)lo.addEventListener('click',checkLogin);
+    var pk=$('#pPick'); if(pk)pk.addEventListener('click',pickRecent);
+    var go=$('#pGo'); if(go)go.addEventListener('click',function(){doSend(false)});
+    var ex=$('#pExec'); if(ex)ex.addEventListener('click',function(){
+      if(!confirm('这一步会真的点发布，发出去不可撤回。确定？'))return;
+      EXEC=true; doSend(true);
+    });
+    ['#pTitle','#pBody','#pTags','#pVideo'].forEach(function(sel){
+      var e=$(sel); if(e)e.addEventListener('input',function(){runCheck()});
+    });
+    var qa=$('#qAdd'); if(qa)qa.addEventListener('click',addQueue);
+    var qd=$('#qDue'); if(qd)qd.addEventListener('click',loadDue);
+    var cs=$('#cSave'); if(cs)cs.addEventListener('click',saveChannel);
+    var ct=$('#cTest'); if(ct)ct.addEventListener('click',testChannel);
+
+    // ── 发图文 ──
+    var an=$('#aPick'); if(an)an.addEventListener('click',pickArticle);
+    var aw=$('#aWxSave'); if(aw)aw.addEventListener('click',saveWx);
+    var as=$('#aWxStatus'); if(as)as.addEventListener('click',wxStatus);
+    var ad=$('#aDraft'); if(ad)ad.addEventListener('click',function(){doArticle(false)});
+    var ae=$('#aExec'); if(ae)ae.addEventListener('click',function(){
+      if(!confirm('这一步会真的发出去，发完只能删。确定？'))return;
+      doArticle(true);
+    });
+
+    // ── 排版 · 质检 ──
+    var lc=$('#lConvert'); if(lc)lc.addEventListener('click',function(){doLayout(false)});
+    var lp=$('#lPreview'); if(lp)lp.addEventListener('click',function(){doLayout(true)});
+    var lcp=$('#lCopy'); if(lcp)lcp.addEventListener('click',copyHtml);
+    var la=$('#lAudit'); if(la)la.addEventListener('click',function(){
+      var p=($('#lImg')||{}).value||'';
+      if(!p.trim()){logLine('#lOut','✗ 先填图片绝对路径','bad');say('先填图片绝对路径',1);return}
+      A('/api/publish',{action:'card_audit',path:p.trim()}).then(function(d){
+        var msg='填充 '+(d.fill*100).toFixed(0)+'% · 跨度 '+(d.span*100).toFixed(0)
+          +'% · 底空 '+(d.bottom_dead*100).toFixed(0)+'% · 中段最大空 '+(d.max_gap*100).toFixed(0)+'%';
+        if(d.pass){say('密度够。'+msg)}else{
+          say('有问题：'+(d.problems||[]).join('；'));
+          if(d.hint&&d.hint.length)logLine('#lOut','建议：'+d.hint.join(' → '),'dim');
+        }
+        logLine('#lOut',msg,d.pass?'ok':'bad');
+      }).catch(function(e){say('查图失败：'+(e&&e.message||e))});
+    });
+  }
+
+  // ══ 发图文 ══
+  var ARTS=['toutiao','wechat'],ACUR='toutiao';
+  var ART_LABEL={toutiao:'头条号',wechat:'公众号'};
+  var ART_NOTE={
+    toutiao:'头条走浏览器：要扫码登录一次。草稿是自动保存的，没有「存草稿」按钮。标题 ≤30 字，话题 ≤5 个。',
+    wechat:'公众号走官方接口：要 AppID/AppSecret，且本机出口 IP 在后台 IP 白名单里。标题 ≤64 字，封面必填。'
+  };
+
+  function renderArts(){
+    var box=$('#aPlats'); if(!box)return;
+    box.innerHTML=ARTS.map(function(k){
+      return '<button class="p-plat'+(k===ACUR?' on':'')+'" data-a="'+k+'">'+ART_LABEL[k]+'</button>';
+    }).join('');
+    [].slice.call(box.querySelectorAll('.p-plat')).forEach(function(b){
+      b.addEventListener('click',function(){
+        ACUR=b.getAttribute('data-a');renderArts();
+      });
+    });
+    var n=$('#aRoute'); if(n)n.textContent=ART_NOTE[ACUR];
+    var wb=$('#aWxBox'); if(wb)wb.style.display=ACUR==='wechat'?'':'none';
+  }
+
+  function pickArticle(){
+    A('/api/publish',{action:'pick_file',kind:'md'}).then(function(d){
+      var p=$('#aPath'); if(p)p.value=d.path;
+      if(d.preview){
+        // 首个一级标题当标题，剩下的塞进正文框
+        var lines=String(d.preview).split('\n'),ti=-1;
+        for(var i=0;i<lines.length;i++){
+          if(/^#\s+\S/.test(lines[i])){ti=i;break}
+        }
+        var t=$('#aTitle');
+        if(ti>=0&&t&&!t.value)t.value=lines[ti].replace(/^#\s+/,'').trim().slice(0,64);
+        var body=$('#aBody');
+        if(body){
+          var rest=lines.slice(0);
+          if(ti>=0)rest[ti]='';
+          body.value=rest.join('\n').trim();
+        }
+      }
+      say('已选：'+d.name);
+    }).catch(function(e){
+      var m=String((e&&e.message)||e);
+      say(m.indexOf('取消')>=0||m.indexOf('没有选到')>=0?'没选文件':('选文件失败：'+m));
+    });
+  }
+
+  function saveWx(){
+    var id=($('#aWxId')||{}).value||'',se=($('#aWxSecret')||{}).value||'';
+    if(!id.trim()){say('AppID 要填',1);return}
+    A('/api/publish',{action:'wechat_save',app_id:id.trim(),app_secret:se.trim()}).then(function(){
+      say('已保存到 数据/配置/公众号.json（权限 600）');
+      var s=$('#aWxSecret'); if(s)s.value='';
+      wxStatus();
+    }).catch(function(e){say('保存失败：'+(e&&e.message||e))});
+  }
+
+  function wxStatus(){
+    A('/api/publish',{action:'wechat_status'}).then(function(d){
+      logLine('#aLog','配置：'+(d.has_file?'已写文件':'没配置文件')
+        +' · AppID '+(d.app_id||'空')+' · Secret '+(d.has_secret?'已填':'空')
+        +' · 本机出口 IP '+d.ip,'dim');
+      if(!d.ok&&d.note)logLine('#aLog',d.note,'bad');
+      else logLine('#aLog','配置齐了，可以建草稿。','ok');
+    }).catch(function(e){say('查配置失败：'+(e&&e.message||e))});
+  }
+
+  function doArticle(exec){
+    var path=($('#aPath')||{}).value||'';
+    var body=($('#aBody')||{}).value||'';
+    var title=($('#aTitle')||{}).value||'';
+    var cover=($('#aCover')||{}).value||'';
+    var tags=($('#aTags')||{}).value||'';
+    var box=$('#aLog');
+    var need=function(m){if(box){box.innerHTML='';logLine('#aLog','✗ '+m,'bad')}say(m,1)};
+    if(!path.trim()&&!body.trim()){need('要么选一篇 .md，要么在正文框里写内容');return}
+    if(ACUR==='wechat'&&!cover.trim()){need('公众号必须有封面图，填一下封面路径');return}
+    if(box)box.innerHTML='';
+    var mode=$('#aMode'); if(mode)mode.textContent=exec?'当前：真发模式':'当前：草稿模式，不会公开';
+    logLine('#aLog',(exec?'开始真发到 ':'开始建草稿 ')+ART_LABEL[ACUR]+'…','dim');
+    var payload={action:ACUR==='wechat'?'wechat_publish':'toutiao_publish',
+                 title:title.trim(),body:body,cover:cover.trim(),tags:tags.trim()};
+    if(path.trim())payload.markdown=path.trim();
+    if(exec)payload.exec=1;
+    var t0=Date.now();
+    A('/api/publish',payload).then(function(r){
+      (r.steps||[]).forEach(function(s){logLine('#aLog',s,'dim')});
+      if(r.screenshot_url){
+        var sh=$('#aShot'); if(sh)sh.style.display='';
+        var im=$('#aShotImg'); if(im)im.src=r.screenshot_url;
+        var cp=$('#aShotCap'); if(cp)cp.textContent='填完后停在发布按钮前的样子';
+      }
+      if(r.ok){
+        logLine('#aLog','✅ '+(ACUR==='wechat'
+          ?(exec?'已提交群发，正在等微信侧结果':'草稿已建好，去公众号后台草稿箱看')
+          :(exec?'已提交发布':'内容已填好并自动保存为草稿，去头条「内容管理 → 草稿箱」看')),'ok');
+        if(r.url)logLine('#aLog','链接：'+r.url,'ok');
+        if(r.article_id)logLine('#aLog','id：'+r.article_id,'dim');
+      }else{
+        logLine('#aLog','❌ '+(r.error||'失败')+'（阶段：'+(r.stage||'?')+'）','bad');
+        if(r.note)logLine('#aLog',r.note,'bad');
+      }
+      logLine('#aLog','耗时 '+((Date.now()-t0)/1000).toFixed(1)+' 秒','dim');
+    }).catch(function(e){
+      logLine('#aLog','❌ '+(e&&e.message||e),'bad');
+    });
+  }
+
+  // ══ 排版 · 质检 ══
+  var THEMES=['ink','plain','warm'],TCUR='ink',LAST_HTML='';
+  var THEME_LABEL={ink:'墨色',plain:'纯黑白',warm:'米色'};
+  var THEME_DESC={ink:'白纸 + 墨字 + 朱红',plain:'正式、通告',warm:'米色纸 + 铜金'};
+
+  function renderThemes(){
+    var box=$('#lThemes'); if(!box)return;
+    box.innerHTML=THEMES.map(function(k){
+      return '<button class="p-plat'+(k===TCUR?' on':'')+'" data-th="'+k+'" title="'
+        +esc(THEME_DESC[k])+'">'+THEME_LABEL[k]+'</button>';
+    }).join('');
+    [].slice.call(box.querySelectorAll('.p-plat')).forEach(function(b){
+      b.addEventListener('click',function(){TCUR=b.getAttribute('data-th');renderThemes()});
+    });
+  }
+
+  function doLayout(preview){
+    var md=($('#lMd')||{}).value||'';
+    if(!md.trim()){logLine('#lOut','✗ 左边写点 Markdown 再排','bad');say('左边写点 Markdown 再排',1);return}
+    var st=$('#lStat'); if(st)st.textContent='排版中…';
+    A('/api/publish',{action:'gzh_convert',markdown:md,theme:TCUR,preview:preview?1:0})
+      .then(function(d){
+        LAST_HTML=d.html||'';
+        var ck=d.check||{};
+        var chk=$('#lCheck');
+        if(chk){
+          chk.className='p-check '+(ck.ok?'good':'bad');
+          chk.innerHTML=ck.ok
+            ? '<b>完全合规，可以直接粘进公众号。</b>'+ck.leaf+' 处 leaf 包裹'
+              +(ck.bare?' · <span style="color:#A34A4A">'+ck.bare+' 处裸文字</span>':'')
+              +(ck.half?' · 中文里混了半角标点 '+ck.half+' 处':'')
+            : '<b>还不能粘：</b>'+(ck.errors||[]).join('；');
+        }
+        var out=$('#lOut');
+        if(out){
+          out.innerHTML='';
+          logLine('#lOut','HTML '+LAST_HTML.length+' 字节 · leaf '+ck.leaf
+            +' · 裸文字 '+ck.bare+' · 半角 '+ck.half,ck.ok?'ok':'bad');
+          (ck.errors||[]).forEach(function(e){logLine('#lOut','✗ '+e,'bad')});
+          (ck.warns||[]).forEach(function(w){logLine('#lOut','! '+w,'dim')});
+          var pre=document.createElement('pre');
+          pre.style.cssText='white-space:pre-wrap;word-break:break-all;font-size:10.5px;'
+            +'color:#5A6270;margin:8px 0 0;padding:8px;background:#FAFBFC;border-radius:8px;'
+            +'max-height:220px;overflow:auto';
+          pre.textContent=LAST_HTML.slice(0,2000);
+          out.appendChild(pre);
+        }
+        if(st)st.textContent=ck.ok?'合规':'有问题';
+        if(preview&&(d.preview_url||d.preview)){
+          var u=d.preview_url||'';
+          if(u){
+            logLine('#lOut','预览页：'+u+'（要在实时预览面板里点右键复制，最好在浏览器新窗口打开）','dim');
+            window.open(u,'_blank');
+            say('预览页已在新标签打开，点页面上的「复制到公众号」再粘进编辑器');
+          }else{
+            logLine('#lOut','预览页：'+d.preview,'dim');
+            say('预览页已生成：'+d.preview);
+          }
+        }
+      }).catch(function(e){
+        if(st)st.textContent='失败';
+        logLine('#lOut','❌ '+(e&&e.message||e),'bad');
+      });
+  }
+
+  function copyHtml(){
+    if(!LAST_HTML){say('先点「排版成公众号 HTML」',1);return}
+    var ok=function(){say('HTML 已复制。粘进公众号编辑器会带格式。')};
+    var bad=function(){say('复制失败，可以手动从下面框里全选复制')};
+    if(navigator.clipboard&&window.ClipboardItem){
+      try{
+        navigator.clipboard.write([new ClipboardItem({
+          'text/html':new Blob([LAST_HTML],{type:'text/html'}),
+          'text/plain':new Blob([LAST_HTML],{type:'text/plain'})
+        })]).then(ok,bad);
+        return;
+      }catch(e){}
+    }
+    var ta=document.createElement('textarea');
+    ta.value=LAST_HTML;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');ok()}catch(e){bad()}
+    document.body.removeChild(ta);
+  }
+
+  // ══ 平台 ══
+  function loadPlats(){
+    A('/api/publish',{action:'platforms'}).then(function(d){
+      PLATS=(d&&d.drivers)||[];
+      SPECS=(d&&d.specs)||{};
+      // 登录态顺手查一遍，按钮上打绿点
+      renderPlats();
+      refreshLoginDots();
+      runCheck();
+    }).catch(function(){ renderPlats(); });
+  }
+
+  function renderPlats(){
+    var box=$('#pPlats'); if(!box)return;
+    if(!PLATS.length){
+      PLATS=[{key:'douyin',label:'抖音'},{key:'xiaohongshu',label:'小红书'},
+             {key:'kuaishou',label:'快手'},{key:'weixin-channels',label:'视频号'},
+             {key:'bilibili',label:'B站'}];
+    }
+    box.innerHTML=PLATS.map(function(p){
+      return '<button class="p-plat'+(p.key===CUR?' on':'')+'" data-p="'+esc(p.key)+'">'
+        +'<span class="dot" data-dot="'+esc(p.key)+'"></span>'+esc(p.label)+'</button>';
+    }).join('');
+    [].slice.call(box.querySelectorAll('.p-plat')).forEach(function(b){
+      b.addEventListener('click',function(){
+        CUR=b.getAttribute('data-p');
+        renderPlats(); refreshLoginDots(); runCheck();
+      });
+    });
+  }
+
+  function refreshLoginDots(){
+    PLATS.forEach(function(p){
+      A('/api/publish',{action:'login',platform:p.key}).then(function(r){
+        var d=document.querySelector('[data-dot="'+p.key+'"]');
+        if(d)d.classList.toggle('ok',!!(r&&r.logged_in));
+      }).catch(function(){});
+    });
+  }
+
+  function checkLogin(){
+    A('/api/publish',{action:'login',platform:CUR,open:1}).then(function(r){
+      if(r&&r.logged_in){say(r.label+' 已登录，可以直接发')}
+      else{say((r&&r.note)||'没登录，已把页面开出来，去窗口里扫码')}
+      refreshLoginDots();
+    }).catch(function(e){say('查登录态失败：'+(e&&e.message||e))});
+  }
+
+  // ══ 规格实时检查 ══
+  function runCheck(){
+    var title=($('#pTitle')||{}).value||'';
+    var body=($('#pBody')||{}).value||'';
+    var tags=($('#pTags')||{}).value||'';
+    var box=$('#pCheck'); if(!box)return;
+    var spec=SPECS[CUR]||null;
+    if(spec){
+      var s=$('#pSpec');
+      if(s){
+        s.innerHTML='<span class="u-tag gold">标题 ≤'+spec.title+' 字</span>'
+          +'<span class="u-tag gray">'+esc(spec.aspect||'')+'</span>'
+          +'<span class="u-tag gray">话题 ≤'+spec.tags+' 个</span>'
+          +'<span class="u-tag blue">'+esc((spec.types||[]).join(' / '))+'</span>';
+      }
+    }
+    if(!title){box.className='p-check';box.textContent='填上标题，这里会实时告诉你规格对不对。';return}
+    A('/api/publish',{action:'check',platform:CUR,title:title,body:body,tags:tags,
+                      aspect:spec?spec.aspect:''}).then(function(r){
+      if(r&&r.ok===false){
+        box.className='p-check bad';
+        box.innerHTML='<b>这条发不出去：</b>'+(r.issues||[]).map(esc).join('；');
+      }else{
+        box.className='p-check good';
+        box.innerHTML='<b>规格没问题。</b>'+(r&&r.note?esc(r.note):'');
+      }
+    }).catch(function(){});
+  }
+
+  // ══ 发 ══
+  function doSend(exec){
+    var video=($('#pVideo')||{}).value||'';
+    var title=($('#pTitle')||{}).value||'';
+    var body=($('#pBody')||{}).value||'';
+    var tags=($('#pTags')||{}).value||'';
+    var images=($('#pImages')||{}).value||'';
+    if(!title){say('先填个标题');return}
+    if(!video&&!images){say('视频和图片至少给一个 —— 这几个平台都不收纯文字');return}
+    var log=$('#pLog');
+    log.innerHTML='<div class="dim">开始…</div>';
+    var mode=$('#pMode'); if(mode)mode.textContent=exec?'当前：真实发布':'当前：演练模式，不会真发';
+    var line=function(t,cls){
+      log.innerHTML+='<div class="'+(cls||'')+'">'+esc(t)+'</div>';
+      log.scrollTop=log.scrollHeight;
+    };
+    A('/api/publish',{action:'run',platform:CUR,video:video,title:title,body:body,
+                      tags:tags,images:images,exec:exec?1:0}).then(function(r){
+      (r.steps||[]).forEach(function(s){line('· '+s)});
+      if(r.ok){
+        line(r.dry_run?'✓ 已填好，停在发布按钮前':'✓ 发布完成：'+(r.toast||r.url||''),'ok');
+      }else{
+        line('✗ '+(r.error||'没成功')+(r.stage?'（卡在：'+r.stage+'）':''),'bad');
+      }
+      if(r.screenshot_url){
+        var sh=$('#pShot'),im=$('#pShotImg'),cp=$('#pShotCap');
+        if(sh&&im){sh.style.display='block';im.src=r.screenshot_url;
+          if(cp)cp.textContent=r.screenshot||''}
+      }
+      if(r.ok){loadHistory();loadStats()}
+    }).catch(function(e){line('✗ '+(e&&e.message||e),'bad')});
+  }
+
+  function pickRecent(){
+    A('/api/works',{action:'list'}).then(function(d){
+      var items=(d&&d.items)||d||[];
+      var vids=[].slice.call(items).filter(function(x){
+        return /\.(mp4|mov|m4v)$/i.test(x.path||x.file||'')}).slice(0,6);
+      if(!vids.length){say('成片目录里没找到视频文件');return}
+      var p=vids[0].path||vids[0].file;
+      var inp=$('#pVideo'); if(inp){inp.value=p;runCheck()}
+      say('已填入最近成片：'+(p.split('/').pop()));
+    }).catch(function(e){say('读成片列表失败：'+(e&&e.message||e))});
+  }
+
+  // ══ 排期 ══
+  function addQueue(){
+    var c=($('#qContent')||{}).value||'';
+    var at=($('#qAt')||{}).value||'';
+    var p=($('#qPlatform')||{}).value||'douyin';
+    var t=($('#qTitle')||{}).value||'';
+    if(!c||!at){say('内容名和时间都要填');return}
+    A('/api/publish',{action:'queue_add',content:c,at:at,platform:p,title:t}).then(function(r){
+      say('已加进排期，到时提醒');loadQueue();
+    }).catch(function(e){say('加排期失败：'+(e&&e.message||e))});
+  }
+
+  function loadQueue(){
+    A('/api/publish',{action:'queue_list'}).then(function(list){
+      var box=$('#qList');
+      list=list||[];
+      if(!list.length){box.innerHTML='<div class="u-empty"><svg class="ic"><use href="#i-clock"/></svg>'
+        +'<div>还没有排期。上面填内容名和时间就能加一条。</div></div>';return}
+      box.innerHTML='<table><thead><tr><th>时间</th><th>平台</th><th>内容</th><th>状态</th><th></th></tr></thead><tbody>'
+        +list.map(function(q){
+          return '<tr><td>'+esc(q.at||'')+'</td><td>'+esc(q.platform||'')+'</td>'
+            +'<td class="nm" title="'+esc(q.title||q.content||'')+'">'+esc(q.title||q.content||'')+'</td>'
+            +'<td><span class="u-tag '+(q.state==='done'?'green':'gold')+'">'+esc(q.state||'pending')+'</span></td>'
+            +'<td><button class="u-btn sm" data-qdone="'+esc(q.id)+'">标完成</button> '
+            +'<button class="u-btn sm" data-qdrop="'+esc(q.id)+'">删</button></td></tr>';
+        }).join('')+'</tbody></table>';
+      [].slice.call(box.querySelectorAll('[data-qdone]')).forEach(function(b){
+        b.addEventListener('click',function(){
+          A('/api/publish',{action:'queue_mark',id:b.getAttribute('data-qdone'),state:'done'})
+            .then(loadQueue).catch(function(){});
+        });
+      });
+      [].slice.call(box.querySelectorAll('[data-qdrop]')).forEach(function(b){
+        b.addEventListener('click',function(){
+          A('/api/publish',{action:'queue_drop',id:b.getAttribute('data-qdrop')})
+            .then(loadQueue).catch(function(){});
+        });
+      });
+    }).catch(function(){});
+  }
+
+  function loadDue(){
+    A('/api/publish',{action:'queue_due'}).then(function(d){
+      var list=(d&&d.due)||[];
+      say(list.length?'现在该发 '+list.length+' 条':'现在没有到点的排期');
+      if(list.length)loadQueue();
+    }).catch(function(){});
+  }
+
+  // ══ 记录 ══
+  function loadHistory(){
+    A('/api/publish',{action:'history',limit:50}).then(function(list){
+      var box=$('#hList');
+      list=list||[];
+      if(!list.length){box.innerHTML='<div class="u-empty"><svg class="ic"><use href="#i-send"/></svg>'
+        +'<div>还没发过东西。左边「发布」里发一条，这里就会出现记录。</div></div>';return}
+      box.innerHTML='<table><thead><tr><th>时间</th><th>平台</th><th>标题</th><th>链接</th></tr></thead><tbody>'
+        +list.map(function(r){
+          return '<tr><td>'+esc(r.at||r.time||'')+'</td><td>'+esc(r.platform||'')+'</td>'
+            +'<td class="nm" title="'+esc(r.title||'')+'">'+esc(r.title||'')+'</td>'
+            +'<td>'+(r.url?'<a href="'+esc(r.url)+'" target="_blank" class="u-primary">打开</a>':'—')+'</td></tr>';
+        }).join('')+'</tbody></table>';
+    }).catch(function(){});
+  }
+
+  // ══ 归因 ══
+  function loadStats(){
+    A('/api/analytics',{action:'report'}).then(function(d){
+      var cards=$('#sCards'), box=$('#sList'), hint=$('#sHint');
+      d=d||{};
+      var byP=d.by_platform||{};
+      cards.innerHTML=[['总发布',d.total||0,''],['平台数',Object.keys(byP).length,''],
+        ['样本量',d.sample||0,''],['排期待发',d.queue_pending||0,'']].map(function(c){
+        return '<div class="u-card"><b>'+c[1]+'</b><span>'+c[0]+'</span></div>';
+      }).join('');
+      if(hint)hint.innerHTML=(d.hints||[]).length
+        ? (d.hints||[]).map(esc).join('<br>')
+        : '样本少于 3 条时不下结论 —— 一条数据的「规律」是噪音。';
+      var buckets=(d.by_time&&d.by_time.buckets)||[];
+      if(!buckets.length){
+        box.innerHTML='<div class="u-empty"><svg class="ic"><use href="#i-chart"/></svg>'
+          +'<div>还没有足够数据。发几条、回填播放数，这里会告诉你什么时段、什么标签更带量。</div></div>';
+        return;
+      }
+      box.innerHTML='<table><thead><tr><th>时段</th><th>条数</th><th>中位播放</th><th>最好</th><th>相对全站</th></tr></thead><tbody>'
+        +buckets.map(function(b){
+          var lift=(b.lift_vs_all>0?'+':'')+(b.lift_vs_all||0)+'%';
+          var cls=b.lift_vs_all>15?'green':(b.lift_vs_all<-15?'gray':'gold');
+          return '<tr><td>'+esc(b.daypart||'')+'</td><td>'+b.n+'</td>'
+            +'<td>'+(b.median||0)+'</td><td>'+(b.max||0)+'</td>'
+            +'<td><span class="u-tag '+cls+'">'+lift+'</span>'
+            +(b.reliable?'':'<span class="u-tag gray" style="margin-left:4px">样本少</span>')+'</td></tr>';
+        }).join('')+'</tbody></table>';
+    }).catch(function(){});
+  }
+
+  // ══ 通知渠道 ══
+  function saveChannel(){
+    var ch=($('#cChannel')||{}).value||'feishu';
+    var w=($('#cWebhook')||{}).value||'';
+    var s=($('#cSecret')||{}).value||'';
+    if(!w){say('Webhook 地址要填');return}
+    A('/api/publish',{action:'channel_set',channel:ch,webhook:w,secret:s}).then(function(){
+      say('渠道已保存');loadChannels();
+    }).catch(function(e){say('保存失败：'+(e&&e.message||e))});
+  }
+
+  function testChannel(){
+    var ch=($('#cChannel')||{}).value||'feishu';
+    var t=($('#cText')||{}).value||'影创测试通知';
+    A('/api/publish',{action:'notify',channel:ch,text:t}).then(function(r){
+      say(r&&r.ok?'通知发出去了':'没发出去：'+((r&&r.error)||'webhook 不认'));
+    }).catch(function(e){say('发通知失败：'+(e&&e.message||e))});
+  }
+
+  function loadChannels(){
+    A('/api/publish',{action:'channels'}).then(function(d){
+      var box=$('#cList');
+      var keys=d&&typeof d==='object'?Object.keys(d):[];
+      if(!keys.length){box.innerHTML='<div class="u-empty"><svg class="ic"><use href="#i-bell"/></svg>'
+        +'<div>还没配任何通知渠道。配一个之后，发完/排期到点会通知你。</div></div>';return}
+      box.innerHTML='<table><thead><tr><th>渠道</th><th>Webhook</th><th>已配</th></tr></thead><tbody>'
+        +keys.map(function(k){
+          var v=d[k]||{};
+          return '<tr><td>'+esc(k)+'</td><td class="nm">'+esc(v.webhook||'—')+'</td>'
+            +'<td><span class="u-tag '+(v.webhook?'green':'gray')+'">'+(v.webhook?'是':'否')+'</span></td></tr>';
+        }).join('')+'</tbody></table>';
+    }).catch(function(){});
+  }
+})();
+</script>

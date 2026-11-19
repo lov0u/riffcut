@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>影创新版</title>
+<style>
+:root{
+  --bg:#FFFFFF; --card:#FFFFFF; --panel:#FFFFFF;
+  --ink:#1E2430; --ink2:#5A6272; --ink3:#98A0AF;
+  --line:#E7EAF0; --hover:#F4F6FA;
+  --accent:#1B8B7E; --accent-ink:#147567; --accent-soft:#EAF5F3; --accent-line:#BFE0DA;
+  --r-lg:12px; --r-md:8px; --r-sm:4px;
+  --f1:20px; --f2:15px; --f3:12px; --f5:10.5px;
+  --sh-1:0 1px 2px rgba(28,38,58,.06),0 4px 14px rgba(28,38,58,.06);
+  --sh-in:inset 0 1px 2px rgba(28,38,58,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);
+  font-size:var(--f2);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;
+  color:var(--ink);-webkit-font-smoothing:antialiased}
+button,input,textarea{font-family:inherit;color:inherit;font-size:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+
+#app{display:flex;height:100%;overflow:hidden}
+
+/* ── 侧栏 ───────────────────────────── */
+.side{flex:0 0 220px;display:flex;flex-direction:column;border-right:1px solid var(--line);background:#FCFDFE}
+.side-top{-webkit-app-region:drag;height:52px;flex:0 0 52px;display:flex;align-items:center;padding:0 16px 0 78px}
+.side-top img{height:17px;opacity:.92}
+.nav{padding:6px 10px;display:flex;flex-direction:column;gap:1px}
+.nav button{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border-radius:var(--r-md);
+  font-size:var(--f3);color:var(--ink2);text-align:left;transition:background .15s,color .15s}
+.nav button:hover{background:var(--hover);color:var(--ink)}
+.nav button.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.nav .ic{width:16px;height:16px;flex:0 0 auto;opacity:.75}
+.nav .k{margin-left:auto;font-size:var(--f5);color:var(--ink3);font-variant-numeric:tabular-nums}
+.nav-sec{padding:14px 20px 4px;font-size:var(--f5);color:var(--ink3);letter-spacing:.4px}
+.side-bot{margin-top:auto;padding:10px;border-top:1px solid var(--line)}
+.side-bot button{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border-radius:var(--r-md);
+  font-size:var(--f3);color:var(--ink2)}
+.side-bot button:hover{background:var(--hover);color:var(--ink)}
+/* ★ 别漏这条：.nav .ic 有尺寸，但 .side-bot 不在 .nav 里；
+   没尺寸的 <svg> 默认宽高 100%，会把整个侧栏底撑成一个大图标。 */
+.side-bot .ic{width:16px;height:16px;flex:0 0 auto;opacity:.75}
+
+/* ── 主区 ───────────────────────────── */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;flex:0 0 52px;-webkit-app-region:drag;display:flex;align-items:center;
+  gap:10px;padding:0 20px;border-bottom:1px solid var(--line)}
+.topbar .t{font-size:var(--f3);font-weight:600}
+.topbar .s{font-size:var(--f5);color:var(--ink3)}
+.topbar .right{margin-left:auto;display:flex;gap:8px;align-items:center;-webkit-app-region:no-drag}
+.chip{height:26px;padding:0 10px;border-radius:var(--r-md);border:1px solid var(--line);
+  display:inline-flex;align-items:center;gap:6px;font-size:var(--f5);color:var(--ink2);background:#fff}
+.chip b{font-weight:600;color:var(--ink)}
+.dot{width:6px;height:6px;border-radius:50%;background:#C9CFDA}
+.dot.ok{background:#34B27B}.dot.bad{background:#E4635B}.dot.run{background:#E8A33D}
+
+.view{flex:1;min-height:0;overflow:auto;display:none}
+.view.on{display:block}
+
+/* ── 首页 ───────────────────────────── */
+.hero{max-width:820px;margin:0 auto;padding:clamp(40px,9vh,96px) 24px 0;text-align:center}
+.hero img.mark{width:44px;height:44px;object-fit:contain;margin-bottom:20px}
+.hero h1{font-size:clamp(24px,3.2vw,34px);font-weight:600;letter-spacing:-.4px;margin:0 0 8px}
+.hero p{font-size:var(--f3);color:var(--ink3);margin:0 0 26px}
+.compose{position:relative;border:1px solid var(--line);border-radius:var(--r-lg);background:#fff;
+  box-shadow:var(--sh-1);padding:14px 14px 10px;text-align:left}
+.compose textarea{width:100%;border:0;outline:0;resize:none;min-height:56px;max-height:200px;
+  font-size:var(--f2);line-height:1.55;background:transparent}
+.compose textarea::placeholder{color:var(--ink3)}
+.compose-bar{display:flex;align-items:center;gap:8px;margin-top:6px}
+.compose-bar .spacer{margin-left:auto}
+.send{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;
+  display:grid;place-items:center;transition:opacity .15s,transform .15s}
+.send:hover{opacity:.9}.send:active{transform:scale(.94)}
+.send[disabled]{background:#D6DBE4;cursor:default}
+.sugg{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+.sugg button{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;
+  font-size:var(--f5);color:var(--ink2)}
+.sugg button:hover{border-color:var(--accent-line);color:var(--accent-ink);background:var(--accent-soft)}
+
+/* 区块 */
+.sec{max-width:1100px;margin:0 auto;padding:34px 24px 0}
+.sec-h{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+.sec-h b{font-size:var(--f2);font-weight:600}
+.sec-h i{font-style:normal;font-size:var(--f5);color:var(--ink3)}
+.sec-h .more{margin-left:auto;font-size:var(--f5);color:var(--accent-ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(154px,1fr));gap:10px}
+.tpl{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:#fff;
+  transition:border-color .15s,box-shadow .15s,transform .15s;cursor:pointer}
+.tpl:hover{border-color:var(--accent-line);box-shadow:var(--sh-1);transform:translateY(-1px)}
+.tpl .ph{aspect-ratio:16/9;background:var(--hover);display:grid;place-items:center;color:var(--ink3);
+  font-size:var(--f5);overflow:hidden}
+.tpl .ph img{width:100%;height:100%;object-fit:cover}
+.tpl .nm{padding:7px 9px;font-size:var(--f5);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.skills{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.skill{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--line);
+  border-radius:var(--r-md);background:#fff;font-size:var(--f3);color:var(--ink2)}
+.skill:hover{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent-ink)}
+.skill .ic{width:14px;height:14px;opacity:.6}
+
+/* ── 会话 / 原生 ─────────────────────── */
+.chatwrap{height:100%;display:flex;flex-direction:column}
+.chatlog{flex:1;min-height:0;overflow:auto;padding:22px 26px}
+.msg{max-width:820px;margin:0 auto 14px}
+.msg .who{font-size:var(--f5);color:var(--ink3);margin-bottom:5px}
+.msg .bd{font-size:var(--f3);line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.msg.user .bd{background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:var(--r-md);padding:10px 12px}
+.step{max-width:820px;margin:0 auto 8px;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.step-h{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#FBFCFE;font-size:var(--f5);cursor:pointer}
+.step-h .tl{font-weight:600;color:var(--ink2);font-family:ui-monospace,Menlo,monospace}
+.step-h .st{margin-left:auto;color:#34B27B}
+.step-h .st.bad{color:#E4635B}
+.step .args{margin:0;padding:8px 10px;font-size:11px;line-height:1.5;color:var(--ink2);
+  font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all;max-height:180px;overflow:auto;
+  border-top:1px solid var(--line);display:none;background:#FCFDFE}
+.step.open .args{display:block}
+.chatbar{border-top:1px solid var(--line);padding:12px 26px 16px;background:#fff}
+.native{height:100%;position:relative}
+.native webview{width:100%;height:100%;border:0;display:inline-flex}
+.empty{padding:60px 24px;text-align:center;color:var(--ink3);font-size:var(--f3)}
+</style>
+</head>
+<body>
+<svg style="position:absolute;width:0;height:0" aria-hidden="true"><defs>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 5v14M17 5v14M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" stroke="currentColor" stroke-width="1.3" fill="none"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l2.2 6.1L20.5 11l-6.3 1.9L12 19l-2.2-6.1L3.5 11l6.3-1.9L12 3z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M10 4.5a2 2 0 114 0V6h3a1 1 0 011 1v3h1.5a2 2 0 110 4H18v3a1 1 0 01-1 1h-3v-1.5a2 2 0 10-4 0V18H7a1 1 0 01-1-1v-3H4.5a2 2 0 110-4H6V7a1 1 0 011-1h3V4.5z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6M18.4 18.4l-1.6-1.6M7.2 7.2L5.6 5.6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8 8M9 5H5.5A1.5 1.5 0 004 6.5v12A1.5 1.5 0 005.5 20h12a1.5 1.5 0 001.5-1.5V15" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs></svg>
+
+<div id="app">
+  <aside class="side">
+    <div class="side-top"><img src="assets/wordmark.png" alt="RiffCut 影创"></div>
+    <nav class="nav" id="nav">
+      <button data-v="home" class="on"><svg class="ic"><use href="#i-spark"/></svg>影创剪辑</button>
+      <button data-v="templates"><svg class="ic"><use href="#i-grid"/></svg>模板库<span class="k" id="nTpl"></span></button>
+      <button data-v="skills"><svg class="ic"><use href="#i-cube"/></svg>导演技能<span class="k" id="nSkill"></span></button>
+      <button data-v="chat"><svg class="ic"><use href="#i-film"/></svg>对话剪辑</button>
+      <div class="nav-sec">扩展</div>
+      <button data-v="native"><svg class="ic"><use href="#i-puzzle"/></svg>原生能力<span class="k">DSH</span></button>
+      <button data-v="settings"><svg class="ic"><use href="#i-gear"/></svg>设置</button>
+    </nav>
+    <div class="side-bot">
+      <button id="btnNative2"><svg class="ic"><use href="#i-ext"/></svg>打开 DSH 原生界面</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <span class="t" id="tbT">影创剪辑</span>
+      <span class="s" id="tbS"></span>
+      <div class="right">
+        <span class="chip"><span class="dot" id="dCore"></span><span id="tCore">内核待启动</span></span>
+        <span class="chip"><span class="dot ok" id="dModel"></span><b id="tModel">—</b></span>
+      </div>
+    </div>
+
+    <!-- 首页 -->
+    <section class="view on" data-view="home">
+      <div class="hero">
+        <img class="mark" src="assets/vmark.png" alt="">
+        <h1>今天，想做什么片？</h1>
+        <p>说一句话，我来剪 · <b id="heroTpl">—</b> 个模板 · <b id="heroSkill">—</b> 个导演技能 · <b id="heroTool">—</b> 个工具随时可用</p>
+        <div class="compose">
+          <textarea id="inp" rows="1" placeholder="比如：把素材剪成一条 30 秒竖屏宣传片，深色科技感，中文旁白"></textarea>
+          <div class="compose-bar">
+            <span class="chip" id="cPerm" title="点一下调整 AI 的授权档">—</span>
+            <span class="chip" id="cScope" title="点一下调整 AI 能看见的目录">—</span>
+            <span class="spacer"></span>
+            <button class="send" id="btnSend" title="发送（⌘↵）"><svg class="ic" style="width:16px;height:16px"><use href="#i-send"/></svg></button>
+          </div>
+        </div>
+        <div class="sugg">
+          <button>把素材剪成一条 60 秒宣传片</button>
+          <button>按今天热点写三条口播文案</button>
+          <button>新建竖屏工程并套一个片头模板</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h"><b>模板库</b><i id="tplNote">加载中…</i><button class="more" data-goto="templates">全部 ›</button></div>
+        <div class="grid" id="tplGrid"></div>
+      </div>
+
+      <div class="sec" style="padding-bottom:48px">
+        <div class="sec-h"><b>导演技能</b><i id="skillNote"></i><button class="more" data-goto="skills">全部 ›</button></div>
+        <div class="skills" id="skillGrid"></div>
+      </div>
+    </section>
+
+    <!-- 模板库 -->
+    <section class="view" data-view="templates">
+      <div class="sec" style="padding-top:24px;padding-bottom:40px">
+        <div class="sec-h"><b>全部模板</b><i id="tplAllNote"></i></div>
+        <div class="grid" id="tplAll"></div>
+      </div>
+    </section>
+
+    <!-- 技能 -->
+    <section class="view" data-view="skills">
+      <div class="sec" style="padding-top:24px;padding-bottom:40px">
+        <div class="sec-h"><b>导演技能</b><i id="skillAllNote"></i></div>
+        <div class="skills" id="skillAll"></div>
+      </div>
+    </section>
+
+    <!-- 对话 -->
+    <section class="view" data-view="chat" style="height:100%">
+      <div class="chatwrap">
+        <div class="chatlog" id="log"><div class="empty">说一句话开始。工具调用会显示在这里。</div></div>
+        <div class="chatbar">
+          <div class="compose" style="box-shadow:none">
+            <textarea id="inp2" rows="1" placeholder="继续说…"></textarea>
+            <div class="compose-bar">
+              <span class="spacer"></span>
+              <button class="send" id="btnSend2"><svg class="ic" style="width:16px;height:16px"><use href="#i-send"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 原生 -->
+    <section class="view" data-view="native" style="height:100%">
+      <div class="native" id="nativeBox"><div class="empty">点右下角「打开 DSH 原生界面」加载</div></div>
+    </section>
+
+    <!-- 设置 -->
+    <section class="view" data-view="settings">
+      <div class="sec" style="padding-top:24px">
+        <div class="sec-h"><b>内核</b></div>
+        <div style="font-size:var(--f3);color:var(--ink2);line-height:2" id="setBox">读取中…</div>
+      </div>
+    </section>
+
+    <div class="topbar" style="border-bottom:0;border-top:1px solid var(--line);height:0;flex:0"></div>
+  </main>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s)
+const $$ = (s) => Array.from(document.querySelectorAll(s))
+const V = window.riffcut
+
+let S = {
+  view: 'home',
+  kernel: null,       // {provider, model}
+  info: null,
+  sessionId: 'sess-' + Date.now().toString(36),
+  steps: [],
+  cache: { tpl: [], skill: [] },
+}
+
+// ── 视图切换 ───────────────────────────────────────
+function go(v) {
+  S.view = v
+  $$('.view').forEach(e => e.classList.toggle('on', e.dataset.view === v))
+  $$('#nav button').forEach(e => e.classList.toggle('on', e.dataset.v === v))
+  const t = { home:'影创剪辑', templates:'模板库', skills:'导演技能', chat:'对话剪辑', native:'原生能力', settings:'设置' }
+  $('#tbT').textContent = t[v] || v
+  if (v === 'settings') renderSettings()
+}
+$('#nav').addEventListener('click', e => {
+  const b = e.target.closest('button[data-v]'); if (b) go(b.dataset.v)
+})
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-goto]'); if (g) go(g.dataset.goto)
+})
+
+// ── 状态条 ─────────────────────────────────────────
+function setCore(state, text) {
+  $('#dCore').className = 'dot ' + state
+  $('#tCore').textContent = text
+}
+
+// ── 模板 / 技能 ─────────────────────────────────────
+function tplCard(t) {
+  const d = document.createElement('div')
+  d.className = 'tpl'
+  d.title = t.name + (t.category ? ' · ' + t.category : '')
+  const ph = document.createElement('div'); ph.className = 'ph'
+  if (t.thumb) { const im = document.createElement('img'); im.src = t.thumb; im.loading = 'lazy'; ph.appendChild(im) }
+  else ph.textContent = t.name.slice(0, 18)
+  const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = t.name
+  d.append(ph, nm)
+  d.onclick = () => { go('chat'); $('#inp2').value = '用模板「' + t.name + '」新建一个工程'; $('#inp2').focus() }
+  return d
+}
+
+async function loadAssets() {
+  try {
+    const r = await V.templates({ limit: 400 })
+    S.cache.tpl = (r && r.items) || []
+    const tplTotal = (r && r.total != null) ? r.total : S.cache.tpl.length
+  $('#nTpl').textContent = tplTotal
+  if ($('#heroTpl')) $('#heroTpl').textContent = tplTotal
+  if ($('#heroSkill')) $('#heroSkill').textContent = S.cache.skill.length || '41'
+  if ($('#heroTool') && S.info) $('#heroTool').textContent = S.info.tools || '—'
+  // 选出来的模板卡片：缩略图取不到就退成首字母块，别留破图标
+  $$('#tplGrid img, #tplAll img').forEach(img => {
+    img.addEventListener('error', () => {
+      const box = img.parentElement
+      if (!box) return
+      img.remove()
+      const ph = document.createElement('div')
+      ph.className = 'ph'
+      ph.textContent = (box.dataset.name || '?').slice(0, 2).toUpperCase()
+      box.appendChild(ph)
+    }, { once: true })
+  })
+    const first = S.cache.tpl.slice(0, 12)
+    $('#tplGrid').innerHTML = ''
+    first.forEach(t => $('#tplGrid').appendChild(tplCard(t)))
+    $('#tplAll').innerHTML = ''
+    S.cache.tpl.forEach(t => $('#tplAll').appendChild(tplCard(t)))
+    const note = (r && r.total) ? ('共 ' + r.total + ' 个 · 来自 ' + (r.source || '模板库')) : '没有读到模板'
+    $('#tplNote').textContent = note
+    $('#tplAllNote').textContent = note
+  } catch (e) {
+    $('#tplNote').textContent = '读取失败：' + e.message
+  }
+  try {
+    const r = await V.skills()
+    S.cache.skill = (r && r.items) || []
+    $('#nSkill').textContent = S.cache.skill.length
+    const box = $('#skillGrid'), all = $('#skillAll')
+    box.innerHTML = ''; all.innerHTML = ''
+    for (const s of S.cache.skill) {
+      for (const host of [box, all]) {
+        const d = document.createElement('div')
+        d.className = 'skill'
+        d.innerHTML = '<svg class="ic"><use href="#i-check"/></svg>'
+        const sp = document.createElement('span'); sp.textContent = s.name
+        d.appendChild(sp)
+        d.title = s.desc || s.name
+        d.onclick = () => { go('chat'); $('#inp2').value = '按「' + s.name + '」这个技能来做'; $('#inp2').focus() }
+        host.appendChild(d)
+      }
+    }
+    if (!S.cache.skill.length) box.innerHTML = '<div class="empty" style="grid-column:1/-1">没找到技能目录</div>'
+    $('#skillNote').textContent = S.cache.skill.length ? ('共 ' + S.cache.skill.length + ' 个') : ''
+    $('#skillAllNote').textContent = S.cache.skill.length ? ('共 ' + S.cache.skill.length + ' 个 · 来自 数据/配置/导演技能') : ''
+  } catch (e) {
+    $('#skillNote').textContent = '读取失败：' + e.message
+  }
+}
+
+// ── 内核 ───────────────────────────────────────────
+async function bootKernel() {
+  setCore('run', '内核启动中…')
+  const r = await V.start({})
+  if (!r.ok) { setCore('bad', '内核启动失败'); pushSys('内核启动失败：' + r.error); return }
+  S.kernel = { provider: r.provider, model: r.model }
+  setCore('ok', '内核就绪')
+  $('#tModel').textContent = r.model || '—'
+  $('#tbS').textContent = (r.provider || '') + ' / ' + (r.model || '')
+}
+
+// ── 事件翻译 ───────────────────────────────────────
+function pushSys(t) {
+  const log = $('#log')
+  if (log.querySelector('.empty')) log.innerHTML = ''
+  const d = document.createElement('div')
+  d.className = 'msg'
+  d.innerHTML = '<div class="who">系统</div>'
+  const bd = document.createElement('div'); bd.className = 'bd'; bd.textContent = t
+  d.appendChild(bd); log.appendChild(d)
+  log.scrollTop = log.scrollHeight
+}
+
+function pushUser(t) {
+  const log = $('#log')
+  if (log.querySelector('.empty')) log.innerHTML = ''
+  const d = document.createElement('div')
+  d.className = 'msg user'
+  d.innerHTML = '<div class="who">你</div>'
+  const bd = document.createElement('div'); bd.className = 'bd'; bd.textContent = t
+  d.appendChild(bd); log.appendChild(d)
+  log.scrollTop = log.scrollHeight
+}
+
+function pushAssistant(t) {
+  const log = $('#log')
+  const d = document.createElement('div')
+  d.className = 'msg'
+  d.innerHTML = '<div class="who">影创</div>'
+  const bd = document.createElement('div'); bd.className = 'bd'; bd.textContent = t
+  d.appendChild(bd); log.appendChild(d)
+  log.scrollTop = log.scrollHeight
+}
+
+const stepEls = new Map()
+
+function upsertStep(callId, patch) {
+  let el = stepEls.get(callId)
+  if (!el) {
+    el = document.createElement('div')
+    el.className = 'step'
+    el.innerHTML = '<div class="step-h"><span class="tl"></span><span class="st">运行中</span></div><pre class="args"></pre>'
+    el.querySelector('.step-h').onclick = () => el.classList.toggle('open')
+    $('#log').appendChild(el)
+    stepEls.set(callId, el)
+  }
+  const st = el.querySelector('.st')
+  if (patch.name) el.querySelector('.tl').textContent = patch.name
+  if (patch.args !== undefined) el.querySelector('.args').textContent = patch.args
+  if (patch.ok !== undefined) {
+    st.textContent = patch.ok ? '完成' : '失败'
+    st.className = 'st' + (patch.ok ? '' : ' bad')
+  }
+  if (patch.out) el.querySelector('.args').textContent += '\n\n── 结果 ──\n' + patch.out
+  $('#log').scrollTop = $('#log').scrollHeight
+}
+
+V.onEvent(({ event }) => {
+  const t = event && event.type
+  const d = event && event.data
+  if (t === 'assistant/message') {
+    for (const c of (d && d.message && d.message.content) || []) {
+      if (c.type === 'text' && c.text) pushAssistant(c.text)
+      if (c.type === 'tool-call') upsertStep(c.id, { name: c.name, args: c.arguments })
+    }
+  } else if (t === 'tool/result') {
+    const id = d && (d.toolCallId || d.id)
+    const isErr = d && (d.isError || d.error)
+    let out = ''
+    try {
+      const txt = d && d.message && d.message.content && d.message.content[0] && d.message.content[0].text
+      out = String(txt || '').slice(0, 900)
+    } catch {}
+    if (id) upsertStep(id, { ok: !isErr, out })
+  } else if (t === 'session/title') {
+    if (d && d.title) $('#tbS').textContent = d.title
+  } else if (t === 'turn/end') {
+    $('#log').scrollTop = $('#log').scrollHeight
+  }
+})
+
+V.onReady(() => setCore('ok', '内核就绪'))
+
+// ── 发送 ───────────────────────────────────────────
+async function send(text) {
+  text = (text || '').trim()
+  if (!text) return
+  if (!S.kernel) { await bootKernel() }
+  if (!S.kernel) return
+  pushUser(text)
+  go('chat')
+  stepEls.clear()
+  const r = await V.prompt({ sessionId: S.sessionId, text })
+  if (!r.ok) { pushSys('发送失败：' + r.error); return }
+  await V.wait({ sessionId: S.sessionId, timeout: 0 })
+}
+
+function bindSend(inp, btn) {
+  const auto = () => { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 200) + 'px' }
+  inp.addEventListener('input', auto)
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(inp.value); inp.value = ''; auto() }
+  })
+  btn.onclick = () => { send(inp.value); inp.value = ''; auto() }
+}
+bindSend($('#inp'), $('#btnSend'))
+bindSend($('#inp2'), $('#btnSend2'))
+
+$$('.sugg button').forEach(b => b.onclick = () => { $('#inp').value = b.textContent; $('#inp').focus() })
+
+// ── 原生 DSH 界面 ──────────────────────────────────
+async function openNative() {
+  go('native')
+  const info = await V.nativeInfo()
+  if (!info || !info.url) {
+    $('#nativeBox').innerHTML = '<div class="empty">原生界面还没起（内核启动后会自动开）</div>'
+    return
+  }
+  const box = $('#nativeBox')
+  box.innerHTML = ''
+  const wv = document.createElement('webview')
+  wv.setAttribute('src', info.url)
+  wv.setAttribute('allowpopups', '')
+  wv.setAttribute('partition', 'persist:dsh')
+  box.appendChild(wv)
+}
+$('#btnNative2').onclick = openNative
+
+// ── 设置 ───────────────────────────────────────────
+async function renderSettings() {
+  const info = S.info || await V.info()
+  S.info = info
+  const k = info.kernelProbe || {}
+  $('#setBox').innerHTML = [
+    '应用版本：<b>' + (info.version || '?') + '</b>',
+    '数据目录：<code>' + (info.home || '') + '</code>',
+    '内核目录：<code>' + (info.kernel || '') + '</code>',
+    '内核版本：<b>' + (k.version || '未找到') + '</b> ' + (k.ok ? '✅ 可用' : '❌ ' + (k.reason || '')),
+    '模型路由：<b>' + ((S.kernel && S.kernel.provider) || '—') + ' / ' + ((S.kernel && S.kernel.model) || '—') + '</b>',
+  ].join('<br>')
+}
+
+// ── 权限与范围 ─────────────────────────────────────
+const LEVELS = ['只读', '建议', '可整理', '完全托管']
+const SCOPES = ['标准', '影创', '本机']
+function paintPerm() {
+  const lv = (S.info && S.info.level) || '建议'
+  const sc = (S.info && S.info.scope) || '影创'
+  if ($('#cPerm')) $('#cPerm').textContent = lv
+  if ($('#cScope')) $('#cScope').textContent = sc
+}
+$('#cPerm').onclick = async () => {
+  const cur = (S.info && S.info.level) || '建议'
+  const next = LEVELS[(LEVELS.indexOf(cur) + 1) % LEVELS.length]
+  const r = await V.setPerm({ level: next })
+  if (r.ok) { S.info.level = r.level; paintPerm() } else pushSys('改授权失败：' + r.error)
+}
+$('#cScope').onclick = async () => {
+  const cur = (S.info && S.info.scope) || '影创'
+  const next = SCOPES[(SCOPES.indexOf(cur) + 1) % SCOPES.length]
+  const r = await V.setPerm({ scope: next })
+  if (r.ok) { S.info.scope = r.scope; paintPerm() } else pushSys('改范围失败：' + r.error)
+}
+
+// ── 启动 ───────────────────────────────────────────
+;(async () => {
+  S.info = await V.info()
+  const k = S.info.kernelProbe || {}
+  if (!k.ok) { setCore('bad', '内核缺失'); return }
+  $('#tbS').textContent = 'DSH ' + k.version
+  paintPerm()
+  loadAssets()
+  bootKernel()
+})()
+</script>
+</body>
+</html>

@@ -1,0 +1,2075 @@
+<style>
+/* ══ 专业剪辑台（我们自己的多轨剪辑界面）═══════════════════════════════════
+   设计取舍：
+   · 不嵌任何第三方剪辑界面。渲染能力由引擎提供，界面、数据、品牌全是影创自己的。
+   · 三栏：左素材池 / 中预览 / 右属性；底部多轨时间线横跨整宽。
+   · 时间线用「秒 → 像素」单一口径换算，缩放只改一个变量，拖拽裁剪都跟着走。 */
+.ed{flex:1;min-height:0;display:flex;flex-direction:column;gap:9px}
+.ed-main{flex:1 1 auto;min-height:170px;display:grid;
+  grid-template-columns:clamp(170px,17%,230px) minmax(0,1fr) clamp(190px,19%,250px);gap:9px}
+
+/* 打开成片浮层：列出导出过的 mp4，点一下就导进当前工程 */
+.ed-wk-modal{position:fixed;inset:0;z-index:370;display:none;
+  align-items:center;justify-content:center;background:rgba(16,22,32,.46);
+  backdrop-filter:blur(2px)}
+.ed-wk-modal.on{display:flex}
+.ed-wk-box{width:min(660px,90vw);max-height:78vh;display:flex;flex-direction:column;
+  background:#FFF;border-radius:13px;overflow:hidden;
+  box-shadow:0 24px 60px -16px rgba(20,30,50,.28)}
+.ed-wk-hd{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:13px 16px;
+  border-bottom:1px solid var(--line)}
+.ed-wk-hd b{flex:1;font-size:14px;font-weight:600;color:var(--ink)}
+.ed-wk-hd span{font-size:11.5px;color:var(--ink3)}
+.ed-wk-hd button{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;
+  font-size:17px;font-weight:300;color:var(--ink3);background:var(--hover)}
+.ed-wk-hd button:hover{background:#E8ECF3;color:var(--ink)}
+.ed-wk-list{flex:1 1 auto;min-height:0;overflow:auto;padding:8px}
+.ed-wk-e{padding:26px 12px;text-align:center;font-size:12.5px;color:var(--ink3);line-height:1.9}
+.ed-wk-i{display:flex;align-items:center;gap:11px;width:100%;padding:7px 8px;
+  border-radius:9px;text-align:left}
+.ed-wk-i:hover{background:var(--accent-soft)}
+.ed-wk-i .th{flex:0 0 auto;width:74px;height:44px;border-radius:6px;overflow:hidden;
+  background:#EEF2F7;display:grid;place-items:center;color:var(--ink3)}
+.ed-wk-i .th img{width:100%;height:100%;object-fit:cover;display:block}
+.ed-wk-i .th .ic{width:18px;height:18px}
+.ed-wk-i .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ed-wk-i .tx b{font-size:13px;font-weight:500;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-wk-i .tx i{font-size:11px;font-style:normal;color:var(--ink3);
+  font-variant-numeric:tabular-nums}
+
+/* 素材池 */
+.ed-pool{display:flex;flex-direction:column;min-height:0;background:#fff;
+  border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.ed-pool-h{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:8px 10px;
+  border-bottom:1px solid var(--line);font-size:var(--f5);font-weight:600;color:var(--ink)}
+.ed-pool-h .u-btn{margin-left:auto;height:23px;padding:0 8px;font-size:10.5px}
+.ed-pool-b{flex:1 1 auto;min-height:0;overflow-y:auto;padding:7px;display:flex;
+  flex-direction:column;gap:6px;scrollbar-width:thin}
+.ed-as{display:flex;align-items:center;gap:7px;padding:6px 7px;border:1px solid var(--line);
+  border-radius:8px;cursor:grab;background:#FCFDFE;font-size:12px;line-height:1.3}
+.ed-as:hover{border-color:#BFE4DC;background:#F4FBF9}
+.ed-as:active{cursor:grabbing}
+.ed-as .ic{width:14px;height:14px;flex:0 0 auto;color:#8A92A2}
+.ed-as .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-as .du{flex:0 0 auto;font-size:10.5px;color:var(--ink3)}
+.ed-as.video .ic{color:#2E9E76}.ed-as.audio .ic{color:#1B8B7E}
+.ed-as.image .ic{color:#5A8FD6}
+.ed-pool-e{color:var(--ink3);font-size:10.5px;text-align:center;padding:16px 8px;line-height:1.7}
+
+/* 预览 */
+.ed-pv{display:flex;flex-direction:column;min-height:0;background:#0B1119;
+  border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;position:relative}
+.ed-stage{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;
+  padding:10px;position:relative}
+.ed-stage video,.ed-stage img{max-width:100%;max-height:100%;object-fit:contain;display:block;
+  border-radius:4px;background:#000}
+/* 模板预览：模板是按 1920x1080 的绝对坐标画的，直接塞进预览框只会
+   露出左上角一小块（看着就是「黑屏」）。所以 iframe 固定 1920x1080，
+   再用 transform 等比缩到预览框里。 */
+.ed-stage iframe.ed-tpl{position:absolute;left:50%;top:50%;
+  width:1920px;height:1080px;border:0;border-radius:4px;background:#000;
+  transform-origin:center center;display:block}
+.ed-stage .ph{color:#5E6B7C;font-size:12px;text-align:center;line-height:1.9;padding:20px}
+.ed-bar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:6px 10px;
+  border-top:1px solid rgba(255,255,255,.09);color:#D6DCE6;font-size:10.5px}
+.ed-bar button{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+  color:#D6DCE6;background:transparent;border:0;cursor:pointer}
+.ed-bar button:hover{background:rgba(255,255,255,.1)}
+.ed-bar .tm{font-variant-numeric:tabular-nums;letter-spacing:.4px}
+.ed-bar .u-btn{margin-left:auto;height:26px;padding:0 10px;font-size:10.5px;
+  background:#1B8B7E;border-color:#1B8B7E;color:#fff}
+.ed-bar .u-btn:hover{background:#16786C}
+
+/* 属性 */
+.ed-insp{display:flex;flex-direction:column;min-height:0;background:#fff;
+  border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.ed-insp-h{flex:0 0 auto;padding:8px 10px;border-bottom:1px solid var(--line);
+  font-size:var(--f5);font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px}
+.ed-insp-b{flex:1 1 auto;min-height:0;overflow-y:auto;padding:9px 10px;
+  display:flex;flex-direction:column;gap:8px;scrollbar-width:thin}
+.ed-insp .row{display:flex;flex-direction:column;gap:3px}
+.ed-insp label{font-size:10.5px;color:var(--ink3)}
+.ed-insp input[type=text],.ed-insp input[type=number],.ed-insp select{
+  height:26px;border:1px solid var(--line);border-radius:8px;padding:0 7px;
+  font-size:12px;color:var(--ink);background:#fff;width:100%}
+.ed-insp input[type=color]{height:26px;padding:1px;border:1px solid var(--line);
+  border-radius:8px;background:#fff;width:100%}
+.ed-insp input[type=range]{width:100%}
+.ed-insp .two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.ed-insp .hint{font-size:10.5px;color:var(--ink3);line-height:1.65;text-align:center;padding:14px 4px}
+.ed-insp .del{height:26px;border-radius:8px;border:1px solid #F0D5CF;background:#FFF6F4;
+  color:#C4553F;font-size:10.5px;cursor:pointer;margin-top:2px}
+.ed-insp .del:hover{background:#FDECE8}
+
+/* 时间线 */
+.ed-tl{flex:0 0 auto;min-height:0;display:flex;flex-direction:column;
+  background:#fff;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.ed-tl-h{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:6px 10px;
+  border-bottom:1px solid var(--line);font-size:var(--f5);color:var(--ink)}
+.ed-tl-h .u-btn{height:23px;padding:0 8px;font-size:10.5px}
+.ed-tl-h .sp{flex:1 1 auto}
+.ed-tl-h .zoom{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink3)}
+.ed-tl-h input[type=range]{width:80px}
+.ed-scroll{flex:0 1 auto;overflow:auto;position:relative;scrollbar-width:thin;
+  /* 至少完整显示刻度 + 四条轨（20 + 4×32 = 148），否则音频轨会被切掉一半，
+     看着像界面断了。轨道更多时才出现滚动条。 */
+  min-height:148px;max-height:min(46vh,360px)}
+.ed-inner{position:relative;min-width:100%}
+.ed-ruler{position:sticky;top:0;z-index:3;height:20px;min-width:100%;background:#FBFCFE;
+  border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.ed-ruler .tk{position:absolute;top:0;height:100%;border-left:1px solid #E8ECF3;
+  font-size:10.5px;color:#9AA2B1;padding-left:3px;line-height:20px;white-space:nowrap}
+.ed-lane{display:flex;align-items:stretch;border-bottom:1px solid #F1F4F8;min-height:32px}
+.ed-lane-lb{flex:0 0 62px;position:sticky;left:0;z-index:2;background:#FBFCFE;
+  border-right:1px solid var(--line);display:flex;align-items:center;gap:4px;
+  padding:0 6px;font-size:10.5px;color:var(--ink3);white-space:nowrap;overflow:hidden}
+.ed-lane-lb .ic{width:11px;height:11px;flex:0 0 auto}
+.ed-lane-b{flex:1 1 auto;position:relative;min-height:32px}
+.ed-cl{position:absolute;top:3px;height:30px;border-radius:4px;overflow:hidden;
+  font-size:10.5px;line-height:1;display:flex;align-items:center;padding:0 6px;
+  cursor:grab;user-select:none;border:1px solid transparent;
+  white-space:nowrap;text-overflow:ellipsis;box-sizing:border-box}
+.ed-cl:active{cursor:grabbing}
+.ed-cl.video{background:#E4F4EF;border-color:#B7E0D4;color:#12705F}
+.ed-cl.audio{background:#FCF3E2;border-color:#F4F6FA;color:#147567}
+.ed-cl.image{background:#E8F0FB;border-color:#C5D9F2;color:#2C5C99}
+.ed-cl.text{background:#F4EFFB;border-color:#DCCDF2;color:#5B3E8E}
+.ed-cl.template{background:#EDF6F4;border-color:#BEE3DA;color:#0F6B60}
+.ed-cl.on{outline:2px solid #1B8B7E;outline-offset:-1px;box-shadow:0 2px 8px rgba(27,139,126,.25)}
+.ed-cl .h{position:absolute;top:0;bottom:0;width:6px;cursor:ew-resize;z-index:2}
+.ed-cl .h.l{left:0}.ed-cl .h.r{right:0}
+.ed-cl .h:hover{background:rgba(27,139,126,.35)}
+.ed-play{position:absolute;top:0;bottom:0;width:9px;margin-left:-4px;background:transparent;
+  z-index:4;cursor:ew-resize}
+.ed-play::after{content:"";position:absolute;top:0;bottom:0;left:4px;width:1px;background:#C4553F}
+.ed-play::before{content:"";position:absolute;top:0;left:0;width:9px;height:9px;
+  background:#C4553F;border-radius:0 0 50% 50%}
+.ed-drop{position:absolute;inset:0;border:2px dashed transparent;pointer-events:none}
+.ed-lane-b.over .ed-drop{border-color:#1B8B7E;background:rgba(27,139,126,.05);border-radius:4px}
+/* 模板没有官方缩略图时的兜底：渐变底 + 名字，别显示碎图 */
+/* 每个模板卡都先铺一层 16:9 占位底，有图再把图盖上去。
+   这样没图的、图挂了，都不会出现碎图或空白塌陷 —— 448 个模板里只有 178 个有官方图。 */
+.ed-tp .thumb{position:relative;width:100%;aspect-ratio:16/9;background:#EEF2F7;overflow:hidden}
+.ed-tp .nopic-ph{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;
+  background:linear-gradient(135deg,#1E2634,#2C3748);color:#C8D2E0}
+.ed-tp .nopic-ph b{font-size:10.5px;font-weight:600;color:#7FD3C4;letter-spacing:.5px}
+.ed-tp .nopic-ph i{font-size:10.5px;color:#7A879C;font-style:normal;max-width:92%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-tp .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+
+.ed-tip{padding:22px;text-align:center;color:var(--ink3);font-size:12px;line-height:1.9}
+
+/* 模板库：居中悬浮框（原来是 430px 右侧抽屉，两列小卡片，
+   用户原话「空间大一点显示的也完整」）。
+   现在 92vw 宽、四列，一屏能看 24 张，行高按内容自适应。 */
+.ed-lib{position:fixed;left:50%;top:50%;z-index:120;
+  width:min(1180px,92vw);height:min(760px,88vh);
+  background:#fff;border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 24px 70px rgba(16,24,40,.26);
+  display:none;flex-direction:column;
+  transform:translate(-50%,-50%) scale(.985);opacity:0;
+  transition:opacity .18s,transform .18s}
+.ed-lib.open{display:flex;transform:translate(-50%,-50%) scale(1);opacity:1}
+/* 背后压一层暗色，让悬浮框自己立起来 */
+.ed-lib-mask{position:fixed;inset:0;z-index:119;background:rgba(14,20,32,.34);
+  display:none;opacity:0;transition:opacity .18s}
+.ed-lib-mask.open{display:block;opacity:1}
+.ed-lib-h{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:13px 16px;
+  border-bottom:1px solid var(--line);font-size:var(--f4);font-weight:600;
+  border-radius:14px 14px 0 0;background:#FCFDFE}
+.ed-lib-h .u-btn{margin-left:0}
+.ed-lib-h .u-btn{margin-left:auto;height:25px;padding:0 9px;font-size:10.5px}
+.ed-lib-s{flex:0 0 auto;display:flex;gap:6px;padding:8px 12px 6px}
+.ed-lib-s input{flex:1 1 auto;height:30px;border:1px solid var(--line);border-radius:9px;
+  padding:0 10px;font-size:12.5px}
+/* 分类单行横滚：11 个分类折两行要占 70px，横滚只占 26px。
+   滚动条压到看不见（触控板和 shift 滚轮都能滚），不留一道灰杠破坏观感。 */
+.ed-lib-cats{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:5px;margin:0;
+  padding:0 16px 11px}
+.ed-lib-cats button{flex:0 0 auto}
+.ed-lib-b{flex:1 1 auto;min-height:0;overflow-y:auto;padding:4px 11px 14px;
+  display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+.ed-tp{flex:0 0 calc(25% - 6px);max-width:calc(25% - 6px);box-sizing:border-box;
+  border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;
+  display:flex;flex-direction:column}
+.ed-tp .thumb img{background:#EEF2F7}
+/* 卡片只留：缩略图 + 标题 + 两个按钮。原来还有一行两行截断的描述，
+   占 29px 高、且被截得只剩半句话（用户原话「太多的垃圾信息」）。
+   完整描述挂到 title 上，鼠标停一下就有。 */
+.ed-tp .bd{padding:5px 6px 6px;display:flex;flex-direction:column;gap:4px;min-height:0}
+.ed-tp b{font-size:11.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;line-height:1.3}
+.ed-tp .row{display:flex;gap:4px}
+.ed-tp .row button{flex:1 1 0;min-width:0}
+.ed-tp button{height:24px;border-radius:7px;border:1px solid var(--line);background:#FBFCFE;
+  font-size:11px;color:#4A5262;cursor:pointer;padding:0 4px}
+.ed-tp button:hover{background:#EAF6F3;border-color:#BFE4DC;color:#0F6B60}
+.ed-tp button[data-n]{background:#fff;border-color:#D8E2DC;color:#1B7A6E;font-weight:600}
+.ed-tp button[data-n]:hover{background:#1B8B7E;border-color:#1B8B7E;color:#fff}
+/* 缩略图整块可点，等一下就有反应，鼠标要给出这个暗示 */
+.ed-tp .thumb{cursor:pointer;position:relative}
+.ed-tp .thumb:hover::after{content:"";position:absolute;inset:0;
+  box-shadow:inset 0 0 0 2px #1B8B7E;border-radius:0;pointer-events:none}
+/* 有官方预览片的角上带个播放标：用户一眼分得清哪些能立刻看 */
+.ed-tp .thumb .pv{position:absolute;right:6px;bottom:6px;width:20px;height:20px;
+  border-radius:50%;background:rgba(20,28,42,.62);display:flex;align-items:center;
+  justify-content:center;backdrop-filter:blur(1px)}
+.ed-tp .thumb .pv .ic{width:11px;height:11px;color:#fff}
+.ed-lib-tip{flex:0 0 auto;padding:8px 13px 10px;border-top:1px solid var(--line);
+  background:#FBFCFE;font-size:10.5px;color:var(--ink3);line-height:1.65}
+
+/* 模板卡片上的「先看看」按钮 + 试用弹窗 */
+.ed-tp .bd .peek{width:100%;height:26px;margin-bottom:5px;border-radius:8px;
+  border:1px solid var(--line);background:#fff;color:var(--ink2);font-size:12px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px}
+.ed-tp .bd .peek:hover{border-color:#1B8B7E;color:#1B8B7E;background:#F6FBFA}
+.ed-tp .bd .peek .ic{width:12px;height:12px}
+.ed-lib-cats button{height:26px;padding:0 10px;border:1px solid #E3E9F1;background:#FFF;
+  border-radius:12px;font-size:12px;color:#5A6473;cursor:pointer;line-height:1;
+  display:inline-flex;align-items:center;gap:4px;transition:.14s}
+.ed-lib-cats button:hover{border-color:#BFD8D2;color:#1B8B7E}
+.ed-lib-cats button.on{background:#1B8B7E;border-color:#1B8B7E;color:#FFF;font-weight:600}
+.ed-lib-cats button em{font-style:normal;font-size:10.5px;opacity:.62}
+.ed-lib-cats button.on em{opacity:.8}
+
+.ed-tp .catb{position:absolute;left:7px;top:7px;z-index:2;padding:1px 6px;border-radius:4px;
+  background:rgba(22,30,42,.62);color:#FFF;font-size:10.5px;line-height:16px;letter-spacing:.02em;
+  backdrop-filter:blur(4px)}
+/* 原来这里是「说明段 + 同步条 + 品牌条」三块竖着排，占掉 100 多像素。
+   现在压成一行：状态点 + 一句话 + 同步 + 品牌色开关 + 色块。 */
+.ed-lib-state{flex:0 0 auto;display:flex;align-items:center;gap:7px;margin:0 12px 8px;
+  padding:5px 10px;border-radius:8px;background:#F7FAFC;border:1px solid #E8EEF5;
+  font-size:11px;color:#5A6473;min-height:28px}
+.ed-lib-state .dot{width:6px;height:6px;border-radius:50%;background:#C9D2DE;flex:0 0 auto}
+.ed-lib-state.ok .dot{background:#1B8B7E}
+.ed-lib-state.ok{background:#F4FAF8;border-color:#CDE7E0;color:#2E6B62}
+.ed-lib-state .tx{flex:1 1 auto;line-height:1.4;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.ed-lib-state .u-btn{height:22px;padding:0 8px;font-size:10.5px;flex:0 0 auto}
+.ed-lib-state .bc{display:flex;align-items:center;gap:4px;cursor:pointer;flex:0 0 auto;
+  padding-left:7px;border-left:1px solid #E2E8F0}
+.ed-lib-state .bc input{margin:0;cursor:pointer;accent-color:#1B8B7E;width:12px;height:12px}
+.ed-lib-state .lc{width:11px;height:11px;border-radius:3px;border:1px solid #DDE3EC;
+  background:#EEE;flex:0 0 auto}
+.ed-try{position:fixed;inset:0;z-index:120;background:rgba(12,18,28,.62);
+  display:none;align-items:center;justify-content:center;padding:24px}
+.ed-try.open{display:flex}
+/* 视频和 iframe 都带原始尺寸（1920x1080），如果不给预览区一个确定高度，
+   它们会把整个弹窗顶到 1080px 高，标题栏和按钮全被挤出去。
+   所以预览区锁成 16:9，内部元素一律 absolute 铺满。 */
+.ed-try-box{width:min(880px,92vw);display:flex;flex-direction:column;
+  background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 24px 70px rgba(10,16,26,.4)}
+.ed-try-v{aspect-ratio:16/9;flex:0 0 auto;max-height:calc(88vh - 120px)}
+.ed-try-h{flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:12px 16px;
+  border-bottom:1px solid var(--line);font-size:12px}
+.ed-try-h b{font-weight:600}
+.ed-try-h span{font-size:10.5px;color:#7A8494;background:#F1F4F8;border-radius:4px;padding:2px 7px}
+.ed-try-h button{margin-left:auto}
+.ed-try-v{background:#0B1119;position:relative;overflow:hidden}
+.ed-try-v iframe{width:100%;height:100%;border:0;display:block;background:#0B1119}
+.ed-try-v video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  background:#0B1119;display:block}
+.ed-try-v .ed-tip{position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;text-align:center;padding:24px;line-height:1.9}
+.ed-try-fr{position:absolute;inset:0;overflow:hidden}
+.ed-try-fr iframe.ed-tpl{position:absolute;left:50%;top:50%;width:1920px;height:1080px;
+  border:0;background:#0B1119;transform-origin:center center}
+.ed-try-v .ed-tip{color:#7A8494;font-size:12px}
+.ed-try-f{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:11px 16px;
+  border-top:1px solid var(--line);background:#FBFCFE}
+.ed-try-d{flex:1 1 auto;font-size:12px;color:var(--ink3);line-height:1.7}
+.ed-try-a{flex:0 0 auto}
+.ed-try-a button{height:30px;padding:0 16px;border-radius:8px;border:0;cursor:pointer;
+  background:#1B8B7E;color:#fff;font-size:12px}
+.ed-try-a button:hover{background:#157568}
+.ed-try-a button:disabled{background:#9AB8B3;cursor:default}
+
+/* ══════════ 剪映式升级：多轨合成预览 / 关键帧 / 轨道控制 ══════════ */
+/* 预览不再只显示「一个」片段，而是把当前时刻命中的所有片段按 z 叠成一张画面。
+   容器固定按工程分辨率(默认1920x1080)排版，再整块 scale 缩进预览框，
+   跟模板 iframe 的做法一致 —— 编辑器里看到的和导出的构图才对得上。 */
+.ed-stage .ed-compose{position:absolute;left:50%;top:50%;transform-origin:center center;
+  overflow:hidden;background:#000;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+.ed-layer{position:absolute;transform-origin:center center;overflow:hidden;
+  box-sizing:border-box;pointer-events:none}
+.ed-layer video,.ed-layer img,.ed-layer .ed-tpl{width:100%;height:100%;
+  object-fit:cover;display:block;border:0;background:transparent}
+.ed-layer .ed-tpl{position:absolute;left:0;top:0}
+/* 文字层：跟导出端 .vl-tx 同一套排版口径（居中、可换行、深色底衬、描边阴影）。
+   width/height 交给 edApplyXform 设成 auto，靠 translate(-50%,-50%) 定位到 x/y。 */
+.ed-layer.text{overflow:visible}
+.ed-layer .ed-text{display:block;padding:10px 24px;border-radius:12px;
+  background:rgba(10,16,24,.58);box-shadow:0 6px 26px rgba(0,0,0,.22);
+  text-shadow:0 2px 12px rgba(0,0,0,.45);backdrop-filter:blur(2px);
+  white-space:pre-wrap;word-break:break-word;text-align:center;line-height:1.35;
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+/* 关键帧菱形：落在片段内部，按 at(0~1) 定位；点一下播放头跳到那一帧。 */
+.ed-kf{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;
+  background:#C4553F;border:1px solid #fff;border-radius:2px;transform:rotate(45deg);
+  z-index:3;cursor:pointer;box-shadow:0 0 0 1px rgba(196,85,63,.3)}
+.ed-kf:hover{background:#8E3524;transform:rotate(45deg) scale(1.25)}
+.ed-cl .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+/* 轨道名那一列：锁 / 静音 / 删除，默认藏起来，hover 轨道才出现，省地方。 */
+.ed-lane-lb .lb-nm{flex:1;overflow:hidden;text-overflow:ellipsis}
+.ed-lane-lb .lb-t{width:16px;height:16px;flex:0 0 auto;border:0;border-radius:4px;
+  padding:0;display:none;place-items:center;cursor:pointer;color:var(--ink3);
+  background:transparent;font-size:11px;line-height:1}
+.ed-lane:hover .ed-lane-lb .lb-t,.ed-lane-lb .lb-t.on{display:grid}
+.ed-lane-lb .lb-t:hover{background:rgba(27,139,126,.16);color:#12705F}
+.ed-lane.locked .ed-lane-b{opacity:.55}
+.ed-lane.locked .ed-cl{cursor:not-allowed}
+/* 时间线工具条分组 */
+.ed-tl-h .tlsep{width:1px;height:15px;background:var(--line);margin:0 1px}
+/* 属性面板：变换分区 + 关键帧列表 */
+.ed-insp .vsec{border:1px solid var(--line);border-radius:8px;padding:7px;display:flex;
+  flex-direction:column;gap:6px;background:#FCFDFE}
+.ed-insp .vsec .vh{font-size:10.5px;font-weight:600;color:var(--ink);display:flex;
+  align-items:center;gap:5px}
+.ed-insp .vsec .vh .sp{flex:1}
+.ed-insp .kfrow{display:flex;align-items:center;gap:5px}
+.ed-insp .kfrow label{flex:0 0 62px;font-size:10.5px;color:var(--ink3)}
+.ed-insp .kfrow input{flex:1;min-width:0}
+/* 打帧按钮：空心=没打，实心红=当前位置已有该属性关键帧。 */
+.ed-insp .kfbtn{flex:0 0 auto;width:22px;height:22px;border:1px solid var(--line);
+  border-radius:5px;background:#fff;color:#9AA2B1;cursor:pointer;font-size:12px;
+  display:grid;place-items:center;padding:0;transform:none}
+.ed-insp .kfbtn:hover{border-color:#C4553F;color:#C4553F}
+.ed-insp .kfbtn.on{background:#C4553F;border-color:#C4553F;color:#fff}
+.ed-insp .kflist{display:flex;flex-direction:column;gap:3px;max-height:118px;overflow:auto;
+  scrollbar-width:thin}
+.ed-insp .kfi{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink3);
+  padding:3px 5px;border-radius:6px;background:#fff;border:1px solid var(--line)}
+.ed-insp .kfi.cur{border-color:#C4553F;background:#FFF6F4;color:#8E3524}
+.ed-insp .kfi .at{flex:0 0 42px;font-variant-numeric:tabular-nums}
+.ed-insp .kfi .val{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-insp .kfi select{height:20px;width:74px;font-size:10px;padding:0 2px}
+.ed-insp .kfi button{flex:0 0 auto;width:18px;height:18px;border:0;border-radius:4px;
+  background:var(--hover);color:var(--ink3);cursor:pointer;padding:0;font-size:11px}
+.ed-insp .kfi button:hover{background:#FDECE8;color:#C4553F}
+.ed-insp .kfops{display:flex;gap:6px}
+.ed-insp .kfops button{flex:1;height:25px;border-radius:7px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);font-size:10.5px;cursor:pointer}
+.ed-insp .kfops button:hover{border-color:#1B8B7E;color:#12705F;background:#F4FBF9}
+.ed-insp .kfops button.hot{background:#C4553F;border-color:#C4553F;color:#fff}
+</style>
+
+<section class="page" data-page="edit">
+  <div class="u-head">
+    <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-clap"/></svg>专业剪辑台</div>
+      <div class="u-sub" id="edSub">选一个工程开始；AI 粗剪的结果也会出现在这里，随时可以接着改。</div></div>
+    <div class="u-actions">
+      <div class="u-select" style="min-width:150px"><select id="edProj"><option value="">（还没有工程）</option></select><svg class="ic"><use href="#i-chev"/></svg></div>
+      <button class="u-btn" id="edNewBtn"><svg class="ic"><use href="#i-plus"/></svg>新建工程</button>
+      <button class="u-btn" id="edLibBtn"><svg class="ic"><use href="#i-grid"/></svg>模板库</button>
+      <button class="u-btn" id="edOpenWorkBtn" title="把导出过的成片导入当前工程继续改"><svg class="ic"><use href="#i-film"/></svg>打开成片</button>
+      <div class="u-select" style="min-width:150px"><select id="edPreset" title="出片预设：一条预设同时定画幅、时长与技能">
+        <option value="">出片预设：不用</option>
+      </select><svg class="ic"><use href="#i-chev"/></svg></div>
+      <div class="u-select" style="min-width:118px"><select id="edSize">
+        <option value="1920x1080">1920×1080 横屏</option>
+        <option value="1080x1920">1080×1920 竖屏</option>
+        <option value="1080x1080">1080×1080 方形</option>
+        <option value="3840x2160">3840×2160 4K</option>
+        <option value="1280x720">1280×720 小横屏</option>
+      </select><svg class="ic"><use href="#i-chev"/></svg></div>
+      <button class="u-btn gold" id="edRenderBtn" title="人审过、要交付的才点这个。AI 自己出的片只进「产出/预览」，不算成片"><svg class="ic"><use href="#i-download"/></svg>导出成片</button>
+    </div>
+  </div>
+
+  <div class="ed">
+    <div class="ed-main">
+      <!-- 素材池 -->
+      <div class="ed-pool">
+        <div class="ed-pool-h"><svg class="ic"><use href="#i-folder"/></svg>素材
+          <button class="u-btn" id="edImpBtn"><svg class="ic"><use href="#i-plus"/></svg>导入</button></div>
+        <div class="ed-pool-b" id="edPool"></div>
+      </div>
+
+      <!-- 预览 -->
+      <div class="ed-pv">
+        <div class="ed-stage" id="edStage"><div class="ph">选一个工程，<br>把左边素材拖到下面轨道上</div></div>
+        <div class="ed-bar">
+          <button id="edPlayBtn" title="播放 / 暂停"><svg class="ic"><use href="#i-play"/></svg></button>
+          <span class="tm" id="edTime">00:00 / 00:00</span>
+          <button class="u-btn" id="edSaveBtn">保存</button>
+        </div>
+      </div>
+
+      <!-- 属性 -->
+      <div class="ed-insp">
+        <div class="ed-insp-h"><svg class="ic"><use href="#i-sliders"/></svg><span id="edInspTitle">属性</span></div>
+        <div class="ed-insp-b" id="edInsp"><div class="hint">在时间线上点一个片段，<br>这里就能改它的参数</div></div>
+      </div>
+    </div>
+
+    <!-- 时间线 -->
+    <div class="ed-tl">
+      <div class="ed-tl-h">
+        <svg class="ic"><use href="#i-list"/></svg>时间线
+        <span class="tlsep"></span>
+        <button class="u-btn" id="edSplitBtn" title="把选中的片段从播放头处切开（S）">✂ 分割</button>
+        <button class="u-btn" id="edDupBtn" title="复制选中的片段（Ctrl/Cmd+D）">复制</button>
+        <span class="tlsep"></span>
+        <button class="u-btn" id="edAddVBtn" title="加一条视频/图形轨">＋视频轨</button>
+        <button class="u-btn" id="edAddTBtn" title="加一条字幕轨">＋字幕轨</button>
+        <button class="u-btn" id="edAddABtn" title="加一条音频轨">＋音频轨</button>
+        <span class="sp"></span>
+        <span class="zoom">缩放<input type="range" id="edZoom" min="50" max="400" value="100" step="10"></span>
+      </div>
+      <div class="ed-scroll" id="edScroll">
+        <div class="ed-inner" id="edInner">
+          <div class="ed-ruler" id="edRuler"></div>
+          <div id="edLanes"></div>
+          <div class="ed-play" id="edPlay" style="left:62px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模板库（居中悬浮框）-->
+  <div class="ed-lib-mask" id="edLibMask"></div>
+  <div class="ed-lib" id="edLib">
+    <div class="ed-lib-h"><svg class="ic"><use href="#i-grid"/></svg>模板库
+      <button class="u-btn" id="edLibClose">关闭</button></div>
+    <!-- 顶部只留三层：搜索、分类（单行横滚）、一行状态。
+         以前这里是六层（搜索/下拉/两行分类/一段说明/同步条/品牌条），
+         768 高的窗口里被吃掉约 290px，模板卡片只剩不到一半 —— 用户原话
+         「整个顶部太多了无效显示，留给模板展示的区域太少了」。
+         被砍掉的东西去了哪：那段落解释文案挪进搜索框的 placeholder 和卡片
+         的 title；「整场戏/片段」下拉跟分类按钮重复，删掉（分类里本来就有
+         这两个概念的替代——按场景分类比按技术形态分类更好用）。 -->
+    <div class="ed-lib-s">
+      <input id="edLibQ" placeholder="搜模板（中文直接搜：片头 / 转场 / 字幕 / 图表…）">
+    </div>
+    <div class="ed-lib-cats" id="edLibCats"></div>
+    <div class="ed-lib-state">
+      <span class="dot" id="edSrcDot"></span>
+      <span class="tx" id="edSrcTx">检查本地模板库…</span>
+      <button class="u-btn" id="edSrcSync" title="从镜像重新拉一份模板库，约 139MB">同步</button>
+      <label class="bc" title="勾上后装模板时把模板的强调色换成客户品牌色。模板配色是它的设计语言，默认不换。">
+        <input type="checkbox" id="edUseBrand"><span>品牌色</span>
+      </label>
+      <span class="lc" id="edBrandSw"></span>
+    </div>
+    <div class="ed-lib-b" id="edLibGrid"><div class="ed-tip">输入关键词搜一下</div></div>
+    <div class="ed-lib-tip">装进工程后是可改的源码，落在工程 compositions 目录里，不是黑盒。</div>
+  </div>
+
+  <!-- 模板试用弹窗：装之前先看清楚它是什么、动起来什么样 -->
+  <div class="ed-try" id="edTry">
+    <div class="ed-try-box">
+      <div class="ed-try-h"><b id="edTryName">模板</b>
+        <span id="edTryKind">整场戏</span>
+        <button class="u-btn" id="edTryClose">关闭</button></div>
+      <div class="ed-try-v" id="edTryView"><div class="ed-tip">加载中…</div></div>
+      <div class="ed-try-f">
+        <div class="ed-try-d" id="edTryDesc"></div>
+        <div class="ed-try-a">
+          <button class="u-btn" id="edTryAdd">装进工程</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- 打开成片浮层。挂在页面最外层：放进 .ed 或工具栏里会跟着栅格高度被挤没。 -->
+<div class="ed-wk-modal" id="edWkModal">
+  <div class="ed-wk-box" role="dialog" aria-modal="true" aria-label="打开成片">
+    <div class="ed-wk-hd">
+      <b>打开成片</b>
+      <span>点一条就导进当前工程当素材</span>
+      <button type="button" id="edWkX" aria-label="关闭">×</button>
+    </div>
+    <div class="ed-wk-list" id="edWkList"></div>
+  </div>
+</div>
+
+</section>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+
+    /* 出片预设：从「品牌资产」页拆过来，放在真正用得到的地方 —— 导出前。
+   一条预设 = 画幅 × 时长 × 引用哪个技能，选完画幅自动跟着改，
+   这样用户在品牌页配置的规格，出片这一刻才真正落到手上。 */
+/* 品牌色：从「品牌资产」页配的套件里取主色（colors[0]），
+   装模板时如果用户勾了「用品牌色跑模板」，就把模板主色换掉。
+   默认不勾 —— 模板的配色是它的设计语言，无脑替换会让所有模板长一样。 */
+window.__ED_BRAND = "";
+function edLoadBrand(){
+  var sw=$('#edBrandSw'), tx=$('#edSrcTx'), bar=$('#edBrandBar');
+  if(!sw||!tx)return;
+  window.api('/api/brand',{action:'bootstrap'}).then(function(d){
+    var kits=(d&&d.kits)||[];
+    var cur=kits.filter(function(k){return k.current})[0]||kits[0]||{};
+    var cs=(cur.colors||[]).filter(function(c){return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(c.hex||'').trim())});
+    if(!cs.length){
+      sw.style.background='#EEE';
+      sw.title='当前客户还没设品牌配色（去「品牌资产」加）';
+      return;
+    }
+    var main=String(cs[0].hex||'').trim();
+    window.__ED_BRAND=main;
+    window.__ED_COLORS=cs;
+    /* 品牌「主色」常常是近黑的漆墨色（示例客户就是 #1E2430），拿去换模板
+       主色整个画面会发黑。这里跟后端判断保持一致，提前把「实际会用哪个色」
+       告诉用户，免得装完了才发现颜色不对还得再查。 */
+    function lum(h){
+      h=String(h||'').replace('#','');
+      if(h.length===3)h=h.split('').map(function(c){return c+c}).join('');
+      if(h.length!==6)return null;
+      var r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+      var mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+      return {mx:mx,mn:mn,gray:(mx-mn)<22||mx<40||mn>225};
+    }
+    var use=cs[0], note='';
+    if(lum(main)&&lum(main).gray){
+      var pick=cs.filter(function(c){
+        return /强调|点缀|识别|品牌色/i.test(c.name||'')&&lum(c.hex)&&!lum(c.hex).gray;
+      })[0];
+      if(!pick){
+        var best=null,bs=-1;
+        cs.forEach(function(c){
+          var L=lum(c.hex);if(!L||L.gray)return;
+          var s2=(L.mx-L.mn)/255;
+          if(s2>bs){bs=s2;best=c}
+        });
+        pick=best;
+      }
+      if(pick){use=pick;note='（主色太深，实际用'+(pick.name||'强调色')+'）'}
+      else{note='（主色太深，建议加一个鲜艳的强调色）'}
+    }
+    sw.style.background=use.hex;
+    window.__ED_USE=String(use.hex||'').trim();
+    /* 品牌色不再单独占一行文字说明，改挂 title —— 顶部每一行都要省着用。
+       想知道具体用哪个色，鼠标停一下色块就有。 */
+    sw.title=use.hex+(use.name?' '+use.name:'')+(note?'（主色太深，已改用强调色）':'')+' · 模板按这个色跑';
+  }).catch(function(){});
+}
+$('#edUseBrand') && $('#edUseBrand').addEventListener('change',function(){
+  var bar=$('#edBrandBar');
+  if(bar)bar.classList.toggle('on',this.checked);
+  if(this.checked&&!window.__ED_BRAND)say('这个客户还没设品牌配色');
+});
+
+function edFillPresets(){
+  var sel=$('#edPreset');if(!sel)return;
+  window.api('/api/brand',{action:'bootstrap'}).then(function(d){
+    var ps=(d&&d.presets)||[];
+    sel.innerHTML='<option value="">出片预设：不用</option>'+ps.map(function(p){
+      return '<option value="'+esc(p.id)+'" data-ratio="'+esc(p.ratio||'')+
+        '" data-dur="'+esc(p.duration||'')+'">'+esc(p.name)+
+        (p.ratio?' · '+esc(p.ratio):'')+'</option>';
+    }).join('');
+  }).catch(function(){});
+}
+document.addEventListener('DOMContentLoaded',edFillPresets);
+setTimeout(edFillPresets,1500);
+$('#edPreset') && $('#edPreset').addEventListener('change',function(){
+  var o=this.options[this.selectedIndex];if(!o)return;
+  var r=(o.getAttribute('data-ratio')||'').trim();
+  var sz=$('#edSize');
+  if(r&&sz){
+    // 预设里的画幅写的是「16:9」这类比例，映射到下拉里的具体尺寸
+    var m={'16:9':'1920x1080','9:16':'1080x1920','1:1':'1080x1080','4:3':'1280x960'};
+    var hit=m[r]||'';
+    if(!hit){
+      var mm=r.match(/^(\d+)\s*[x×:]\s*(\d+)$/);
+      if(mm)hit=parseInt(mm[1])+'x'+parseInt(mm[2]);
+    }
+    if(hit&&[].some.call(sz.options,function(x){return x.value===hit}))sz.value=hit;
+    else if(hit){sz.options[sz.options.length]=new Option(hit+'（预设）',hit);sz.value=hit;}
+  }
+  if(o.value)say('用预设「'+(o.textContent||'').split(' · ')[0]+'」出片');
+});
+
+  var ED={proj:null,data:null,assets:[],sel:null,pps:60,zoom:1,t:0,playing:false,dirty:false,
+          compose:null,layers:{},kf:{track:null,i:null,prop:'x'}};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function say(m){window.say(m)}
+  function fmt(s){s=Math.max(0,+s||0);var m=Math.floor(s/60),x=Math.floor(s%60);
+    return ('0'+m).slice(-2)+':'+('0'+x).slice(-2)}
+
+  /* ═══════ 关键帧引擎（前端预览用，导出仍以后端 GSAP 为准）═══════
+     语义跟 timeline.js 的 keyTweens() 完全一致：
+       · keys[].at 是「片段内进度 0~1」，片段挪动/改长时关键帧跟着走；
+       · 每个点记录「到达这里时的目标值」，点之间用目标点的 ease 插值；
+       · 没有该属性的关键帧 → 用片段上的基础属性。
+     这样预览里看到的运动，就是导出后的运动，不会「剪的时候是一个样、出片又一个样」。 */
+  var KF_PROPS=['x','y','w','h','scale','rotate','opacity','radius'];
+  var KF_LABEL={x:'横向位置',y:'纵向位置',w:'宽度',h:'高度',scale:'缩放',rotate:'旋转',opacity:'不透明度',radius:'圆角'};
+  function edNum(v,d){v=+v;return isFinite(v)?v:d}
+  function edEase(name,p){
+    p=Math.max(0,Math.min(1,p));
+    var n=String(name||'power2.inOut').toLowerCase();
+    if(n.indexOf('linear')>=0)return p;
+    var sine=n.indexOf('sine')>=0, expo=n.indexOf('expo')>=0;
+    var m=n.match(/power([1-4])/), pow=m?+m[1]:2;
+    function f(t){
+      if(t<=0)return 0;if(t>=1)return 1;
+      if(sine)return 1-Math.cos(t*Math.PI/2);
+      if(expo)return Math.pow(2,10*(t-1));
+      return Math.pow(t,pow);
+    }
+    var hasIn=n.indexOf('.in')>=0||n.indexOf('inout')>=0||n==='in';
+    var hasOut=n.indexOf('.out')>=0||n.indexOf('inout')>=0||n==='out';
+    if(hasIn&&hasOut)return p<0.5?f(2*p)/2:1-f(2*(1-p))/2;
+    if(hasOut&&!hasIn)return 1-f(1-p);
+    return f(p);
+  }
+  function edKeyPoints(c,k){
+    var base={x:edNum(c.x,0.5),y:edNum(c.y,0.5),w:edNum(c.w,1),h:edNum(c.h,1),
+      scale:edNum(c.scale,1),rotate:edNum(c.rotate,0),opacity:edNum(c.opacity,1),radius:edNum(c.radius,0)};
+    var pts=[{at:0,v:base[k],ease:'power2.inOut',base:true}];
+    (c.keys||[]).forEach(function(kk){
+      if(!kk||kk[k]==null||kk.at==null)return;
+      var v=+kk[k];if(!isFinite(v))return;
+      pts.push({at:Math.max(0,Math.min(1,+kk.at)),v:v,ease:kk.ease||'power2.inOut'});
+    });
+    pts.sort(function(a,b){return a.at-b.at});
+    var uniq=[];
+    pts.forEach(function(q){
+      if(uniq.length&&Math.abs(uniq[uniq.length-1].at-q.at)<1e-6)uniq[uniq.length-1]=q;
+      else uniq.push(q);
+    });
+    return uniq;
+  }
+  function edEvalKF(c,t){
+    var s=+c.start||0,len=edClipLen(c);
+    var p=len>0?(t-s)/len:0;
+    p=Math.max(0,Math.min(1,p));
+    var out={};
+    KF_PROPS.forEach(function(k){
+      var pts=edKeyPoints(c,k),val=pts[0].v;
+      for(var i=1;i<pts.length;i++){
+        var a=pts[i-1],b=pts[i];
+        if(p>=b.at){val=b.v;continue}
+        if(p>=a.at){
+          var span=Math.max(1e-6,b.at-a.at);
+          var e=edEase(b.ease,(p-a.at)/span);
+          val=a.v+(b.v-a.v)*e;
+          break;
+        }
+      }
+      out[k]=val;
+    });
+    return out;
+  }
+  function edApplyXform(el,c,t){
+    var v=edEvalKF(c,t),txt=c.type==='text';
+    el.style.left=(v.x*100).toFixed(3)+'%';
+    el.style.top=(v.y*100).toFixed(3)+'%';
+    el.style.width=txt?'auto':(v.w*100).toFixed(3)+'%';
+    el.style.height=txt?'auto':(v.h*100).toFixed(3)+'%';
+    el.style.maxWidth=txt?'86%':'';
+    el.style.opacity=Math.max(0,Math.min(1,v.opacity)).toFixed(3);
+    if(!txt)el.style.borderRadius=(v.radius>0?(+v.radius).toFixed(1)+'px':'0');
+    el.style.transform='translate(-50%,-50%) rotate('+v.rotate.toFixed(2)+'deg) scale('+Math.max(.01,v.scale).toFixed(4)+')';
+  }
+
+  /* ── 工程列表 ── */
+  function edLoadList(){
+    return window.api('/api/edit',{action:'list'}).then(function(d){
+      var list=(d&&d.projects)||[], sel=$('#edProj');
+      if(!list.length){sel.innerHTML='<option value="">（还没有工程）</option>';return}
+      sel.innerHTML=list.map(function(p){
+        return '<option value="'+esc(p.name)+'">'+esc(p.name)+' · '+p.clips+' 段 · '+fmt(p.duration)+'</option>';
+      }).join('');
+      /* 别把内部草稿工程（_模板试用 之类）当当前工程打开。
+         它是「先看看」的预览容器，没有主时间线，一导出必然失败。
+         列表接口已经不返回它了，但 ED.proj 可能还停在旧值上。 */
+      function isInternal(n){return String(n||'').charAt(0)==='_'}
+      if(ED.proj&&isInternal(ED.proj))ED.proj='';
+      /* 当前工程还在列表里 → 保持不动；不在了（被删/改名）→ 清掉重选 */
+      var exists=list.some(function(p){return p.name===ED.proj});
+      if(ED.proj&&!exists)ED.proj='';
+      if(ED.proj){ sel.value=ED.proj; return }
+      /* 没有当前工程：选「最新的那个」而不是 list[0]。
+         list 按名字排序的话，AI 刚建的「垂直片头演示」可能排在后面，
+         选中第一个等于还是打开旧工程，用户以为新工程没建成。
+         接口给了 mtime（秒），按它倒序取最新的最符合直觉。 */
+      var newest=list.slice().sort(function(a,b){ return (b.mtime||0)-(a.mtime||0) })[0];
+      if(newest){ sel.value=newest.name; edOpen(newest.name) }
+      else say('还没有剪辑工程，点「新建工程」开始');
+    }).catch(function(){});
+  }
+
+  function edOpen(name){
+    return window.api('/api/edit',{action:'get',project:name}).then(function(d){
+      ED.proj=name;ED.data=(d&&d.project)||null;ED.assets=(d&&d.assets)||[];ED.sel=null;
+      $('#edProj').value=name;
+      edPool();edLanes();edInsp();edPreview();
+      var sz=$('#edSize');
+      if(sz&&ED.data&&ED.data.width&&ED.data.height){
+        var v=ED.data.width+'x'+ED.data.height;
+        for(var i=0;i<sz.options.length;i++)if(sz.options[i].value===v){sz.selectedIndex=i;break}
+      }
+      var sub=$('#edSub');
+      if(sub&&ED.data)sub.textContent='当前工程：'+name+' · '+ED.data.width+'×'+ED.data.height
+        +' · '+fmt(ED.data.duration)+' · '+((ED.data.tracks||[]).reduce(function(a,t){return a+(t.clips||[]).length},0))+' 个片段';
+      return d;
+    }).catch(function(e){say('打开工程失败：'+(e&&e.message||''))});
+  }
+
+  /* ── 素材池 ── */
+  function edPool(){
+    var box=$('#edPool');if(!box)return;
+    if(!ED.assets.length){
+      box.innerHTML='<div class="ed-pool-e">还没有素材。<br>点「导入」加视频 / 音频 / 图片，<br>拖到轨道上就能用。</div>';
+      return;   /* ★ 这个 return 以前少了右大括号，函数体没闭合 —— 后面的渲染代码
+                   全部漏在函数外面，等于素材池永远不渲染。 */
+    }
+    var ic={video:'#i-film',audio:'#i-vol',image:'#i-image'};
+    box.innerHTML=ED.assets.map(function(a,i){
+      return '<div class="ed-as '+a.kind+'" draggable="true" data-i="'+i+'" title="'+esc(a.name)+'">'+
+        '<svg class="ic"><use href="'+(ic[a.kind]||'#i-list')+'"/></svg>'+
+        '<span class="nm">'+esc(a.name)+'</span>'+
+        (a.duration?'<span class="du">'+fmt(a.duration)+'</span>':'')+'</div>';
+    }).join('');
+  }
+
+  /* ── 时间线 ── */
+  function edLanes(){
+    var lanes=$('#edLanes'),ruler=$('#edRuler');
+    if(!lanes)return;
+    if(!ED.data){lanes.innerHTML='';ruler.innerHTML='';return}
+    var dur=Math.max(ED.data.duration||10,10);
+    /* 缩放口径：pps = 让整条时间线正好铺满可视宽度的每像素秒数 × 用户倍率。
+       这样 12 秒的工程也铺满整条，不会右边留一大片空白；
+       拉滑块只是在这个基准上放大缩小，不会一进来就半屏空着。 */
+    var sc=$('#edScroll');
+    var visW=Math.max(400,((sc&&sc.clientWidth)||600)-62);
+    var base=visW/dur;                       /* 铺满所需的 pps */
+    ED.pps=Math.max(4, base*(ED.zoom||1));
+    var wpx=Math.max(dur*ED.pps, visW);
+    /* 刻度按「可视宽度能放下多少秒」来画，不按工程时长画。
+       只画到 dur 的话，短工程右边会留一大片空刻度，看着像界面断了。 */
+    var visSec=Math.max(dur, wpx/ED.pps);
+    var r='',step=dur<=20?2:(dur<=60?5:10);
+    if(visSec>60)step=15;
+    if(visSec>180)step=30;
+    /* 刻度要跟片段对齐：轨道名那列占 62px，所以 tick 和 ruler 宽度都要加这 62。
+       原来 tick 从 0 画、clip 从 62 画，00:00 跟片段差一整格，看着很别扭。 */
+    for(var s2=0;s2<=visSec;s2+=step){
+      r+='<div class="tk" style="left:'+(62+s2*ED.pps)+'px">'+fmt(s2)+'</div>';
+    }
+    ruler.innerHTML=r;ruler.style.width=(wpx+62)+'px';
+    var laneIc={video:'#i-film',graphics:'#i-grid',text:'#i-text',audio:'#i-vol'};
+    lanes.innerHTML=(ED.data.tracks||[]).map(function(tr){
+      var clips=(tr.clips||[]).map(function(c,ci){
+        var left=Math.max(0,(+c.start||0)*ED.pps);
+        var len=edClipLen(c);
+        var cls=(c.type&&c.type!=='text'&&c.type!=='template')?c.type:(c.type||tr.kind);
+        var label=c.type==='text'?(c.text||'字幕'):(c.type==='template'?('模板 · '+(c.name||'')):(c.src||'').split('/').pop());
+        var on=(ED.sel&&ED.sel.track===tr.id&&ED.sel.i===ci)?' on':'';
+        /* 关键帧菱形：at 是片段内进度，落在片段宽度对应位置。
+           点菱形跳播放头到那一帧，配合右侧属性面板改值。 */
+        var kfs=(c.keys||[]).map(function(k){
+          if(k==null||k.at==null)return '';
+          return '<i class="ed-kf" data-kf="'+ci+'" data-at="'+(+k.at)+'" title="关键帧 '+fmt((+c.start||0)+(+k.at)*len)+'"></i>';
+        }).join('');
+        return '<div class="ed-cl '+cls+on+(c.locked?' lk':'')+(c.mute?' mu':'')+'" data-tr="'+esc(tr.id)+'" data-i="'+ci+'" '+
+          'style="left:'+left+'px;width:'+Math.max(16,len*ED.pps)+'px" title="'+esc(label)+'">'+
+          '<span class="h l"></span><span class="nm">'+esc(label)+'</span>'+kfs+'<span class="h r"></span></div>';
+      }).join('');
+      var lb=(tr.locked?' lk':'')+(tr.mute?' mu':'');
+      return '<div class="ed-lane'+lb+'" data-tr="'+esc(tr.id)+'">'+
+        '<div class="ed-lane-lb"><svg class="ic"><use href="'+(laneIc[tr.kind]||'#i-list')+'"/></svg>'+
+        '<span class="lb-nm">'+esc(tr.name||tr.id)+'</span>'+
+        '<button class="lb-t'+(tr.locked?' on':'')+'" data-track-act="lock" title="锁定 / 解锁这条轨道">'+(tr.locked?'🔒':'🔓')+'</button>'+
+        '<button class="lb-t'+(tr.mute?' on':'')+'" data-track-act="mute" title="静音 / 取消静音">'+(tr.mute?'🔇':'♪')+'</button>'+
+        '<button class="lb-t" data-track-act="del" title="删除这条轨道">×</button>'+
+        '</div>'+
+        '<div class="ed-lane-b" data-tr="'+esc(tr.id)+'" data-kind="'+esc(tr.kind)+'">'+
+        '<div class="ed-drop"></div>'+clips+'</div></div>';
+    }).join('');
+    edTime();
+  }
+
+  function edClipLen(c){
+    if(c.type==='text'||c.type==='template')return Math.max(0.2,+c.duration||3);
+    var d=Math.max(0.1,(+c.out||0)-(+c.in||0));
+    return d/Math.max(0.1,+c.speed||1);
+  }
+
+  function edTime(){
+    var t=Math.max(0,ED.t||0),dur=ED.data?ED.data.duration||0:0;
+    var el=$('#edTime');if(el)el.textContent=fmt(t)+' / '+fmt(dur);
+    var ph=$('#edPlay');if(ph)ph.style.left=(62+t*ED.pps)+'px';
+  }
+
+  /* ── 属性面板 ── */
+  function edInsp(){
+    var box=$('#edInsp'),title=$('#edInspTitle');
+    if(!box)return;
+    if(!ED.sel||!ED.data){title.textContent='属性';
+      box.innerHTML='<div class="hint">在时间线上点一个片段，<br>这里就能改它的参数</div>';return}
+    var tr=(ED.data.tracks||[]).filter(function(x){return x.id===ED.sel.track})[0];
+    var c=tr&&(tr.clips||[])[ED.sel.i];
+    if(!c){title.textContent='属性';box.innerHTML='<div class="hint">片段已经不在了</div>';return}
+    var kind=c.type||tr.kind;
+    title.textContent=({video:'视频片段',audio:'音频片段',image:'图片片段',text:'字幕片段',template:'模板片段'})[kind]||'片段';
+    var h='';
+    /* 基础字段：文字 / 模板 / 媒体各有各的时间口径 */
+    if(kind==='text'){
+      h+='<div class="row"><label>文字</label><input type="text" id="fText" value="'+esc(c.text||'')+'"></div>';
+      h+='<div class="two"><div class="row"><label>字号(px)</label><input type="number" id="fSize" value="'+(c.size||64)+'"></div>'+
+         '<div class="row"><label>颜色</label><input type="color" id="fColor" value="'+(c.color||'#FFFFFF')+'"></div></div>';
+      h+='<div class="two"><div class="row"><label>开始(秒)</label><input type="number" id="fStart" step="0.1" value="'+(+c.start||0)+'"></div>'+
+         '<div class="row"><label>时长(秒)</label><input type="number" id="fDur" step="0.1" value="'+(+c.duration||3)+'"></div></div>';
+    }else if(kind==='template'){
+      h+='<div class="row"><label>模板</label><input type="text" value="'+esc(c.name||'')+'" readonly></div>';
+      h+='<div class="two"><div class="row"><label>开始(秒)</label><input type="number" id="fStart" step="0.1" value="'+(+c.start||0)+'"></div>'+
+         '<div class="row"><label>时长(秒)</label><input type="number" id="fDur" step="0.1" value="'+(+c.duration||3)+'"></div></div>';
+    }else{
+      h+='<div class="row"><label>素材</label><input type="text" value="'+esc((c.src||'').split('/').pop())+'" readonly></div>';
+      h+='<div class="two"><div class="row"><label>轨道起点</label><input type="number" id="fStart" step="0.1" value="'+(+c.start||0)+'"></div>'+
+         '<div class="row"><label>素材入点</label><input type="number" id="fIn" step="0.1" value="'+(+c.in||0)+'"></div></div>';
+      h+='<div class="two"><div class="row"><label>素材出点</label><input type="number" id="fOut" step="0.1" value="'+(+c.out||0)+'"></div>'+
+         '<div class="row"><label>速度</label><input type="number" id="fSpeed" step="0.05" value="'+(+c.speed||1)+'"></div></div>';
+      if(kind!=='image')
+        h+='<div class="row"><label>音量 '+(Math.round((c.volume!=null?c.volume:1)*100))+'%</label><input type="range" id="fVol" min="0" max="100" value="'+Math.round((c.volume!=null?c.volume:1)*100)+'"></div>';
+    }
+    /* 画面变换：剪映里「画面 → 基础」那一组。视频/图片/文字/模板都能改，
+       每个属性右边的 ◆ 就是在当前播放头位置打关键帧。
+       有关键帧时输入框改的是那一帧的值，不是整段的基础值 —— 跟剪映一致。 */
+    if(kind!=='audio'){
+      var v=edEvalKF(c,ED.t);
+      var XF=[['x','横向 %',100,0],['y','纵向 %',100,0],['scale','缩放 %',100,0],
+              ['rotate','旋转 °',1,0],['opacity','不透明度 %',100,0],['radius','圆角 px',1,0]];
+      h+='<div class="vsec"><div class="vh">画面变换<span class="sp"></span>'+
+         '<span style="font-size:9.5px;color:#9AA2B1">◆ = 关键帧</span></div>';
+      XF.forEach(function(p){
+        var k=p[0],mul=p[2],cur=+((v[k]!=null?v[k]:edNum(c[k],k==='scale'?1:k==='opacity'?1:0))*mul).toFixed(1);
+        var has=edKeyAt(c,k,ED.t)>=0;
+        h+='<div class="kfrow"><label>'+p[1]+'</label>'+
+           '<input type="number" data-xf="'+k+'" data-mul="'+mul+'" step="1" value="'+cur+'">'+
+           '<button class="kfbtn'+(has?' on':'')+'" data-kfprop="'+k+'" title="在播放头位置打 / 取消关键帧">◆</button></div>';
+      });
+      h+='<div class="kfrow"><label>层级 z</label><input type="number" data-xf="z" data-mul="1" step="1" value="'+edNum(c.z,0)+'">'+
+         '<button class="kfbtn" disabled title="层级不参与关键帧" style="opacity:.3">·</button></div>';
+      /* 动画预设：没有关键帧时才生效（跟导出端 tweens() 的取舍一致），避免两套位移打架。 */
+      h+='<div class="kfrow"><label>预设动画</label><select data-xf="anim">'+
+         [['','无'],['fade','淡入淡出'],['slideUp','上滑入'],['slideDown','下滑入'],
+          ['slideLeft','左滑入'],['slideRight','右滑入'],['zoomIn','放大入'],['zoomOut','缩小入'],
+          ['kenburns','缓慢推镜']].map(function(o){
+            return '<option value="'+o[0]+'"'+((c.anim||'')===o[0]?' selected':'')+'>'+o[1]+'</option>';
+          }).join('')+'</select><button class="kfbtn" disabled style="opacity:.3">·</button></div>';
+      h+='</div>';
+      /* 关键帧列表：跳转 / 改缓动 / 删除。这是「剪映那样调关键帧」的核心操作面。 */
+      h+='<div class="vsec"><div class="vh">关键帧 <span class="sp"></span>'+
+         '<span style="font-size:9.5px;color:#9AA2B1">'+((c.keys||[]).length)+' 个</span></div>'+
+         '<div class="kfops"><button id="kfAddAll">＋ 在这一帧打全部</button>'+
+         '<button id="kfClear">清空</button></div><div class="kflist" id="kfList">'+
+         edKfList(c)+'</div></div>';
+    }
+    if(kind==='template'){
+      /* 模板的可改内容。模板只提供动效，字是每一期都要换的 ——
+         所以这里填的值落在**片段**上，不动模板源文件（同一个模板
+         在这条时间线上装两次，各填各的，互不影响）。 */
+      h+='<div class="vsec" id="fVars"><div class="vh">这个模板能改的内容</div>'+
+         '<div class="vlist" id="fVarList"><div class="hint">读取中…</div></div></div>';
+    }
+    h+='<button class="del" id="fDel">删掉这个片段</button>';
+    box.innerHTML=h;
+    edWire();
+    if(kind==='template') edFillVars(c);
+  }
+
+  /* 当前播放头位置附近有没有某个属性的关键帧，返回 key 的下标，没有返回 -1。
+     容差 0.03 个进度（约 0.1 秒），让「走到关键帧上按 ◆ 取消」能命中。 */
+  function edKeyAt(c,prop,t){
+    var len=edClipLen(c);if(len<=0)return -1;
+    var p=(t-(+c.start||0))/len;
+    var keys=c.keys||[];
+    for(var i=0;i<keys.length;i++){
+      var k=keys[i];if(!k||k.at==null||k[prop]==null)continue;
+      if(Math.abs((+k.at)-p)<=0.03)return i;
+    }
+    return -1;
+  }
+  /* 关键帧列表 HTML */
+  function edKfList(c){
+    var keys=c.keys||[];
+    if(!keys.length)return '<div class="hint" style="padding:8px 2px">还没有关键帧。<br>把播放头挪到要变的位置，点属性右边的 ◆ 或「＋ 在这一帧打全部」。</div>';
+    var len=edClipLen(c),st=+c.start||0;
+    return keys.map(function(k,i){
+      var at=Math.max(0,Math.min(1,+k.at||0));
+      var cur=Math.abs(ED.t-(st+at*len))<0.15;
+      var summary=KF_PROPS.filter(function(p){return k[p]!=null}).map(function(p){
+        return KF_LABEL[p].slice(0,2)+':'+(+k[p]).toFixed(2);
+      }).join(' ');
+      var ease=String(k.ease||'power2.inOut');
+      var es=['power2.inOut','power1.inOut','power3.inOut','linear','sine.inOut','expo.out','none'].map(function(e){
+        return '<option value="'+e+'"'+(ease===e?' selected':'')+'>'+({none:'默认',linear:'匀速','power2.inOut':'缓入缓出','power1.inOut':'轻微缓动','power3.inOut':'强缓动','sine.inOut':'正弦','expo.out':'急停'})[e]+'</option>';
+      }).join('');
+      return '<div class="kfi'+(cur?' cur':'')+'">'+
+        '<span class="at">'+fmt(st+at*len)+'</span>'+
+        '<span class="val" title="'+esc(summary)+'">'+esc(summary||'（空帧）')+'</span>'+
+        '<select data-kfease="'+i+'">'+es+'</select>'+
+        '<button data-kfgo="'+i+'" title="跳到这一帧">▸</button>'+
+        '<button data-kfdel="'+i+'" title="删掉这一帧">×</button></div>';
+    }).join('');
+  }
+  /* 打/取消一个属性的关键帧 */
+  function edKfToggle(c,prop){
+    var len=edClipLen(c);if(len<=0)return;
+    var p=Math.max(0,Math.min(1,(ED.t-(+c.start||0))/len));
+    var idx=edKeyAt(c,prop,ED.t);
+    c.keys=c.keys||[];
+    if(idx>=0){
+      delete c.keys[idx][prop];
+      if(!KF_PROPS.some(function(k){return c.keys[idx][k]!=null}))c.keys.splice(idx,1);
+      say('已取消「'+KF_LABEL[prop]+'」在这个位置的关键帧');
+    }else{
+      var v=edEvalKF(c,ED.t)[prop];
+      /* 同一位置已有别的属性的帧 → 合并进去，不要叠出两个重叠的菱形 */
+      var hit=-1;
+      c.keys.forEach(function(k,i){if(k&&k.at!=null&&Math.abs((+k.at)-p)<0.02)hit=i});
+      if(hit<0){c.keys.push({at:Math.round(p*1000)/1000,ease:'power2.inOut',[prop]:v})}
+      else c.keys[hit][prop]=v;
+      c.keys.sort(function(a,b){return (+a.at)-(+b.at)});
+      say('已在 '+fmt(ED.t)+' 打上「'+KF_LABEL[prop]+'」关键帧');
+    }
+    edDirty();edLanes();edInsp();edPreview();
+  }
+  /* 关键帧模式下改属性值：有帧改帧，没帧改基础值 */
+  function edSetXf(c,prop,v){
+    var idx=edKeyAt(c,prop,ED.t);
+    if(idx>=0&&c.keys&&c.keys[idx])c.keys[idx][prop]=v;
+    else c[prop]=v;
+    edDirty();edPreview();
+  }
+
+  /* 把一个模板片段能改的项列出来。声明来自模板源码里的
+     data-composition-variables，值来自片段自己的 vars。 */
+  function edFillVars(clip){
+    var box=$('#fVarList'); if(!box)return;
+    var cid=clip.id||'';
+    if(!cid){box.innerHTML='<div class="hint">这个片段还没存过，先拖一下时间线</div>';return}
+    window.api('/api/edit?action=template_vars&project='+encodeURIComponent(ED.proj)+
+               '&clip_id='+encodeURIComponent(cid)).then(function(d){
+      var it=((d&&d.items)||[])[0];
+      var decl=(it&&it.decl)||[], vals=(it&&it.values)||clip.vars||{};
+      if(!decl.length){
+        box.innerHTML='<div class="hint">这个模板没有可改项，内容是写死的。<br>'+
+                      '要换字得改源码（工程 compositions 目录里的 html）。</div>';
+        return}
+      box.innerHTML=decl.map(function(v){
+        var val=vals[v.id]!=null?vals[v.id]:(v.default!=null?v.default:'');
+        var lbl=esc(v.label||v.id), hint=v.desc?' title="'+esc(v.desc)+'"':'';
+        if(v.type==='color'){
+          return '<div class="vrow"><label'+hint+'>'+lbl+'</label>'+
+                 '<input type="color" data-var="'+esc(v.id)+'" value="'+esc(String(val))+'"></div>';
+        }
+        if(v.type==='enum'&&v.options){
+          var op=v.options.map(function(o){
+            return '<option value="'+esc(String(o.value))+'"'+
+                   (String(val)===String(o.value)?' selected':'')+'>'+esc(String(o.label||o.value))+'</option>';
+          }).join('');
+          return '<div class="vrow"><label'+hint+'>'+lbl+'</label>'+
+                 '<select data-var="'+esc(v.id)+'">'+op+'</select></div>';
+        }
+        var long=String(v.default||'').length>34;
+        return '<div class="vrow'+(long?' col':'')+'"><label'+hint+'>'+lbl+'</label>'+
+               (long?'<textarea data-var="'+esc(v.id)+'" rows="2">'+esc(String(val))+'</textarea>'
+                    :'<input type="text" data-var="'+esc(v.id)+'" value="'+esc(String(val))+'">')+
+               '</div>';
+      }).join('');
+    }).catch(function(){ box.innerHTML='<div class="hint">读不到这个模板的参数</div>' });
+  }
+
+  function edWire(){
+    function num(id,fn){var e=$(id);if(e)e.addEventListener('input',function(){fn(+this.value);edDirty()})}
+    function str(id,fn){var e=$(id);if(e)e.addEventListener('input',function(){fn(this.value);edDirty()})}
+    var c=edSel();if(!c)return;
+    str('#fText',function(v){c.text=v;edLanes();edPreview()});
+    num('#fSize',function(v){c.size=v;edPreview()});
+    str('#fColor',function(v){c.color=v;edPreview()});
+    num('#fStart',function(v){c.start=Math.max(0,v);edLanes()});
+    num('#fDur',function(v){c.duration=Math.max(0.2,v);edLanes()});
+    num('#fIn',function(v){c.in=Math.max(0,v);edLanes()});
+    num('#fOut',function(v){c.out=Math.max(0,v);edLanes()});
+    num('#fSpeed',function(v){c.speed=Math.max(0.1,v);edLanes()});
+    var vol=$('#fVol');
+    if(vol)vol.addEventListener('input',function(){c.volume=(+this.value)/100;
+      this.previousElementSibling.textContent='音量 '+this.value+'%'});
+    /* 变换输入：有关键帧就改帧，没关键帧就改基础值（剪映行为）。 */
+    Array.prototype.forEach.call(document.querySelectorAll('#edInsp [data-xf]'),function(inp){
+      var ev=inp.tagName==='SELECT'?'change':'input';
+      inp.addEventListener(ev,function(){
+        var k=inp.getAttribute('data-xf'),mul=+(inp.getAttribute('data-mul')||1);
+        var v=+inp.value/mul;if(!isFinite(v))return;
+        if(k==='scale')v=Math.max(0.01,v);
+        if(k==='opacity')v=Math.max(0,Math.min(1,v));
+        if(k==='anim'){c.anim=v;edDirty();return}
+        if(k==='z'){c.z=v;edDirty();edPreview();return}
+        edSetXf(c,k,v);
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#edInsp [data-kfprop]'),function(b){
+      b.addEventListener('click',function(){edKfToggle(c,b.getAttribute('data-kfprop'))});
+    });
+    var all=$('#kfAddAll');
+    if(all)all.addEventListener('click',function(){
+      var len=edClipLen(c);if(len<=0)return;
+      var p=Math.max(0,Math.min(1,(ED.t-(+c.start||0))/len));
+      var v=edEvalKF(c,ED.t);c.keys=c.keys||[];
+      var hit=-1;
+      c.keys.forEach(function(k,i){if(k&&k.at!=null&&Math.abs((+k.at)-p)<0.02)hit=i});
+      var pt=hit<0?{at:Math.round(p*1000)/1000,ease:'power2.inOut'}:c.keys[hit];
+      KF_PROPS.forEach(function(k){pt[k]=v[k]});
+      if(hit<0)c.keys.push(pt);
+      c.keys.sort(function(a,b){return (+a.at)-(+b.at)});
+      edDirty();edLanes();edInsp();edPreview();
+      say('已在 '+fmt(ED.t)+' 打上全部关键帧');
+    });
+    var clr=$('#kfClear');
+    if(clr)clr.addEventListener('click',function(){
+      if(!(c.keys||[]).length)return;
+      c.keys=[];edDirty();edLanes();edInsp();edPreview();say('这个片段的关键帧已清空');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#edInsp [data-kfgo]'),function(b){
+      b.addEventListener('click',function(){
+        var k=(c.keys||[])[+b.getAttribute('data-kfgo')];if(!k)return;
+        ED.t=(+c.start||0)+(+k.at||0)*edClipLen(c);
+        edTime();edInsp();edPreview();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#edInsp [data-kfdel]'),function(b){
+      b.addEventListener('click',function(){
+        var i=+b.getAttribute('data-kfdel');
+        if(c.keys&&c.keys[i])c.keys.splice(i,1);
+        edDirty();edLanes();edInsp();edPreview();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#edInsp [data-kfease]'),function(s){
+      s.addEventListener('change',function(){
+        var k=(c.keys||[])[+s.getAttribute('data-kfease')];if(!k)return;
+        k.ease=this.value;edDirty();say('这个关键帧的缓动已改为「'+this.options[this.selectedIndex].text+'」');
+      });
+    });
+    var del=$('#fDel');
+    if(del)del.addEventListener('click',function(){
+      var tr=(ED.data.tracks||[]).filter(function(x){return x.id===ED.sel.track})[0];
+      if(!tr)return;
+      tr.clips.splice(ED.sel.i,1);ED.sel=null;edDirty();edLanes();edInsp();edPreview();
+    });
+  }
+
+  function edSel(){
+    if(!ED.sel||!ED.data)return null;
+    var tr=(ED.data.tracks||[]).filter(function(x){return x.id===ED.sel.track})[0];
+    return tr?(tr.clips||[])[ED.sel.i]:null;
+  }
+
+  function edDirty(){ED.dirty=true}
+
+  function edSave(quiet){
+    if(!ED.data||!ED.proj)return Promise.resolve();
+    ED.data.duration=Math.max(ED.data.duration||1,edTail());
+    return window.api('/api/edit',{action:'save',project:ED.proj,project_data:ED.data})
+      .then(function(d){
+        if(d&&d.project)ED.data=d.project;
+        ED.dirty=false;
+        if(!quiet)say('工程已保存');
+        edLanes();
+      }).catch(function(e){say('保存失败：'+(e&&e.message||''))});
+  }
+
+  function edTail(){
+    var end=0;
+    (ED.data.tracks||[]).forEach(function(t){
+      (t.clips||[]).forEach(function(c){
+        end=Math.max(end,(+c.start||0)+edClipLen(c));
+      });
+    });
+    return Math.round(end*100)/100;
+  }
+
+  /* ── 拖拽 ── */
+  var drag=null;
+  document.addEventListener('mousedown',function(e){
+    /* 点菱形 = 播放头跳到这一帧，不启动片段拖拽 */
+    var kf=e.target.closest&&e.target.closest('.ed-kf');
+    if(kf){
+      var kcl=kf.closest('.ed-cl');
+      var kt=kcl&&kcl.getAttribute('data-tr'),ki=kcl?+kcl.getAttribute('data-i'):-1;
+      var kc=edClipAt(kt,ki);
+      if(kc){
+        ED.sel={track:kt,i:ki};
+        ED.t=(+kc.start||0)+(+kf.getAttribute('data-at')||0)*edClipLen(kc);
+        e.preventDefault();e.stopPropagation();
+        edLanes();edInsp();edTime();edPreview();
+      }
+      return;
+    }
+    var cl=e.target.closest('.ed-cl');if(!cl)return;
+    var tr=cl.getAttribute('data-tr'),i=+cl.getAttribute('data-i');
+    var trObj=(ED.data.tracks||[]).filter(function(x){return x.id===tr})[0];
+    if(trObj&&trObj.locked){say('这条轨道锁住了，点轨道名旁边的 🔓 解锁');return}
+    var c=edClipAt(tr,i);if(!c)return;
+    if(c.locked){say('这个片段锁住了');return}
+    ED.sel={track:tr,i:i};edLanes();edInsp();
+    var mode='move';
+    if(e.target.classList.contains('h'))mode=e.target.classList.contains('l')?'left':'right';
+    drag={mode:mode,c:c,x0:e.clientX,start0:+c.start||0,
+          in0:+c.in||0,out0:+c.out||0,dur0:edClipLen(c),tr:tr};
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!drag)return;
+    var dx=(e.clientX-drag.x0)/ED.pps;
+    if(drag.mode==='move'){
+      drag.c.start=Math.max(0,Math.round((drag.start0+dx)*100)/100);
+    }else if(drag.mode==='right'){
+      if(drag.c.type==='text'||drag.c.type==='template'){
+        drag.c.duration=Math.max(0.2,Math.round((drag.dur0+dx)*100)/100);
+      }else{
+        drag.c.out=Math.max(drag.in0+0.1,Math.round((drag.out0+dx)*100)/100);
+      }
+    }else{
+      if(drag.c.type==='text'||drag.c.type==='template'){
+        var nd=Math.max(0.2,drag.dur0-dx);
+        drag.c.start=Math.max(0,drag.start0+(drag.dur0-nd));
+        drag.c.duration=Math.round(nd*100)/100;
+      }else{
+        drag.c.in=Math.max(0,Math.min(drag.out0-0.1,Math.round((drag.in0+dx)*100)/100));
+        drag.c.start=Math.max(0,Math.round((drag.start0+dx)*100)/100);
+      }
+    }
+    edDirty();edLanes();
+  });
+  document.addEventListener('mouseup',function(){
+    if(!drag)return;drag=null;edInsp();
+  });
+
+  function edClipAt(tr,i){
+    if(!ED.data)return null;
+    var t=(ED.data.tracks||[]).filter(function(x){return x.id===tr})[0];
+    return t?(t.clips||[])[i]:null;
+  }
+
+  /* ── 轨道操作：加 / 锁 / 静音 / 删 ──
+     「多轨」不只是画几条线：每条轨要能单独锁住防误拖、静音、删掉，
+     还要能随时加一条新轨 —— 这些在剪映里都是最基础的动作。 */
+  function edAddTrack(kind){
+    /* 没打开工程时，「加轨」不能静默失败 —— 那正是用户说的「轨道做不了」。
+       自动建一个工程再挂轨，一次点击就把多轨时间线跑起来。
+       ★ 建工程是异步的，建完回调里再走一遍本函数（那时 ED.data 已就绪）。 */
+    if(!ED.data){
+      var nm0='未命名-'+Date.now().toString().slice(-4);
+      say('还没有工程，正在自动建一个…');
+      window.api('/api/edit',{action:'new',name:nm0}).then(function(){
+        return edLoadList().then(function(){return edOpen(nm0)});
+      }).then(function(){
+        if(ED.data){edAddTrack(kind);say('工程「'+nm0+'」建好了，轨道已就位，把素材拖上来就能剪')
+        }else say('工程建好了，请从上面的工程列表选它');
+      }).catch(function(e){say('建工程失败：'+((e&&e.message)||''))});
+      return;
+    }
+    var nm={video:'主视频',graphics:'图形',text:'字幕',audio:'音频'};
+    var n=(ED.data.tracks||[]).filter(function(t){return t.kind===kind}).length+1;
+    ED.data.tracks=ED.data.tracks||[];
+    ED.data.tracks.push({id:kind.charAt(0)+'t'+Date.now().toString().slice(-5),
+      kind:kind,name:(nm[kind]||kind)+n,clips:[]});
+    edDirty();edLanes();say('已加一条'+(nm[kind]||kind)+'轨');
+  }
+  function edConfirm(text,onOk){
+    if(window.__confirmAsk){window.__confirmAsk(text,onOk);return}
+    if(window.confirm&&window.confirm(text))onOk();
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('[data-track-act]');
+    if(!b||!ED.data)return;
+    var lane=b.closest('.ed-lane'),tid=lane&&lane.getAttribute('data-tr');
+    var tr=(ED.data.tracks||[]).filter(function(x){return x.id===tid})[0];
+    if(!tr)return;
+    var act=b.getAttribute('data-track-act');
+    if(act==='lock')tr.locked=!tr.locked;
+    else if(act==='mute')tr.mute=!tr.mute;
+    else if(act==='del'){
+      if((ED.data.tracks||[]).length<=1){say('至少留一条轨道');return}
+      var n=(tr.clips||[]).length;
+      var go=function(){
+        ED.data.tracks=ED.data.tracks.filter(function(x){return x!==tr});
+        if(ED.sel&&ED.sel.track===tid)ED.sel=null;
+        edDirty();edLanes();edInsp();edPreview();
+        say('轨道已删除');
+      };
+      if(n)edConfirm('这条轨道上有 '+n+' 个片段，删轨会一起删掉。确定？',go);
+      else go();
+      return;
+    }
+    edDirty();edLanes();edInsp();edPreview();
+  });
+  $('#edAddVBtn')&&$('#edAddVBtn').addEventListener('click',function(){edAddTrack('video')});
+  $('#edAddTBtn')&&$('#edAddTBtn').addEventListener('click',function(){edAddTrack('text')});
+  $('#edAddABtn')&&$('#edAddABtn').addEventListener('click',function(){edAddTrack('audio')});
+
+  /* ── 分割 / 复制 ── */
+  function edSplit(){
+    var c=edSel();if(!c){say('先点一个片段，再把播放头挪到要切开的位置');return}
+    var tr=(ED.data.tracks||[]).filter(function(x){return x.id===ED.sel.track})[0];
+    if(!tr||tr.locked){say('这条轨道锁住了');return}
+    var s=+c.start||0,len=edClipLen(c),off=ED.t-s;
+    if(off<=0.15||off>=len-0.15){say('把播放头放到片段中间（别贴着两头）再分割');return}
+    var right=JSON.parse(JSON.stringify(c));
+    right.id='c'+Date.now()+'x'+Math.floor(Math.random()*99);
+    right.start=Math.round((s+off)*100)/100;
+    var p=off/len;
+    /* 关键帧按切点拆：左边留 at≤p，右边的 at 重映射到新片段的 0~1。 */
+    if(c.keys&&c.keys.length){
+      c.keys=c.keys.filter(function(k){return (+k.at)<=p});
+      right.keys=(right.keys||[]).filter(function(k){return (+k.at)>p}).map(function(k){
+        k.at=Math.round(((+k.at)-p)/(1-p)*1000)/1000;return k;
+      });
+    }
+    if(c.type==='text'||c.type==='template'){
+      c.duration=Math.round(off*100)/100;
+      right.duration=Math.round((len-off)*100)/100;
+    }else{
+      var cut=Math.round(((+c.in||0)+off*(+c.speed||1))*100)/100;
+      c.out=cut;right.in=cut;
+    }
+    tr.clips.splice(ED.sel.i+1,0,right);
+    edDirty();edLanes();edInsp();edPreview();say('已在 '+fmt(ED.t)+' 把片段切成两段');
+  }
+  function edDup(){
+    var c=edSel();if(!c){say('先点一个片段');return}
+    var tr=(ED.data.tracks||[]).filter(function(x){return x.id===ED.sel.track})[0];
+    if(!tr)return;
+    var d=JSON.parse(JSON.stringify(c));
+    d.id='c'+Date.now()+'d'+Math.floor(Math.random()*99);
+    d.start=Math.round(((+c.start||0)+edClipLen(c))*100)/100;
+    tr.clips.splice(ED.sel.i+1,0,d);ED.sel.i++;
+    edDirty();edLanes();edInsp();edPreview();say('片段已复制一份，接在后面');
+  }
+  $('#edSplitBtn')&&$('#edSplitBtn').addEventListener('click',edSplit);
+  $('#edDupBtn')&&$('#edDupBtn').addEventListener('click',edDup);
+
+  /* 素材池拖到轨道 */
+  document.addEventListener('dragstart',function(e){
+    var a=e.target.closest('.ed-as');if(!a)return;
+    e.dataTransfer.setData('text/plain','asset:'+a.getAttribute('data-i'));
+    e.dataTransfer.effectAllowed='copy';
+  });
+  document.addEventListener('dragover',function(e){
+    var lane=e.target.closest('.ed-lane-b');if(!lane)return;
+    e.preventDefault();e.dataTransfer.dropEffect='copy';
+    lane.classList.add('over');
+  });
+  document.addEventListener('dragleave',function(e){
+    var lane=e.target.closest('.ed-lane-b');if(lane)lane.classList.remove('over');
+  });
+  document.addEventListener('drop',function(e){
+    var lane=e.target.closest('.ed-lane-b');if(!lane)return;
+    e.preventDefault();lane.classList.remove('over');
+    var raw=e.dataTransfer.getData('text/plain')||'';
+    if(raw.indexOf('asset:')!==0)return;
+    var a=ED.assets[+raw.slice(6)];if(!a)return;
+    var kind=lane.getAttribute('data-kind');
+    // 落点换算成秒：减去左边轨道名那一列的宽度
+    var box=lane.getBoundingClientRect();
+    var x=Math.max(0,e.clientX-box.left);
+    var start=Math.round(x/ED.pps*100)/100;
+    if((a.kind==='audio')!==(kind==='audio')){
+      say(a.kind==='audio'?'音频请放到音频轨':'这个素材要放到视频轨');return;
+    }
+    var c={id:'c'+Date.now(),start:start,volume:1,speed:1};
+    if(a.kind==='image'){c.type='image';c.src=a.src;c.in=0;c.out=5}
+    else{c.type=a.kind;c.src=a.src;c.in=0;c.out=a.duration||5}
+    edPush(lane.getAttribute('data-tr'),c);
+  });
+
+  function edPush(trId,c){
+    if(!ED.data)return;
+    var t=(ED.data.tracks||[]).filter(function(x){return x.id===trId})[0];
+    if(!t){t=(ED.data.tracks||[]).filter(function(x){return x.kind===trId})[0]}
+    if(!t)return;
+    t.clips=t.clips||[];t.clips.push(c);
+    ED.data.duration=Math.max(ED.data.duration||1,edTail());
+    ED.sel={track:t.id,i:t.clips.length-1};
+    edDirty();edLanes();edInsp();edSave(true);
+  }
+
+  /* ── 播放头 ── */
+  var raf=0,t0=0;
+  function edPlayToggle(){
+    if(!ED.data)return;
+    ED.playing=!ED.playing;
+    if(ED.playing){
+      t0=performance.now()-ED.t*1000;
+      var tick=function(){
+        if(!ED.playing)return;
+        ED.t=(performance.now()-t0)/1000;
+        if(ED.t>=(ED.data.duration||0)){ED.t=0;ED.playing=false;edTime();edPreview();return}
+        edTime();edPreview();raf=requestAnimationFrame(tick);
+      };
+      raf=requestAnimationFrame(tick);
+      edPreview();
+    }else{if(raf)cancelAnimationFrame(raf)}
+  }
+
+  /* 合成容器固定用工程的真实分辨率排版（默认 1920×1080），再整块 scale 缩进预览框。
+     这样 x/y/w/h 的「比例」口径、文字的 px 字号，都跟导出端 composition 完全一致，
+     编辑器里看到的构图就是出片的构图。 */
+  function edComposeFit(){
+    var box=ED.compose,st=$('#edStage');if(!box||!st||!ED.data)return;
+    var W=+ED.data.width||1920,H=+ED.data.height||1080;
+    box.style.width=W+'px';box.style.height=H+'px';
+    var bw=st.clientWidth-20,bh=st.clientHeight-20;
+    if(bw<=0||bh<=0)return;
+    var k=Math.min(bw/W,bh/H);
+    box.style.transform='translate(-50%,-50%) scale('+k.toFixed(4)+')';
+  }
+  function edPreviewURL(c){
+    return '/ed/'+encodeURIComponent(ED.proj)+'/'+encodeURIComponent((c.src||'').split('/').pop());
+  }
+  /* ★ 真正的多轨合成预览。
+     以前这里只挑「一个」best 片段显示 —— 两条轨同时有东西就只能看见一条，
+     字幕永远看不到，关键帧变换也完全没应用，所以怎么看都不像剪映。
+     现在：当前时刻所有命中的片段按「视频→图形/模板→文字、再按 z」叠成一张画面，
+     每层都跑 edApplyXform() 把关键帧插值出来的位置/缩放/旋转/透明度写上去。 */
+  function edPreview(){
+    var st=$('#edStage');if(!st||!ED.data)return;
+    var box=ED.compose;
+    if(!box||box.parentNode!==st){
+      st.innerHTML='';box=document.createElement('div');box.className='ed-compose';
+      st.appendChild(box);ED.compose=box;ED.layers={};
+    }
+    edComposeFit();
+    /* 收集这一刻有画面的片段（音频轨只出声不出画面，隐藏轨不参与） */
+    var hits=[];
+    (ED.data.tracks||[]).forEach(function(tr){
+      if(tr.hidden)return;
+      (tr.clips||[]).forEach(function(c){
+        var s=+c.start||0,e2=s+edClipLen(c);
+        if(ED.t>=s&&ED.t<e2)hits.push({c:c,tr:tr});
+      });
+    });
+    if(!hits.length){
+      Object.keys(ED.layers).forEach(function(k){ED.layers[k].remove();delete ED.layers[k]});
+      box.innerHTML='';
+      var ph=document.createElement('div');ph.className='ph';
+      ph.style.cssText='position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:150%;text-align:center';
+      ph.innerHTML=fmt(ED.t)+' 这个位置没有画面<br>'
+        +'<span style="font-size:10.5px;color:#4C586A">把素材拖到「主视频」轨上，或从模板库装个模板到「图形」轨</span>';
+      st.appendChild(ph);
+      edAudioPreview([]);
+      return;
+    }
+    var oldPh=st.querySelector('.ph');if(oldPh)oldPh.remove();
+    var rank={video:0,image:0,graphics:1,template:1,text:2};
+    hits.sort(function(a,b){
+      var ra=rank[a.c.type]!=null?rank[a.c.type]:(a.tr.kind==='graphics'?1:0);
+      var rb=rank[b.c.type]!=null?rank[b.c.type]:(b.tr.kind==='graphics'?1:0);
+      return ra!==rb?ra-rb:((+a.c.z)||0)-((+b.c.z)||0);
+    });
+    var live={},audio=[],ordered=[];
+    hits.forEach(function(h){
+      var c=h.c,tr=h.tr,key=tr.id+'_'+(tr.clips||[]).indexOf(c);
+      var typ=c.type==='text'?'text':(c.type==='template'?'template':
+                (c.type==='audio'?'audio':(c.type==='image'?'image':'media')));
+      if(typ==='audio'){audio.push({c:c,tr:tr});return}
+      var L=ED.layers[key],needRebuild=!L||L.dataset.typ!==typ;
+      var tu='';
+      if(typ==='template'){
+        var nm=(c.src||'').split('/').pop().replace(/\.html$/,'');
+        tu='/edt/'+encodeURIComponent(ED.proj)+'/'+encodeURIComponent(nm);
+        if(L&&L.dataset.src!==tu)needRebuild=true;
+      }
+      if(needRebuild){
+        if(L)L.remove();
+        L=document.createElement('div');L.className='ed-layer '+typ;
+        L.dataset.typ=typ;L.dataset.src=tu;
+        if(typ==='text'){
+          L.innerHTML='<div class="ed-text"></div>';
+        }else if(typ==='template'){
+          L.innerHTML='<iframe class="ed-tpl" data-src="'+tu+'" src="'+tu+'" frameborder="0" '
+            +'scrolling="no" sandbox="allow-scripts allow-same-origin"></iframe>';
+          var fr=L.querySelector('iframe');
+          if(fr)fr.addEventListener('load',function(){edTplSeek(fr,Math.max(0,ED.t-(+c.start||0)),ED.playing)});
+        }else if(typ==='image'){
+          L.innerHTML='<img src="">';
+        }else{
+          L.innerHTML='<video muted playsinline></video>';
+        }
+        ED.layers[key]=L;
+      }
+      var url=edPreviewURL(c);
+      if(typ==='text'){
+        var tx=L.querySelector('.ed-text');
+        if(tx){
+          tx.textContent=c.text||'';
+          tx.style.fontSize=(+c.size||64)+'px';
+          tx.style.color=c.color||'#FFFFFF';
+          tx.style.fontWeight=(c.weight||700);
+          if(String(c.plate)==='0'){
+            tx.style.background='none';tx.style.boxShadow='none';tx.style.textShadow='none';
+          }
+        }
+      }else if(typ==='template'){
+        var ifr=L.querySelector('iframe');
+        if(ifr)edTplSeek(ifr,Math.max(0,ED.t-(+c.start||0)),ED.playing);
+      }else{
+        var m=typ==='image'?L.querySelector('img'):L.querySelector('video');
+        if(m){
+          if(m.getAttribute('src')!==url)m.src=url;
+          if(typ==='media'){
+            /* 素材时间点 = in + 片段内已走时间 × 速度，跟导出端 data-media-start 同一口径。
+               只在偏差明显时纠正，避免每帧 seek 把画面拖卡。 */
+            var want=Math.max(0,(+c.in||0)+(ED.t-(+c.start||0))*(+c.speed||1));
+            if(m.readyState>0&&Math.abs(m.currentTime-want)>0.25)m.currentTime=want;
+            if(ED.playing){if(m.paused)m.play().catch(function(){})}
+            else if(!m.paused)m.pause();
+            m.volume=c.mute?0:edNum(c.volume,1);
+          }
+        }
+      }
+      edApplyXform(L,c,ED.t);
+      ordered.push({key:key,el:L});
+      live[key]=1;
+    });
+    /* 只在「这一刻的图层组合/层级」变了时才重排 DOM。
+       每帧 appendChild 会把 video 摘下来再插回去，播放会一顿一顿的。 */
+    var sig=ordered.map(function(o){return o.key}).join('|');
+    if(sig!==ED.layerSig){
+      ED.layerSig=sig;
+      ordered.forEach(function(o){box.appendChild(o.el)});
+    }
+    Object.keys(ED.layers).forEach(function(k){
+      if(!live[k]){ED.layers[k].remove();delete ED.layers[k];ED.layerSig=''}
+    });
+    edAudioPreview(audio);
+  }
+
+  /* 音频预览：当前时刻命中的音频片段各自 seek，播放时一起走。
+     用缓存的 <audio> 元素，不塞进画面容器，避免每帧重建导致断音。 */
+  function edAudioPreview(list){
+    var box=ED.audios||(ED.audios={});
+    var live={};
+    list.forEach(function(h){
+      var c=h.c,key=(h.tr.id||'a')+'_'+((h.tr.clips||[]).indexOf(c));
+      var a=box[key];
+      if(!a){a=new Audio();a.preload='auto';box[key]=a}
+      var url=edPreviewURL(c);
+      if(a.getAttribute('src')!==url)a.src=url;
+      a.muted=!!(h.tr.mute||c.mute);
+      a.volume=edNum(c.volume,1);
+      var want=Math.max(0,(+c.in||0)+(ED.t-(+c.start||0))*(+c.speed||1));
+      if(a.readyState>0&&Math.abs(a.currentTime-want)>0.3)a.currentTime=want;
+      if(ED.playing){if(a.paused)a.play().catch(function(){})}
+      else if(!a.paused)a.pause();
+      live[key]=1;
+    });
+    Object.keys(box).forEach(function(k){
+      if(!live[k]){try{box[k].pause()}catch(e){}delete box[k]}
+    });
+  }
+  window.addEventListener('resize',function(){
+    edComposeFit();
+  });
+
+  /* 把预览里的模板 iframe 拖到正确的时间点。
+     模板自带一条 gsap 时间轴（window.__timelines["main"] 或 ["<模板名>"]），
+     我们自己也是这么写的，所以可以直接 seek 它 —— 用户在时间线上拖到第 3 秒，
+     模板画面就得是第 3 秒，而不是永远停在第 0 帧。
+     模板是 sandbox iframe，同源（都从 127.0.0.1 来）所以能直接进 contentWindow；
+     万一将来跨源，try/catch 掉就行，不影响预览显示静态首帧。 */
+  function edTplSeek(fr,rel,playing){
+    if(!fr||!fr.contentWindow)return;
+    try{
+      var w=fr.contentWindow;
+      var tl=w.__timelines&&(w.__timelines["main"]||Object.values(w.__timelines)[0]);
+      if(!tl||!tl.seek)return;
+      if(playing){
+        // 播的时候交给模板自己的时钟，只在明显对不上时纠正，避免每帧打断
+        if(Math.abs((tl.time()||0)-rel)>0.35)tl.seek(rel);
+        if(tl.paused&&tl.play)tl.play();
+      }else{
+        if(tl.pause)tl.pause();
+        tl.seek(rel);
+      }
+    }catch(e){}
+  }
+
+  /* ── 缩放 / 滚动定位 ── */
+  var zm=$('#edZoom');
+  if(zm)zm.addEventListener('input',function(){
+    ED.zoom=(+this.value)/100;    /* 1.0 = 正好铺满；往右放大看细节 */
+    edLanes();edTime();
+  });
+  var sc=$('#edScroll');
+  if(sc)sc.addEventListener('click',function(e){
+    var r=$('#edRuler');if(!r||!r.contains(e.target))return;
+    var box=r.getBoundingClientRect();
+    ED.t=Math.max(0,(e.clientX-box.left-62)/ED.pps);   /* 62 = 轨道名列宽 */
+    edTime();edPreview();edInsp();
+  });
+  /* 播放头可以直接拖 —— 剪映里最常用的是「抓着红线扫一遍看哪帧要打点」。 */
+  var playH=$('#edPlay'),headDrag=false;
+  if(playH)playH.addEventListener('mousedown',function(e){
+    headDrag=true;e.preventDefault();e.stopPropagation();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!headDrag)return;
+    var r=$('#edRuler');if(!r)return;
+    var box=r.getBoundingClientRect();
+    ED.t=Math.max(0,Math.min(ED.data?ED.data.duration||999:999,(e.clientX-box.left-62)/ED.pps));
+    edTime();edPreview();
+  });
+  document.addEventListener('mouseup',function(){
+    if(!headDrag)return;headDrag=false;edInsp();
+  });
+
+  /* ── 按钮 ── */
+  /* 新建工程：不能用 window.prompt —— WKWebView 不支持它，直接返回 null，
+     表现就是「点了没反应」。改成自己画的输入框。 */
+  $('#edNewBtn') && $('#edNewBtn').addEventListener('click',function(){
+    if(!window.confirmAction){
+      // 极端兜底：确认框没加载好时也要能建
+      edCreate('未命名-'+Date.now().toString().slice(-4));return;
+    }
+    window.confirmAction({
+      title:'新建剪辑工程',
+      html:'<div class="u-input" style="height:32px"><input id="edNewName" placeholder="工程名，比如：产品宣传片 30 秒" value="未命名-'+Date.now().toString().slice(-4)+'"></div>'
+        +'<div style="font-size:10.5px;color:#9AA2B1;margin-top:7px;line-height:1.6">'
+        +'建好之后把素材拖到轨道上就能剪。工程文件存在「工程/剪辑」下，随时可以回来接着改。</div>',
+      okText:'建工程',
+      onOk:function(){
+        var inp=document.getElementById('edNewName');
+        edCreate((inp&&inp.value||'').trim());
+      }
+    });
+  });
+
+  function edCreate(nm){
+    if(!nm){say('工程名不能是空的');return}
+    window.api('/api/edit',{action:'new',name:nm}).then(function(d){
+      say('工程「'+nm+'」建好了，把素材拖到轨道上就能剪');
+      return edLoadList().then(function(){return edOpen(nm)});
+    }).catch(function(e){say('新建失败：'+(e&&e.message||''))});
+  }
+
+  $('#edSaveBtn') && $('#edSaveBtn').addEventListener('click',function(){edSave()});
+
+  $('#edProj') && $('#edProj').addEventListener('change',function(){
+    if(this.value)edOpen(this.value);
+  });
+
+  /* 「导入」= 选文件 → 逐个走 /api/edit 的 import。
+     ★ 以前这里是自建一个 `<input type="file">` 再 click()：
+       ①这个 input 没插进 DOM，WKWebView 里 change 根本不触发；
+       ②就算触发，浏览器也只给文件名不给绝对路径，而 import 要的是磁盘路径；
+       ③它去调 window.webkit.messageHandlers.files —— 原生壳里从来没注册过
+         叫 files 的桥（只有 native / folder / dragGuard）。
+     表现为点了完全没反应。现在走原生 FileBridge（主进程弹 NSOpenPanel 选文件），
+     回传 window.onFilesPicked(绝对路径数组)，这里再逐个导入。 */
+  $('#edImpBtn') && $('#edImpBtn').addEventListener('click',function(){
+    if(!ED.proj){say('先选一个工程，再导入素材');return}
+    if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.files){
+      window.__edImporting=ED.proj;
+      say('选好文件就自动导入…');
+      window.webkit.messageHandlers.files.postMessage('pick');
+    }else{
+      say('浏览器预览模式拿不到磁盘路径，请在本机 App 里导入');
+    }
+  });
+
+  /* 原生 FileBridge 的回调：拿到一批绝对路径，逐个 import 进当前工程。
+     一次选 5 个就导 5 个，成功几个说几个，失败的把原因说出来 —— 
+     不要笼统「导入失败」，用户不知道该改什么。 */
+  window.onFilesPicked=function(arg){
+    var list=(arg&&arg.files)||[];
+    var proj=window.__edImporting||ED.proj;
+    window.__edImporting=null;
+    if(!list.length){say('没选文件');return}
+    if(!proj){say('工程已经切走了，这次没导入');return}
+    var okN=0,fails=[];
+    say('正在导入 '+list.length+' 个素材…');
+    var chain=Promise.resolve();
+    list.forEach(function(path){
+      chain=chain.then(function(){
+        return api('/api/edit',{action:'import',project:proj,path:path})
+          .then(function(r){ if(r&&r.asset)okN++; else fails.push(basename(path)+'：接口没回素材'); })
+          .catch(function(e){ fails.push(basename(path)+'：'+((e&&e.message)||'未知')) });
+      });
+    });
+    chain.then(function(){
+      /* ★ 这里是 edPool()，不是 edAssets()。
+         edAssets 这个函数全项目不存在 —— 导入成功的回调第一句就
+         ReferenceError，后面 edPreview / edOpen 全都执行不到，
+         表现为「文件选完了、什么也没发生、素材池还是空的」。
+         真正的素材池渲染函数叫 edPool()（本文件 549 行）。 */
+      edPool();edPreview();
+      if(ED.proj===proj)edOpen(proj);
+      if(fails.length){
+        say('导入 '+okN+' 个，'+fails.length+' 个没成：'+fails.slice(0,2).join('；'));
+      }else{
+        say('已导入 '+okN+' 个素材');
+      }
+    });
+  };
+  function basename(p){return String(p||'').split('/').pop()}
+
+  $('#edPlayBtn') && $('#edPlayBtn').addEventListener('click',edPlayToggle);
+
+  $('#edRenderBtn') && $('#edRenderBtn').addEventListener('click',function(){
+    if(!ED.proj){say('先选一个工程');return}
+  /* 导出尺寸由客户在这里自己选 —— 我们不替他定。改完写回工程再渲。 */
+    var sz=($('#edSize')&&$('#edSize').value||'1920x1080').split('x');
+    if(ED.data){ED.data.width=+sz[0];ED.data.height=+sz[1]}
+    edSave(true).then(function(){
+      /* final:1 —— 这是「人」按的按钮，所以落到 产出/视频/，进「最近成片」。
+         AI 走工具层渲的一律不传 final，只落 产出/预览/，不进成片榜。 */
+      say('已提交导出，出片在「产出/视频」');
+      window.api('/api/edit',{action:'render',project:ED.proj,final:1}).then(function(d){
+        var tid=(d&&d.task_id)||(d&&d.task&&d.task.id);
+        if(tid&&window.pollTask)window.pollTask(tid,function(res){
+          if(res)say('出片完成：'+(res.name||''));
+        });
+      }).catch(function(e){say('渲染失败：'+(e&&e.message||''))});
+    });
+  });
+
+  /* ── 模板库 ── */
+  /* 本地源状态：模板库现在有一份完整离线副本，装模板不再碰 GitHub。
+     这里把状态显示出来，用户才知道「断网也能装」。 */
+  function edSrcPaint(d){
+    var bar=$('.ed-lib-state'),tx=$('#edSrcTx');if(!bar||!tx)return;
+    if(d&&d.ok){
+      bar.classList.add('on');
+      tx.textContent='本地模板库已就绪 · '+d.count+' 个模板 · '+d.size_mb+' MB，装模板不用联网';
+    }else{
+      bar.classList.remove('on');
+      tx.textContent='还没有本地模板库，装模板要去公网拉（国内经常连不上）。点「同步」备一份。';
+    }
+  }
+  function edSrcLoad(){
+    api('/api/hyperframes',{action:'tpl_status'}).then(function(d){edSrcPaint(d)}).catch(function(){edSrcPaint(null)});
+  }
+  function edLibOpen(on){
+    var box=$('#edLib'),msk=$('#edLibMask');if(!box)return;
+    box.classList.toggle('open',!!on);
+    if(msk)msk.classList.toggle('open',!!on);
+    if(on){edLibSearch();edLoadBrand();edSrcLoad();}
+  }
+  /* 点遮罩关、按 Esc 关 —— 悬浮框必须能随手关掉 */
+  $('#edLibMask') && $('#edLibMask').addEventListener('click',function(){edLibOpen(false)});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){
+      var b=$('#edLib');
+      if(b&&b.classList.contains('open')){e.preventDefault();edLibOpen(false);}
+    }
+  },true);
+  $('#edSrcSync') && $('#edSrcSync').addEventListener('click',function(){
+    var b=this;
+    b.disabled=true;b.textContent='同步中…';
+    say('正在同步模板库，约 139MB，可能要一两分钟');
+    api('/api/hyperframes',{action:'tpl_sync'}).then(function(d){
+      if(d&&d.task_id){say('同步任务已开始，跑完会通知');}
+      else{say('同步没开始：'+(d&&d.error||'未知原因'));b.disabled=false;b.textContent='同步';}
+    }).catch(function(e){say('同步失败：'+(e&&e.message||''));b.disabled=false;b.textContent='同步';});
+  });
+  $('#edLibBtn') && $('#edLibBtn').addEventListener('click',function(){edLibOpen(true)});
+  $('#edLibClose') && $('#edLibClose').addEventListener('click',function(){edLibOpen(false)});
+
+  /* 中文 → 英文映射。模板索引只有英文，但用户不会为了搜个转场先去查单词。
+     这里把常见中文说法直接翻成 registry 认的词，搜不到再回落原文。 */
+  var LIB_ZH={
+    '转场':'transition','过渡':'transition','切换':'transition',
+    '字幕':'caption','标题':'title','文字':'text','字':'text','字幕条':'caption',
+    '开场':'intro','片头':'intro','结尾':'outro','片尾':'outro',
+    '图表':'chart','数据':'chart','统计':'chart','柱状图':'chart','折线图':'chart',
+    '地图':'map','地图动效':'map',
+    '故障':'glitch','毛刺':'glitch','抖动':'shake','闪烁':'flicker',
+    '粒子':'particle','光效':'light','发光':'glow','霓虹':'neon',
+    '模糊':'blur','锐化':'sharp','放大':'zoom','缩放':'scale','推拉':'push',
+    '滑动':'slide','旋转':'rotate','扭曲':'distortion','变形':'morph',
+    '遮罩':'mask','抠图':'mask','抠像':'mask',
+    '背景':'background','纹理':'texture','噪点':'noise','胶片':'film',
+    '3d':'3d','三维':'3d','立体':'3d',
+    '科技':'tech','未来':'futuristic','赛博':'cyber',
+    '产品':'product','展示':'showcase','演示':'showcase',
+    '社交':'social','弹幕':'social','评论':'social',
+    '列表':'list','排行':'rank','排名':'rank',
+    '加载':'loading','进度':'progress','成功':'success','错误':'error',
+    '音乐':'music','音频':'audio','波形':'waveform','节奏':'beat',
+    '网格':'grid','线条':'line','箭头':'arrow','边框':'border','框架':'frame',
+    '电影':'cinematic','电影感':'cinematic','颗粒':'grain','暗角':'vignette',
+    '镜头':'camera','运镜':'camera','推移':'camera'
+  };
+  function libZh(q){
+    var k=String(q||'').trim().toLowerCase();
+    if(!k)return '';
+    if(LIB_ZH[k])return LIB_ZH[k];
+    /* 「转场动效」这种带后缀的，取最长能命中的前缀 */
+    var best='';
+    for(var key in LIB_ZH){
+      if(k.indexOf(key)===0&&key.length>best.length)best=key;
+    }
+    return best?LIB_ZH[best]:'';
+  }
+
+  /* 类别筛选条。路由到「按用途」而不是 registry 那 619 个技术 tag ——
+     用户想找的是「我要个转场」，不是「我要个 motion-primitive」。 */
+  /* 分类条：常驻「全部」+ 四个最常用的，剩下的收进「更多 ▾」。
+     原来 11 个分类平铺要两行（约 70px），压成横滚又滚不完 ——
+     用户原话「最后一个按钮展开所有的分类，这样空间大一点显示的也完整」。
+     PINNED 按实际数量排过：转场 62 / 背景纹理 80 / 动效零件 66 /
+     产品展示 65 是四个最大的类，先摆出来命中率最高。 */
+  /* 分类条：悬浮框有一千多像素宽，11 个分类一行就放得下，
+     不需要「更多 ▾」那一层折叠。（原先在 430px 抽屉里放不下才收的，
+     抽屉改成悬浮框之后这个按钮就成了多余的障碍。） */
+  function edLibCats(stats, order){
+    var box=$('#edLibCats'); if(!box)return;
+    if(!stats){box.innerHTML='';return}
+    var keys=(order||[]).filter(function(k){return stats[k]});
+    var cur=window.__edLibCat||'';
+    var total=0; keys.forEach(function(k){total+=stats[k].n});
+    var h='<button class="'+(cur?'':'on')+'" data-cat="">全部 <em>'+total+'</em></button>';
+    h+=keys.map(function(k){
+      return '<button class="'+(cur===k?'on':'')+'" data-cat="'+esc(k)+'">'+esc(k)+
+             ' <em>'+stats[k].n+'</em></button>';
+    }).join('');
+    box.innerHTML=h;
+  }
+
+  var libTimer=0;
+  function edLibSearch(all){
+    var raw=($('#edLibQ')&&$('#edLibQ').value||'').trim();
+    /* 「整场戏/片段」下拉已经删了（跟分类按钮重复）。
+       需要按形态过滤时，分类里现成的「背景纹理/动效零件」就够用。 */
+    var kind='';
+    var cat=(window.__edLibCat||'');
+    /* 中文直接丢给后端 —— 后端有分类词表，不用前端先翻成英文。
+       以前先 libZh() 翻译再发，像「片头」这种没进词表的就白搜。 */
+    clearTimeout(libTimer);
+    libTimer=setTimeout(function(){
+      $('#edLibGrid').innerHTML='<div class="ed-tip">搜索中…</div>';
+      window.api('/api/hyperframes?action=catalog&query='+encodeURIComponent(raw)+
+                 (kind?'&kind='+kind:'')+(cat?'&cat='+encodeURIComponent(cat):'')).then(function(d){
+        var items=(d&&d.items)||[];
+        if(!items.length){$('#edLibGrid').innerHTML='<div class="ed-tip">没搜到，换个词试试</div>';return}
+        edLibCats(d&&d.cats, d&&d.cat_order);
+        $('#edLibGrid').innerHTML=items.map(function(x){
+          /* 448 个模板里只有 178 个有官方缩略图。所以一律先铺占位底，
+             有图才盖上去；图加载失败 onerror 自己隐藏，露出底下的占位。
+             这样不会出现碎图，也不会塌成空白（用户看到过一片空白）。 */
+          var ph = '<div class="nopic-ph"><b>'+esc(x.type==='block'?'整场戏':'片段')+'</b>'+
+                   '<i>'+esc(x.name)+'</i></div>';
+          var img = x.poster
+            ? '<img loading="lazy" src="'+esc(x.poster)+'" alt="" onerror="this.remove()">'
+            : '';
+          /* 「先看看」是必须的：模板是一段带动画的 HTML，光看名字和一句话
+             说明根本不知道它长什么样。用户原话「我不会用」，根子就在这里。 */
+          var cc = x.cat ? '<span class="catb">'+esc(x.cat)+'</span>' : '';
+          var hasV = x.video ? ' hasv' : '';
+          /* 缩略图整块可点＝先看看。以前只有底下那颗「先看看」按钮能点，
+             点了还得等；现在点图直接跑，命中面积大得多。
+             有官方预览片的图角上带个播放标，用户一眼知道哪些能立刻看。 */
+          return '<div class="ed-tp"><div class="thumb'+hasV+'" data-peek="'+esc(x.name)+'"'
+              +' data-title="'+esc(x.title||x.name)+'"'
+              +' data-kind="'+esc(x.type==='block'?'整场戏':'片段')+'"'
+              +' data-desc="'+esc(x.desc||'')+'" data-video="'+esc(x.video||'')+'"'
+              +' title="'+esc((x.title||x.name)+'　'+(x.desc||''))+'">'+ph+img+cc+
+              (x.video?'<span class="pv"><svg class="ic"><use href="#i-play"/></svg></span>':'')+
+            '</div>'+
+            '<div class="bd"><b title="'+esc(x.name)+'">'+esc(x.title||x.name)+'</b>'+
+            '<div class="row"><button class="peek" data-peek="'+esc(x.name)+'" data-title="'+esc(x.title||x.name)+'"'
+              +' data-kind="'+esc(x.type==='block'?'整场戏':'片段')+'"'
+              +' data-desc="'+esc(x.desc||'')+'">先看看</button>'+
+            '<button data-n="'+esc(x.name)+'">装进工程</button></div></div></div>';
+        }).join('');
+      }).catch(function(){ $('#edLibGrid').innerHTML='<div class="ed-tip">搜索失败</div>' });
+    },320);
+  }
+  $('#edLibQ') && $('#edLibQ').addEventListener('input',edLibSearch);
+  $('#edLibCats') && $('#edLibCats').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-cat]'); if(!b)return;
+    window.__edLibCat=b.getAttribute('data-cat')||'';
+    edLibSearch();
+  });
+  $('#edLibGrid') && $('#edLibGrid').addEventListener('click',function(e){
+    /* 「先看看」—— 官方每个模板都配了一段 mp4 预览（static.heygen.ai，
+       直连 200 可播）。先放这段给用户看清楚它长什么样、怎么动，
+       他再决定装不装。不然光看名字谁也不知道 glitch 是什么。 */
+    /* 缩略图和「先看看」按钮都能点开预览 —— 缩略图面积大，命中率高得多 */
+    var pk=e.target.closest('[data-peek]');
+    if(pk){edTryOpen(pk.getAttribute('data-peek'),
+                     pk.getAttribute('data-title'),
+                     pk.getAttribute('data-kind'),
+                     pk.getAttribute('data-desc')||'',
+                     pk.getAttribute('data-video')||'');return}
+    var b=e.target.closest('button[data-n]');if(!b)return;
+    if(!ED.proj){say('先选一个工程');return}
+    var n=b.getAttribute('data-n');
+    b.textContent='装…';b.disabled=true;
+    var _bc = (($('#edUseBrand')||{}).checked && (window.__ED_USE||window.__ED_BRAND)) ? (window.__ED_USE||window.__ED_BRAND) : '';
+    window.api('/api/edit',{action:'add_template',project:ED.proj,name:n,start:ED.t||0,brand:_bc})
+      .then(function(d){
+        var bc=d&&d.brand_color;
+        say('模板「'+n+'」已装进图形轨'
+          +(bc&&bc.ok?'，已换成品牌色':(bc&&bc.error?'，品牌色没换成：'+bc.error:'')));
+        return edOpen(ED.proj).then(function(){edLibOpen(false)});
+      }).catch(function(e){b.textContent='装进工程';b.disabled=false;
+        say('装失败：'+(e&&e.message||''))});
+  });
+
+  /* ── 模板试用弹窗 ──
+     用户原话：「我不知道这个模板应该怎么用，我不会呀」。
+     根子是他装完看不见东西 —— 模板是图形轨上的一段带动画 HTML，
+     时间线停在 0 秒、主视频轨又空着，预览区就只有一行「这个位置没有画面」。
+     所以两件事必须一起做：①装之前能看预览片 ②装完预览区真的跑起来。 */
+  var TRY={name:'',desc:''};
+  function edTryOpen(n,title,kind,desc){
+    var box=$('#edTry');if(!box)return;
+    TRY.name=n;TRY.desc=desc||'';
+    $('#edTryName').textContent=title||n;
+    $('#edTryKind').textContent=kind||'';
+    $('#edTryDesc').textContent=desc||'';
+    var v=$('#edTryView');
+    v.innerHTML='<div class="ed-tip">加载中…</div>';
+    box.classList.add('open');
+    /* 优先用官方预览片（有 147 个模板配了）；没有的就装进临时工程
+       真跑一份出来看 —— 光给「装进工程后可以看」等于什么都没给。
+       ★ 不再为了拿 video 地址单独查一次 catalog：卡片上已经把 video
+       带过来了（data-*），再查一遍是白等 100~300ms，而且 catalog 要
+       扫 448 项。传进来就用，没传才查。 */
+    var vurl = arguments.length > 4 ? (arguments[4] || '') : '';
+    /* 官方预览片是 static.heygen.ai 上的 mp4。设计上它最省事（147 个模板
+       配了），但在 App 的 WKWebView 里外网地址不一定连得上 —— 连不上时
+       <video> 只有一个黑框，用户看到的就是「点开预览是空白」（实测就是
+       这个现象：浮层结构全对，内容区一条暗色底一个空标题条）。
+       所以：播放失败 / 6 秒还没出画面，就退到本地 iframe 真跑一份。 */
+    var live=0;                       /* 每次打开递增，避免上一次的回退把这一次的 iframe 冲掉 */
+    function playVideo(src,desc){
+      var my=++live;
+      v.innerHTML='<video src="'+esc(src)+'" autoplay loop muted playsinline '
+        +'style="width:100%;height:100%;object-fit:contain;background:#0B1119"></video>';
+      var vd=v.querySelector('video');
+      if(!vd)return;
+      var done=false;
+      var back=function(){
+        if(done||my!==live)return; done=true;
+        /* 走到这里说明本地也装不出来，远程片又拉不动 —— 别再互相回退（会打转），
+           直接告诉用户下一步该做什么。 */
+        v.innerHTML='<div class="ed-tip">这个模板的预览片在外网，这会儿拉不动。<br>'
+          +'直接点下面的「装进工程」，装好就能在预览区看到它跑起来。</div>';
+      };
+      vd.addEventListener('error',back);
+      vd.addEventListener('stalled',back);
+      vd.addEventListener('loadeddata',function(){done=true});
+      vd.addEventListener('playing',function(){done=true});
+      setTimeout(back,6000);
+    }
+    function localRun(desc, onFail){
+      var my=++live;
+      v.innerHTML='<div class="ed-tip">正在生成预览…</div>';
+      window.api('/api/edit',{action:'try_template',name:n}).then(function(r2){
+          if(my!==live)return;
+          var u=((r2&&r2.url)||'')+(r2&&r2.url?'?auto=1':'');
+          if(!u){
+            if(onFail){onFail();return}
+            v.innerHTML='<div class="ed-tip">这个模板没有预览片，装进工程后就能在预览区看到</div>';
+            return;
+          }
+          v.innerHTML='<div class="ed-try-fr"><iframe class="ed-tpl" data-src="'+esc(u)+'" '
+            +'src="'+esc(u)+'" frameborder="0" scrolling="no" '
+            +'sandbox="allow-scripts allow-same-origin"></iframe></div>';
+          var fr=v.querySelector('iframe');
+          if(fr){
+            var fit=function(){
+              if(my!==live)return;
+              var bw=v.clientWidth,bh=v.clientHeight;
+              if(bw<=0||bh<=0)return;
+              var k=Math.min(bw/1920,bh/1080);
+              fr.style.transform='translate(-50%,-50%) scale('+k.toFixed(4)+')';
+            };
+            fr.addEventListener('load',fit);
+            setTimeout(fit,300);setTimeout(fit,1200);
+          }
+        }).catch(function(e){
+          if(my!==live)return;
+          if(onFail){ onFail(); return; }
+          v.innerHTML='<div class="ed-tip">这个模板没能现场跑起来。<br>'
+            +'直接点下面的「装进工程」，装好就能在预览区看到它跑起来。</div>';
+        });
+    }
+    /* 本地优先。
+       模板源文件本来就在磁盘上，装进工程的 compositions 目录后由本机服务
+       发页面、注入自动播放，出来的是真的模板在跑 —— 这才是「先看看」要看的东西。
+       远程 mp4 是 heygen 的官方预览片，在 App 的 WKWebView 里拉不动；以前顺序是
+       反的（先播远程、黑 6 秒等超时才回退本地），用户看到的就是「点了没反应」。
+       本地确实装不出来（模板文件缺、服务不可用）才退到远程片。 */
+    localRun(desc, vurl ? function(){ playVideo(vurl, desc); } : null);
+    var add=$('#edTryAdd');add.disabled=false;add.textContent='装进工程';
+  }
+  function edTryClose(){
+    var box=$('#edTry');if(!box)return;
+    box.classList.remove('open');
+    var v=$('#edTryView');if(v)v.innerHTML='';
+  }
+  $('#edTryClose') && $('#edTryClose').addEventListener('click',edTryClose);
+  $('#edTry') && $('#edTry').addEventListener('click',function(e){
+    if(e.target===this)edTryClose();
+  });
+  $('#edTryAdd') && $('#edTryAdd').addEventListener('click',function(){
+    var b=this;if(!TRY.name)return;
+    if(!ED.proj){say('先选一个工程');return}
+    b.disabled=true;b.textContent='装…';
+    var _bc2 = (($('#edUseBrand')||{}).checked && (window.__ED_USE||window.__ED_BRAND)) ? (window.__ED_USE||window.__ED_BRAND) : '';
+    window.api('/api/edit',{action:'add_template',project:ED.proj,name:TRY.name,start:ED.t||0,brand:_bc2})
+      .then(function(d){
+        var bc=d&&d.brand_color;
+        if(bc&&bc.ok&&bc.changed)say('已换成品牌色 '+bc.brand);
+        b.textContent='装好了';
+        edTryClose();edLibOpen(false);
+        return edOpen(ED.proj);
+      }).catch(function(e){
+        b.disabled=false;b.textContent='装进工程';
+        say('装失败：'+(e&&e.message||''));
+      });
+  });
+
+  document.addEventListener('keydown',function(e){
+    if(!document.querySelector('.page.on[data-page="edit"]'))return;
+    var tag=(document.activeElement||{}).tagName||'';
+    if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
+    if(e.key===' '){e.preventDefault();edPlayToggle();return}
+    if(e.key==='s'||e.key==='S'){e.preventDefault();edSplit();return}
+    if((e.metaKey||e.ctrlKey)&&(e.key==='d'||e.key==='D')){e.preventDefault();edDup();return}
+    if(e.key==='Delete'&&ED.sel){
+      var tr=(ED.data.tracks||[]).filter(function(x){return x.id===ED.sel.track})[0];
+      if(tr&&!tr.locked){tr.clips.splice(ED.sel.i,1);ED.sel=null;edDirty();edLanes();edInsp();edPreview()}
+    }
+  });
+
+  /* 剪辑页一开始是 display:none，这时候量 clientWidth 全是 0，
+     时间线宽度会退回 400px，切过去就是「只画了一半」。所以每次切到本页都重排一次。
+     ★ 同时必须重拉工程列表：AI 在对话里新建的工程是直接写盘的，
+       而本页只在启动时 edLoadList() 过一次 —— 不重拉的话，
+       用户从对话切过来看到的还是「（还没有工程）」，明明工程就在磁盘上。
+       这是「AI 说建好了、剪辑台却是空的」的直接原因。 */
+  document.addEventListener('click',function(e){
+    if(e.target.closest('.nav a[data-page="edit"]')){
+      setTimeout(function(){
+        /* 先重拉列表（会顺带把新工程选上），再重排时间线。
+           如果当前已有工程，保留它，不要因为刷新把用户的选中态冲掉。 */
+        edLoadList().then(function(){
+          if(ED.data)edLanes();
+        }).catch(function(){ if(ED.data)edLanes() });
+      },60);
+    }
+  });
+  window.addEventListener('resize',function(){if(ED.data)edLanes()});
+
+  /* 别的地方（AI 对话、模板库、一键成片）动完工程会发这个事件，收到了就重拉 */
+  window.addEventListener('riffcut:projects-changed',function(){ edLoadList() });
+
+  document.addEventListener('riffcut-ready',function(){edLoadList()});
+  document.addEventListener('planchanged',function(){edLoadList()});
+  if(window.api)edLoadList();
+  else document.addEventListener('riffcut-ready',function(){edLoadList()});
+  window.riffcutEdit=ED;
+
+  /* 首页「打开剪辑台」卡片调这个：切到剪辑页 + 打开指定工程。
+     走 .nav a[data-page] 的点击，复用现有的切页逻辑，不自己造一套。 */
+  /* ── 打开成片：把导出过的 mp4 直接当素材导进当前工程 ──
+     用户的话是「专业剪辑一定要能打开最近的视频才行」。
+     以前素材池只能「导入」，而导入走的是原生文件选择框 ——
+     要逐层点目录、还要记住上次导出到哪了。成片本来就在我们自己的
+     产出目录里，列出来点一下就行。 */
+  function edOpenWork(){
+    var m=document.getElementById('edWkModal');
+    if(m){m.classList.add('on');edFillWorks();return}
+  }
+  function edFillWorks(){
+    var box=document.getElementById('edWkList');
+    if(!box)return;
+    box.innerHTML='<div class="ed-wk-e">读取中…</div>';
+    window.api('/api/works',{action:'list'}).then(function(r){
+      var list=(r&&(r.data||r.items))||r||[];
+      if(!list.length){box.innerHTML='<div class="ed-wk-e">还没有导出过成片。<br>剪完点右上角「导出成片」。</div>';return}
+      box.innerHTML=list.map(function(w,i){
+        var d=Math.max(0,Math.round(+w.duration||0));
+        var dur=('0'+Math.floor(d/60)).slice(-2)+':'+('0'+(d%60)).slice(-2);
+        return '<button class="ed-wk-i" type="button" data-p="'+esc(w.path||'')+'"'
+          +' data-n="'+esc(w.name||'')+'">'
+          +'<span class="th">'+(w.cover?'<img src="/vid/'+encodeURIComponent(w.cover)+'" alt="">'
+                                      :'<svg class="ic"><use href="#i-film"/></svg>')+'</span>'
+          +'<span class="tx"><b>'+esc(w.title||w.name)+'</b>'
+          +'<i>'+(w.width||'?')+'×'+(w.height||'?')+' · '+dur+'</i></span></button>';
+      }).join('');
+    }).catch(function(e){
+      box.innerHTML='<div class="ed-wk-e">读不到成片：'+esc(String((e&&e.message)||e).slice(0,60))+'</div>';
+    });
+  }
+  document.addEventListener('click',function(e){
+    var t=e.target; if(!t||!t.closest)return;
+    if(t.closest('#edOpenWorkBtn')){edOpenWork();return}
+    var m=document.getElementById('edWkModal');
+    if(!m||!m.classList.contains('on'))return;
+    if(t.id==='edWkX'||t.classList.contains('ed-wk-modal')){m.classList.remove('on');return}
+    var it=t.closest('.ed-wk-i');
+    if(it){
+      m.classList.remove('on');
+      var p=it.getAttribute('data-p');
+      if(!p){say('这个成片没有可用的磁盘路径');return}
+      if(!ED.proj){say('先在上面选一个工程，或点「新建工程」，再打开成片');return}
+      window.api('/api/edit',{action:'import',project:ED.proj,path:p}).then(function(d){
+        say('已导入：'+((d&&d.asset&&d.asset.src)||it.getAttribute('data-n')));
+        return window.api('/api/edit',{action:'get',project:ED.proj}).then(function(g){
+          ED.assets=(g&&g.assets)||[];edPool();
+        });
+      }).catch(function(err){say('导入失败：'+((err&&err.message)||''))});
+      return;
+    }
+    if(t.closest('#edWkModal')===null)m.classList.remove('on');
+  },true);
+
+  /* 首页「在剪辑台打开」调这个：切到剪辑页 + 把这条成片导进当前工程。
+     与 riffcutOpenEdit 的区别：那个收的是**工程名**，这个收的是**成片磁盘路径**。
+     以前首页把 mp4 路径传给 riffcutOpenEdit，弹的是「没有这个剪辑工程：…mp4」。 */
+  window.riffcutOpenWork=function(path,name){
+    var a=document.querySelector('.nav a[data-page="edit"]');
+    if(a)a.click();
+    setTimeout(function(){
+      if(!path){say('这条成片没有可用路径');return}
+      var go=function(){
+        window.api('/api/edit',{action:'import',project:ED.proj,path:path}).then(function(d){
+          var src=(d&&d.asset&&d.asset.src)||name||'成片';
+          say('已把「'+src+'」导进来，拖到下面的轨道上就能改');
+          return window.api('/api/edit',{action:'get',project:ED.proj}).then(function(g){
+            ED.assets=(g&&g.assets)||[];edPool();
+          });
+        }).catch(function(e){say('导入失败：'+((e&&e.message)||''))});
+      };
+      if(ED.proj){go();return}
+      /* 没工程就先建一个，否则「打开成片」是空操作 —— 用户点进来是想改东西，
+         不该先被要求「请先新建工程」。 */
+      window.api('/api/edit',{action:'new',name:'改片-'+Cstamp(),width:1920,height:1080})
+        .then(function(r){
+          var nm=(r&&r.project)||'';
+          return edLoadList().then(function(){return nm?edOpen(nm):null}).then(function(){go()});
+        }).catch(function(e){say('新建工程失败：'+((e&&e.message)||''))});
+    },150);
+  };
+  function Cstamp(){
+    var d=new Date(),p=function(n){return ('0'+n).slice(-2)};
+    return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes());
+  }
+
+  window.riffcutOpenEdit=function(name){
+    var a=document.querySelector('.nav a[data-page="edit"]');
+    if(a)a.click();
+    setTimeout(function(){
+      if(name)edOpen(name).then(function(){edLoadList()});
+      else edLoadList();
+    },120);
+  };
+})();
+</script>

@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>影创</title>
+<style>
+/* ══ 设计令牌 ══════════════════════════════════════════════════════════
+   全站只有一档强调色（青绿 #1B8B7E）、三档圆角、五档字号。
+   深色是默认 —— 这一屏是嵌在 DSH 深色界面里的，底色必须跟着深，
+   否则从会话切过来会像另一个软件。
+   ═══════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#0E1013; --card:#16191E; --panel:#1B1F25; --raise:#20252C;
+  --ink:#E8EBF0; --ink2:#9CA5B4; --ink3:#6B7484;
+  --line:#262C35; --hover:#22272F;
+  --accent:#1B8B7E; --accent-ink:#2AA99A; --accent-soft:rgba(27,139,126,.14);
+  --accent-line:rgba(27,139,126,.42);
+  --warn:#C9A46A; --warn-soft:rgba(201,164,106,.12);
+  --err:#C25B5B; --err-soft:rgba(194,91,91,.12);
+  --r-lg:12px; --r-md:8px; --r-sm:4px;
+  --f1:20px; --f2:15px; --f3:12px; --f4:12px; --f5:10.5px;
+  --sh:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.22);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);
+  font-size:var(--f3);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#2C333D;border-radius:9px}
+::-webkit-scrollbar-thumb:hover{background:#3A424E}
+::-webkit-scrollbar-track{background:transparent}
+
+/* 布局：顶部标题条 + 内容区 */
+#app{height:100%;display:flex;flex-direction:column}
+.head{flex:none;display:flex;align-items:center;gap:10px;padding:14px 22px 12px;
+  border-bottom:1px solid var(--line)}
+.head h1{margin:0;font-size:var(--f1);font-weight:600;letter-spacing:.01em}
+.head .sub{color:var(--ink3);font-size:var(--f4)}
+.head .sp{flex:1}
+.body{flex:1;min-height:0;overflow:auto;position:relative}
+.body>.ed{position:absolute;inset:0}
+.pad{padding:20px 22px}
+
+/* 按钮 */
+.btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--raise);
+  color:var(--ink);cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--hover);border-color:#333B46}
+.btn:active{transform:translateY(.5px)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn.pri:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+.btn.gh{background:transparent}
+.btn[disabled]{opacity:.45;cursor:default}
+.btn.sm{height:26px;padding:0 9px;font-size:var(--f4)}
+
+/* 输入 */
+.in{height:32px;padding:0 10px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--bg);color:var(--ink);outline:none;min-width:0}
+.in:focus{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.in::placeholder{color:var(--ink3)}
+
+/* 卡片 / 网格 */
+.grid{display:grid;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:14px;transition:border-color .12s}
+.card:hover{border-color:#333B46}
+.card .t{font-size:var(--f2);font-weight:500;margin-bottom:4px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .d{color:var(--ink3);font-size:var(--f4);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .m{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--ink3);font-size:var(--f5)}
+
+/* 缩略图 */
+.thumb{width:100%;aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;
+  background:#11141A;display:grid;place-items:center;margin-bottom:10px}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .ph{color:var(--ink3);font-size:var(--f5);letter-spacing:.06em}
+
+/* 标签 */
+.tag{display:inline-block;padding:2px 7px;border-radius:99px;font-size:var(--f5);
+  background:var(--raise);color:var(--ink2);border:1px solid var(--line)}
+.tag.on{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent-line)}
+.tag.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.tag.err{background:var(--err-soft);color:var(--err);border-color:transparent}
+
+/* 统计条 */
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:10px 14px;min-width:92px}
+.stat b{display:block;font-size:19px;font-weight:600;line-height:1.2}
+.stat span{color:var(--ink3);font-size:var(--f5)}
+
+/* 行 */
+.row{display:flex;align-items:center;gap:10px;padding:9px 2px;
+  border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* 提示 */
+.note{padding:10px 12px;border-radius:var(--r-md);background:var(--warn-soft);
+  color:var(--warn);border:1px solid rgba(201,164,106,.2);line-height:1.55}
+.note.err{background:var(--err-soft);color:var(--err);border-color:rgba(194,91,91,.22)}
+.empty{padding:60px 20px;text-align:center;color:var(--ink3);line-height:1.8}
+.spin{width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--accent);
+  border-radius:50%;display:inline-block;animation:sp .7s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* 时间线（剪辑台） */
+.tl{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.tl-track{display:flex;border-bottom:1px solid var(--line)}
+.tl-track:last-child{border-bottom:0}
+.tl-lb{width:52px;flex:none;padding:9px 10px;color:var(--ink3);font-size:var(--f5);
+  background:var(--panel);border-right:1px solid var(--line);letter-spacing:.04em}
+.tl-clips{flex:1;display:flex;gap:3px;padding:7px;min-height:44px;align-items:stretch;overflow-x:auto}
+.clip{background:var(--raise);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:5px 8px;font-size:var(--f5);color:var(--ink2);white-space:nowrap;
+  display:flex;align-items:center;flex:none;max-width:200px;overflow:hidden}
+.clip.vid{border-left:2px solid var(--accent)}
+.clip.txt{border-left:2px solid var(--warn)}
+.clip.aud{border-left:2px solid #6B8BC2}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="head">
+    <h1 id="hTitle">剪辑台</h1>
+    <span class="sub" id="hSub"></span>
+    <span class="sp"></span>
+    <span id="hAct"></span>
+  </div>
+  <div class="body" id="body"></div>
+</div>
+<script src="editor.js"></script>
+<script>
+'use strict';
+// ══ 与主进程的唯一通道 ══════════════════════════════════════════════════
+// 所有数据都从工具来（window.riffcut.call），界面里不写死任何数字。
+const V = window.riffcut || {
+  call: async () => ({ ok: false, error: '没有后端通道（iframe 的 preload 没生效）' }),
+  tools: async () => ({ ok: false, items: [] }),
+  info: async () => ({}),
+};
+
+const $ = (s, r) => (r || document).querySelector(s);
+const el = (tag, cls, txt) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (txt != null) e.textContent = txt;
+  return e;
+};
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// 工具调用的统一包装：把 {ok,text} / {ok:false,error} 都摊成一行结果条，
+// 不让界面自己拼错误文案（每个调用点各写一份必然会不一致）
+async function call(name, args) {
+  try {
+    const r = await V.call(name, args || {});
+    if (r && r.denied) return { ok: false, text: r.error, denied: true };
+    if (r && r.ok) return { ok: true, text: r.text || '' };
+    return { ok: false, text: (r && r.error) || '调用失败' };
+  } catch (e) {
+    return { ok: false, text: String((e && e.message) || e) };
+  }
+}
+
+// ══ 通用渲染件 ══════════════════════════════════════════════════════════
+function setHead(title, sub) {
+  $('#hTitle').textContent = title;
+  $('#hSub').textContent = sub || '';
+  $('#hAct').innerHTML = '';
+}
+function busy(on, label) {
+  $('#hAct').innerHTML = on
+    ? '<span class="spin"></span> <span style="color:var(--ink3)">' + esc(label || '正在处理') + '</span>'
+    : '';
+}
+function fail(msg) {
+  const d = el('div', 'note err');
+  d.textContent = msg;
+  return d;
+}
+function statsBox(pairs) {
+  const w = el('div', 'stats');
+  for (const [k, v] of pairs) {
+    const b = el('div', 'stat');
+    b.appendChild(el('b', null, String(v == null ? '—' : v)));
+    b.appendChild(el('span', null, k));
+    w.appendChild(b);
+  }
+  return w;
+}
+/** 把「- a  b  c」这种工具返回的文本行解析成结构化 —— 工具输出是人读格式，
+ *  界面要卡片就得从文本里再拆一次。拆不动就原样显示，不猜。 */
+function parseList(text) {
+  const out = [];
+  for (const line of String(text || '').split('\n')) {
+    const m = line.match(/^-\s+(.+)$/);
+    if (!m) continue;
+    out.push(m[1].split(/\s{2,}/).map((x) => x.trim()).filter(Boolean));
+  }
+  return out;
+}
+
+// ══ 各屏 ══════════════════════════════════════════════════════════════
+
+/** 剪辑台：工程列表 + 时间线 + 出片。 */
+// 剪辑台已经从「工程查看器」换成真编辑器（renderer/editor.js）。
+// 老实现保留在 ED_LEGACY 里只作参考，不再被路由调用。
+async function screenEditLegacy(root) {
+  setHead('剪辑台', '工程、时间线、出片');
+  const box = el('div', 'pad');
+  root.appendChild(box);
+  box.innerHTML = '<div class="empty"><span class="spin"></span> 读工程…</div>';
+
+  const r = await call('projects', { action: 'list' });
+  box.innerHTML = '';
+  if (!r.ok) { box.appendChild(fail(r.text)); return; }
+  const items = parseList(r.text);
+  if (!items.length) { box.appendChild(el('div', 'empty', '还没有剪辑工程。跟 AI 说「做一条 30 秒的片子」它就会建。')); return; }
+
+  const cur = el('div', 'card');
+  cur.style.marginBottom = '16px';
+  cur.innerHTML = '<div class="t">当前打开的时间线</div><div class="d" id="tlHead">还没选工程</div>';
+  box.appendChild(cur);
+
+  const tl = el('div', 'tl');
+  tl.id = 'tlBox';
+  tl.style.marginBottom = '16px';
+  box.appendChild(tl);
+
+  const bar = el('div');
+  bar.style.cssText = 'display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap';
+  const bGen = el('button', 'btn pri', '出预览');
+  const bFin = el('button', 'btn', '出正式成片');
+  bar.appendChild(bGen); bar.appendChild(bFin);
+  box.appendChild(bar);
+
+  // 先开第一个工程，让下面的时间线有内容（用户点进来就想看见东西）
+  await openProject(items[0][0]);
+
+  async function openProject(name) {
+    $('#tlHead').textContent = name + ' 读时间线中…';
+    const t = await call('timeline', { action: 'inspect', project: name });
+    const l = await call('timeline', { action: 'load', project: name });
+    renderTl(name, t.ok ? t.text : '', l.ok ? l.text : t.text);
+  }
+
+  function renderTl(name, inspectText, loadText) {
+    $('#tlHead').textContent = name;
+    const b = $('#tlBox');
+    b.innerHTML = '';
+
+    // 摘要行：inspect 的第一行是「「名字」1080x1920@30 总长 30.00s」
+    const head = el('div');
+    head.style.cssText = 'padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink3);font-size:var(--f5)';
+    head.textContent = String(inspectText || '').split('\n')[0] || '没有读到时间线';
+    b.appendChild(head);
+
+    // load 返回的是 JSON（不是文本行）—— 直接按结构画，别用正则去猜。
+    // 之前用 /(v1|g1|t1|a1)\s+.*?(\d+)s/ 匹配，一条都没命中，整块退化成
+    // 原始 JSON 文本糊在界面上。
+    let doc = null;
+    try { doc = JSON.parse(loadText); } catch { doc = null; }
+
+    if (!doc || !Array.isArray(doc.tracks)) {
+      const pre = el('div', 'empty');
+      pre.style.cssText = 'text-align:left;padding:14px;font-family:ui-monospace,monospace;font-size:11px;white-space:pre-wrap';
+      pre.textContent = String(loadText || '').slice(0, 1200) || '这条时间线是空的';
+      b.appendChild(pre);
+      return;
+    }
+
+    const KIND_CLS = { video: 'clip vid', text: 'clip txt', audio: 'clip aud', group: 'clip' };
+    const KIND_LB = { video: 'v', text: 't', audio: 'a', group: 'g' };
+    let shown = 0;
+    for (const tr of doc.tracks) {
+      const clips = Array.isArray(tr.clips) ? tr.clips : [];
+      const lb = el('div', 'tl-lb', (KIND_LB[tr.kind] || '?') + (tr.id ? tr.id.replace(/[^0-9]/g, '') : ''));
+      const cs = el('div', 'tl-clips');
+      if (!clips.length) {
+        const ph = el('span');
+        ph.style.cssText = 'color:var(--ink3);font-size:var(--f5);padding:8px 4px';
+        ph.textContent = '空轨';
+        cs.appendChild(ph);
+      }
+      for (const c of clips) {
+        // 视频片段用 out - in 算时长；文字/图片片段只有 duration 字段，
+        // 没有 out（写 out 的算出来是 0，文字条会被压成 56px 一根线）
+        const dur = Number(c.out) > 0
+          ? Math.max(0, (Number(c.out) || 0) - (Number(c.in) || 0))
+          : Math.max(0, Number(c.duration) || 0);
+        // 显示宽度按真实时长给，短片段不至于被压成看不清
+        const w = Math.max(56, Math.min(240, dur * 14));
+        const label = c.text ? String(c.text) : (c.src ? String(c.src).split('/').pop() : (c.type || '片段'));
+        const box = el('div', KIND_CLS[c.type] || 'clip', label);
+        box.style.width = w + 'px';
+        box.title = `${c.id || ''}\n${c.type || ''}  ${(Number(c.start) || 0).toFixed(2)}s → ${((Number(c.start) || 0) + dur).toFixed(2)}s（${dur.toFixed(2)}s）`;
+        cs.appendChild(box);
+        shown++;
+      }
+      const tr2 = el('div', 'tl-track');
+      tr2.appendChild(lb);
+      tr2.appendChild(cs);
+      b.appendChild(tr2);
+    }
+    if (!shown) {
+      const e = el('div', 'empty', '这条时间线还没有片段。跟 AI 说「加几张图进来」，它会调 edit_timeline。');
+      b.appendChild(e);
+    }
+  }
+
+  bGen.onclick = async () => {
+    const name = $('#tlHead').textContent;
+    busy(true, '渲染中，几十秒');
+    const g = await call('generate', { project: name, final: 0 });
+    busy(false);
+    alert(g.ok ? '渲染完成：\n' + g.text.slice(0, 800) : '渲染失败：\n' + g.text);
+  };
+  bFin.onclick = async () => {
+    const name = $('#tlHead').textContent;
+    if (!confirm('出正式成片会占用一次完整渲染（30 秒片约 1 分钟）。继续？')) return;
+    busy(true, '渲染正式成片');
+    const g = await call('generate', { project: name, final: 1 });
+    busy(false);
+    alert(g.ok ? '已出片：\n' + g.text.slice(0, 800) : '失败：\n' + g.text);
+  };
+
+  // 工程列表放最后（先看时间线，列表是辅助）
+  const list = el('div');
+  list.style.marginTop = '6px';
+  list.appendChild(el('div', 'sub', '全部工程'));
+  for (const it of items) {
+    const row = el('div', 'row');
+    const nm = el('span', 'nm', it[0]);
+    const meta = el('span', 'tag', it.slice(1).join(' · '));
+    const btn = el('button', 'btn sm', '打开');
+    btn.onclick = () => openProject(it[0]);
+    row.appendChild(nm); row.appendChild(meta); row.appendChild(btn);
+    list.appendChild(row);
+  }
+  box.appendChild(list);
+}
+
+/** 素材库：统计 + 扫描 + 列表。 */
+async function screenAssets(root) {
+  setHead('素材库', '索引、扫描、去重');
+  const box = el('div', 'pad');
+  root.appendChild(box);
+
+  const bar = el('div');
+  bar.style.cssText = 'display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap';
+  const inp = el('input', 'in');
+  inp.placeholder = '扫哪个目录（留空=客户素材目录）';
+  inp.style.flex = '1';
+  const bScan = el('button', 'btn pri', '扫描');
+  const bList = el('button', 'btn', '看已登记');
+  bar.appendChild(inp); bar.appendChild(bScan); bar.appendChild(bList);
+  box.appendChild(bar);
+
+  async function loadStats() {
+    const s = await call('assets', { action: 'stats' });
+    if (!s.ok) return;
+    let o = {};
+    try { o = JSON.parse(s.text); } catch { o = {}; }
+    const old = $('.stats', box);
+    if (old) old.remove();
+    const sb = statsBox([['总数', o['总数']], ['图片', o['图片']], ['视频', o['视频']], ['音频', o['音频']], ['废片', o['废片']]]);
+    box.insertBefore(sb, bar.nextSibling);
+  }
+
+  const out = el('div');
+  box.appendChild(out);
+
+  bScan.onclick = async () => {
+    busy(true, '扫描中');
+    const p = inp.value.trim();
+    const r = p
+      ? await call('assets', { action: 'scan', path: p })
+      : await call('assets', { action: 'scan' });
+    busy(false);
+    out.innerHTML = '';
+    out.appendChild(r.ok ? el('div', 'note', r.text) : fail(r.text));
+    await loadStats();
+  };
+  bList.onclick = async () => {
+    out.innerHTML = '<div class="empty"><span class="spin"></span> 读素材…</div>';
+    const r = await call('assets', { action: 'list' });
+    out.innerHTML = '';
+    if (!r.ok) { out.appendChild(fail(r.text)); return; }
+    for (const it of parseList(r.text)) {
+      const row = el('div', 'row');
+      row.appendChild(el('span', 'nm', it[0]));
+      row.appendChild(el('span', 'tag', it[1] || ''));
+      row.appendChild(el('span', 'tag', it[2] || ''));
+      out.appendChild(row);
+    }
+    if (!out.children.length) out.appendChild(el('div', 'empty', '素材库是空的。点「扫描」把文件夹登记进来。'));
+  };
+  await loadStats();
+}
+
+/** 模板库：448 个模板，按分类筛 + 关键词。 */
+async function screenTemplates(root) {
+  setHead('模板库', '448 个现成动效');
+  const box = el('div', 'pad');
+  root.appendChild(box);
+
+  const cats = ['全部', '片头片尾', '转场', '字幕', '文字动画', '图表数据', '产品展示', '社媒包装', '下三分之一', '背景纹理', '动效零件'];
+  const bar = el('div');
+  bar.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center';
+  const inp = el('input', 'in');
+  inp.placeholder = '搜模板（英文名/中文词都行）';
+  inp.style.cssText = 'flex:1;min-width:180px';
+  const sel = el('select', 'in');
+  for (const c of cats) sel.appendChild(new Option(c, c === '全部' ? '' : c));
+  bar.appendChild(inp); bar.appendChild(sel);
+  box.appendChild(bar);
+
+  const grid = el('div', 'grid');
+  grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(168px,1fr))';
+  box.appendChild(grid);
+
+  async function go() {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><span class="spin"></span> 找模板…</div>';
+    const r = await call('templates', { q: inp.value.trim(), cat: sel.value, limit: 60 });
+    grid.innerHTML = '';
+    if (!r.ok) { grid.appendChild(fail(r.text)); return; }
+    const items = parseList(r.text);
+    const count = (r.text.match(/共\s*(\d+)\s*个/) || [])[1];
+    $('#hSub').textContent = count ? count + ' 个匹配' : '';
+    for (const it of items) {
+      const b = String(it[1] || '').match(/\[(.+?)\/(.+?)\]/);
+      const cat = b ? b[1] : '';
+      const dur = String(it[2] || '').replace('s', '');
+      const c = el('div', 'card');
+      c.style.cursor = 'pointer';
+      const th = el('div', 'thumb');
+      const img = new Image();
+      img.src = 'velora://studio/thumbs/' + encodeURIComponent(it[0]) + '.png';
+      img.onerror = () => { th.innerHTML = '<span class="ph">' + esc(cat || '模板') + '</span>'; };
+      th.appendChild(img);
+      c.appendChild(th);
+      c.appendChild(el('div', 't', it[0]));
+      const m = el('div', 'm');
+      m.appendChild(el('span', 'tag', cat || '—'));
+      if (dur) m.appendChild(el('span', null, dur + 's'));
+      c.appendChild(m);
+      c.onclick = () => {
+        alert('模板：' + it[0] + '\n分类：' + cat + '\n时长：' + (dur || '?') + 's\n\n跟 AI 说「用 ' + it[0] + ' 开场」就会加进时间线。');
+      };
+      grid.appendChild(c);
+    }
+    if (!grid.children.length) grid.appendChild(el('div', 'empty', '没找到。换个词试试，模板名是英文的（intro / caption / chart / aurora…）。'));
+  }
+  inp.oninput = () => { clearTimeout(inp._t); inp._t = setTimeout(go, 320); };
+  sel.onchange = go;
+  await go();
+}
+
+/** AI 配音：音色表 + 试听。 */
+async function screenVoice(root) {
+  setHead('AI 配音', '系统音色，本地合成');
+  const box = el('div', 'pad');
+  root.appendChild(box);
+
+  const card = el('div', 'card');
+  card.style.marginBottom = '16px';
+  card.innerHTML = '<div class="t">念一段话</div>';
+  const ta = el('textarea', 'in');
+  ta.style.cssText = 'width:100%;height:84px;padding:9px 10px;resize:vertical;margin-top:8px';
+  ta.placeholder = '要念的文字';
+  const row = el('div');
+  row.style.cssText = 'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap';
+  const selV = el('select', 'in');
+  selV.innerHTML = '<option value="">默认中文女声</option>';
+  for (const v of ['Eddy (中文（中国大陆）)', 'Flo (中文（中国大陆）)', 'Grandma (中文（中国大陆）)', 'Grandpa (中文（中国大陆）)', 'Reed (中文（中国大陆）)', 'Rocko (中文（中国大陆）)', 'Sandy (中文（中国大陆）)', 'Shelley (中文（中国大陆）)']) {
+    selV.appendChild(new Option(v.split(' ')[0], v));
+  }
+  const rate = el('input', 'in');
+  rate.type = 'number'; rate.value = '175'; rate.style.width = '84px'; rate.title = '语速';
+  const bGo = el('button', 'btn pri', '合成');
+  row.appendChild(selV); row.appendChild(rate); row.appendChild(bGo);
+  card.appendChild(ta); card.appendChild(row);
+  box.appendChild(card);
+
+  const out = el('div');
+  box.appendChild(out);
+
+  bGo.onclick = async () => {
+    const t = ta.value.trim();
+    if (!t) { out.innerHTML = ''; out.appendChild(fail('先写要念的文字')); return; }
+    busy(true, '合成中');
+    const r = await call('voice', { text: t, voice: selV.value, rate: Number(rate.value) || 175 });
+    busy(false);
+    out.innerHTML = '';
+    out.appendChild(r.ok ? el('div', 'note', r.text) : fail(r.text));
+  };
+}
+
+/** 任务中心：列表 + 取消。 */
+async function screenTasks(root) {
+  setHead('任务中心', '跑批进度与失败原因');
+  const box = el('div', 'pad');
+  root.appendChild(box);
+  const bar = el('div');
+  bar.style.cssText = 'display:flex;gap:8px;margin-bottom:14px';
+  const bRe = el('button', 'btn', '刷新');
+  const bCl = el('button', 'btn gh', '清空已完成');
+  bar.appendChild(bRe); bar.appendChild(bCl);
+  box.appendChild(bar);
+  const out = el('div');
+  box.appendChild(out);
+
+  async function go() {
+    out.innerHTML = '<div class="empty"><span class="spin"></span> 读任务…</div>';
+    const r = await call('tasks', { action: 'list' });
+    out.innerHTML = '';
+    if (!r.ok) { out.appendChild(fail(r.text)); return; }
+    const m = r.text.match(/计数\s*(\{.*\})/);
+    if (m) {
+      let c = {};
+      try { c = JSON.parse(m[1]); } catch {}
+      out.appendChild(statsBox(Object.entries(c)));
+    }
+    for (const it of parseList(r.text)) {
+      const row = el('div', 'row');
+      row.appendChild(el('span', 'nm', it[1] || it[0]));
+      const st = it[2] || '';
+      row.appendChild(el('span', 'tag ' + (st === '已完成' ? 'on' : st === '失败' ? 'err' : st === '已取消' ? 'warn' : ''), st));
+      row.appendChild(el('span', 'tag', it[3] || ''));
+      // 失败原因（工具输出里是「⚠ 素材不存在」这种），截短免得撑破行
+      const why = it.slice(4).join(' ').replace(/^⚠\s*/, '');
+      if (why) row.appendChild(el('span', 'tag err', why.slice(0, 48)));
+      if (st === '排队中' || st === '运行中') {
+        const b = el('button', 'btn sm', '取消');
+        b.onclick = async () => {
+          const c = await call('tasks', { action: 'cancel', id: it[0] });
+          alert(c.ok ? c.text : c.text);
+          go();
+        };
+        row.appendChild(b);
+      }
+      out.appendChild(row);
+    }
+    if (!out.children.length) out.appendChild(el('div', 'empty', '还没有任务。'));
+  }
+  bRe.onclick = go;
+  bCl.onclick = async () => { await call('tasks', { action: 'clear' }); go(); };
+  await go();
+}
+
+/** 发布中心：选成片 + 平台 + 标题，默认只填不发。 */
+async function screenPublish(root) {
+  setHead('发布中心', '抖音 · 小红书 · 快手 · 视频号 · B站');
+  const box = el('div', 'pad');
+  root.appendChild(box);
+
+  const note = el('div', 'note');
+  note.style.marginBottom = '14px';
+  note.textContent = '默认只把标题、正文、视频填进网页，停在发布按钮前 —— 真发出去撤不回来，所以要点「真发」才点。';
+  box.appendChild(note);
+
+  const card = el('div', 'card');
+  card.innerHTML = '<div class="t">发一条</div>';
+  box.appendChild(card);
+
+  const form = el('div');
+  form.style.cssText = 'display:grid;gap:9px;margin-top:10px';
+  const selP = el('select', 'in');
+  for (const [k, v] of [['douyin', '抖音'], ['xiaohongshu', '小红书'], ['kuaishou', '快手'], ['weixin-channels', '视频号'], ['bilibili', 'B站']]) {
+    selP.appendChild(new Option(v, k));
+  }
+  const inpV = el('input', 'in'); inpV.placeholder = '成片路径（产出/视频 下的 mp4）';
+  const inpT = el('input', 'in'); inpT.placeholder = '标题';
+  const inpB = el('textarea', 'in'); inpB.placeholder = '正文 / 简介'; inpB.style.cssText = 'height:64px;padding:8px 10px;resize:vertical';
+  form.appendChild(selP); form.appendChild(inpV); form.appendChild(inpT); form.appendChild(inpB);
+  card.appendChild(form);
+
+  const row = el('div');
+  row.style.cssText = 'display:flex;gap:8px;margin-top:11px';
+  const bFill = el('button', 'btn pri', '只填不发');
+  const bSend = el('button', 'btn', '真发');
+  row.appendChild(bFill); row.appendChild(bSend);
+  card.appendChild(row);
+
+  const out = el('div');
+  out.style.marginTop = '14px';
+  box.appendChild(out);
+
+  async function run(exec) {
+    if (!inpV.value.trim()) { out.innerHTML = ''; out.appendChild(fail('先填成片路径')); return; }
+    if (exec && !confirm('会真的点发布按钮，发出去就撤不回来了。确定？')) return;
+    busy(true, exec ? '正在发布' : '正在填写');
+    const r = await call('publish', {
+      platform: selP.value, video: inpV.value.trim(),
+      title: inpT.value.trim(), body: inpB.value.trim(), exec: exec ? 1 : 0,
+    });
+    busy(false);
+    out.innerHTML = '';
+    out.appendChild(r.ok ? el('div', 'note', r.text) : fail(r.text));
+  }
+  bFill.onclick = () => run(false);
+  bSend.onclick = () => run(true);
+}
+
+/** 热点雷达：各平台榜单 + 选题角度。 */
+async function screenHotspot(root) {
+  setHead('热点雷达', '实时榜单');
+  const box = el('div', 'pad');
+  root.appendChild(box);
+
+  const bar = el('div');
+  bar.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center';
+  const sel = el('select', 'in');
+  for (const [k, v] of [['weibo', '微博'], ['douyin', '抖音'], ['bilibili', 'B站'], ['baidu', '百度'], ['zhihu', '知乎'], ['toutiao', '头条'], ['rednote', '小红书']]) {
+    sel.appendChild(new Option(v, k));
+  }
+  const bGo = el('button', 'btn pri', '抓');
+  const bIdea = el('button', 'btn', '给选题角度');
+  bar.appendChild(sel); bar.appendChild(bGo); bar.appendChild(bIdea);
+  box.appendChild(bar);
+  const out = el('div');
+  box.appendChild(out);
+
+  async function go(ideas) {
+    busy(true, '抓榜中');
+    const r = await call('hotspot', { platform: sel.value, limit: 20, ideas: ideas ? 1 : 0 });
+    busy(false);
+    out.innerHTML = '';
+    if (!r.ok) { out.appendChild(fail(r.text)); return; }
+
+    // hotspot 返回的是人读格式，两段不同结构：
+    //   榜单：` 1. 标题  [热度 211.0万]`（前导空格 + 序号，不是 `- `）
+    //   选题：`可以这么切：` 之后 `1. 标题` + `   → 角度` + `   形式：竖屏短视频`
+    // 之前统一用 parseList 找 `- ` 前缀，一条都匹配不到，整屏只剩一行表头。
+    const lines = String(r.text).split('\n');
+    const head = el('div', 'note');
+    head.style.marginBottom = '12px';
+    head.textContent = lines[0] || '';
+    out.appendChild(head);
+
+    const cutAt = lines.findIndex((l) => /可以这么切|选题角度/.test(l));
+    const boardEnd = cutAt >= 0 ? cutAt : lines.length;
+
+    // 点了「给选题角度」时，角度优先放在榜单上面 —— 排在 22 行榜尾
+    // 等于让人滚到底才看见，等于没给。
+    if (cutAt >= 0) {
+      const ideasBox = el('div');
+      ideasBox.style.marginBottom = '16px';
+      ideasBox.appendChild(el('div', 'sub', lines[cutAt]));
+      let cur = null;
+      for (let i = cutAt + 1; i < lines.length; i++) {
+        const raw = lines[i];
+        if (!raw.trim()) continue;
+        const m = raw.match(/^\s*(\d+)\.\s+(.+)$/);
+        if (m) {
+          cur = el('div', 'card');
+          cur.style.marginBottom = '9px';
+          cur.appendChild(el('div', 't', m[2]));
+          ideasBox.appendChild(cur);
+          continue;
+        }
+        if (cur) cur.appendChild(el('div', 'd', raw.trim()));
+      }
+      out.appendChild(ideasBox);
+    }
+
+    let n = 0;
+    for (let i = 1; i < boardEnd; i++) {
+      const raw = lines[i];
+      const m = raw.match(/^\s*(\d+)\.\s+(.+?)\s*(?:\[(.+?)\])?\s*$/);
+      if (!m) continue;
+      const row = el('div', 'row');
+      row.appendChild(el('span', 'tag' + (Number(m[1]) <= 3 ? ' on' : ''), m[1]));
+      row.appendChild(el('span', 'nm', m[2]));
+      if (m[3]) row.appendChild(el('span', 'tag warn', m[3]));
+      out.appendChild(row);
+      n++;
+    }
+    if (!n) out.appendChild(el('div', 'empty', '这个平台这会儿抓不到（可能被限流）。换个平台试试。'));
+
+  }
+
+  bGo.onclick = () => go(false);
+  bIdea.onclick = () => go(true);
+  await go(false);
+}
+
+// ══ 路由：靠 hash 决定进哪一屏 ══════════════════════════════════════════
+const SCREENS = {
+  edit: (root) => (window.VeloraEditor
+    ? window.VeloraEditor.screen(root)
+    : Promise.resolve(root.appendChild(fail('编辑器没加载出来 —— 检查 renderer/editor.js')))),
+  assets: screenAssets,
+  templates: screenTemplates,
+  voice: screenVoice,
+  tasks: screenTasks,
+  publish: screenPublish,
+  hotspot: screenHotspot,
+};
+
+function route() {
+  const key = (location.hash || '#edit').replace(/^#/, '') || 'edit';
+  const fn = SCREENS[key] || SCREENS.edit;
+  const body = $('#body');
+  // 通知上一屏拆掉自己的 document 级监听（剪辑台有空格/方向键/鼠标拖动）
+  body.dispatchEvent(new Event('ed:teardown'));
+  body.innerHTML = '';
+  window.scrollTo(0, 0);
+  Promise.resolve(fn(body)).catch((e) => {
+    body.innerHTML = '';
+    body.appendChild(fail('这一屏出错了：' + ((e && e.message) || e)));
+  });
+}
+
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>

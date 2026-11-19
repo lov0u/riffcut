@@ -1,0 +1,63 @@
+{
+  "version": "2026.11.20-1",
+  "software_version": "1.0.0",
+  "effective_date": "2026-11-20",
+  "holder": "青网（CyanWeb）",
+  "contact": "China@cyanweb.cn",
+  "jurisdiction": "权利主体住所地有管辖权的人民法院",
+  "license_model": "dual",
+  "license_oss": "AGPL-3.0",
+  "license_oss_url": "https://www.gnu.org/licenses/agpl-3.0.html",
+  "license_commercial": "商业授权（付费，按需报价）",
+  "docs": [
+    {
+      "id": "license",
+      "title": "开源许可与商业授权说明",
+      "file": "01-开源许可与商业授权.md",
+      "key": true,
+      "required_on_first_run": true
+    },
+    {
+      "id": "terms",
+      "title": "服务条款",
+      "file": "02-服务条款.md",
+      "key": true,
+      "required_on_first_run": true
+    },
+    {
+      "id": "privacy",
+      "title": "隐私政策",
+      "file": "03-隐私政策.md",
+      "key": true,
+      "required_on_first_run": true
+    },
+    {
+      "id": "ip",
+      "title": "知识产权声明",
+      "file": "04-知识产权声明.md",
+      "key": false,
+      "required_on_first_run": false
+    },
+    {
+      "id": "disclaimer",
+      "title": "免责声明",
+      "file": "05-免责声明.md",
+      "key": true,
+      "required_on_first_run": true
+    }
+  ],
+  "key_points": {
+    "oss": "AGPL-3.0，免费使用、修改、分发",
+    "commercial": "闭源集成 / 去品牌 / 需担保时购买商业授权",
+    "output_rights": "产出物版权归用户，AGPL 不约束产出物",
+    "trademark": "开源许可不授予商标权，修改版须换名换图标",
+    "liability": "按现状提供，AI 输出须人工复核，素材合规责任在用户"
+  },
+  "todo": [
+    "在软件首次启动时弹出协议同意对话框，勾选后方可进入",
+    "在「关于」页面展示许可模式与协议全文入口",
+    "对外分发前确认不含 NOTICE.md 第 3 节列出的违规组件（FFmpeg --enable-nonfree）",
+    "如需正式维权，办理软件著作权登记"
+  ],
+  "disclaimer": "本目录为授权与免责文本，非法律意见书；重大商业决策前请咨询执业律师。"
+}

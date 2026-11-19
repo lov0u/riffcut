@@ -1,0 +1,381 @@
+<style>
+/* 插件市场。
+   它和「技能中心」是两件事：技能是我们自己写的可复用流程（41 条，随包走），
+   插件是 DSH 生态里别人做的扩展（6100 多个，要装才生效）。混在一页会让人
+   以为「装个插件就等于有了剪辑能力」，其实是两套东西。 */
+.pg-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.pg-search{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:#FFF;box-shadow:var(--sh-in);flex:1;min-width:200px;max-width:420px}
+.pg-search input{border:0;outline:none;background:none;font-size:var(--f4);color:#333B49;width:100%;min-width:0}
+.pg-search .ic{width:13px;height:13px;color:#9AA2B1;flex:0 0 auto}
+.pg-stat{font-size:var(--f5);color:#8A92A2;font-variant-numeric:tabular-nums}
+.pg-stat b{color:#33405A;font-weight:600}
+.pg-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) clamp(260px,22vw,320px);gap:clamp(8px,1%,12px)}
+.pg-list{display:flex;flex-direction:column;min-height:0;padding:0}
+.pg-head{display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--line);
+  flex:0 0 auto;font-size:var(--f3);font-weight:600}
+.pg-head .u-tag{margin-left:auto}
+.pg-rows{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:8px 12px 14px}
+.pg-rows::-webkit-scrollbar{display:none}
+.pg-row{display:flex;align-items:flex-start;gap:11px;padding:11px 12px;border:1px solid var(--line);
+  border-radius:var(--r-md);margin-bottom:8px;background:#FFF;transition:border-color .14s,box-shadow .14s}
+.pg-row:hover{border-color:#BFE0DA;box-shadow:var(--sh-1)}
+.pg-row .ic-box{width:34px;height:34px;flex:0 0 auto;border-radius:9px;background:#F3F6FA;
+  display:flex;align-items:center;justify-content:center;color:#7A8496;font-size:13px;font-weight:700}
+.pg-row .mid{flex:1;min-width:0}
+.pg-row .nm{font-size:var(--f4);color:#2C3340;font-weight:600;line-height:1.4;word-break:break-all}
+.pg-row .own{font-size:var(--f5);color:#9AA2B1;margin-left:7px;font-weight:400}
+.pg-row .ds{font-size:var(--f5);color:#5C6478;line-height:1.5;margin-top:3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pg-row .meta{display:flex;align-items:center;gap:7px;margin-top:6px;flex-wrap:wrap}
+.pg-row .meta .u-tag{font-size:10px}
+.pg-row .right{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.pg-row .ver{font-size:10px;color:#A6ADBB;font-variant-numeric:tabular-nums}
+.pg-row .u-btn{height:27px;font-size:var(--f5);padding:0 11px}
+.pg-row.on{border-color:#BFE0DA;background:#FBFEFD}
+.pg-more{display:flex;justify-content:center;padding:6px 0 10px}
+.pg-side{display:flex;flex-direction:column;gap:clamp(8px,1%,12px);min-height:0;overflow:auto;scrollbar-width:none}
+.pg-side::-webkit-scrollbar{display:none}
+.pg-note{font-size:var(--f5);color:#5C6478;line-height:1.62;background:#F8FAFC;
+  border:1px solid var(--line);border-radius:var(--r-md);padding:11px 13px}
+.pg-note b{color:#33405A}
+.pg-note code{background:#EEF2F7;border-radius:3px;padding:0 3px;font-size:10.5px}
+.pg-kern{padding:11px 13px}
+.pg-kern .k{display:flex;justify-content:space-between;gap:8px;font-size:var(--f5);padding:3px 0}
+.pg-kern .k span:first-child{color:#8A92A2}
+.pg-kern .k span:last-child{color:#33405A;font-weight:600;font-variant-numeric:tabular-nums}
+.pg-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#35B26B;margin-right:4px}
+.pg-dot.off{background:#C9CED8}
+/* 标签切换：市场 / 已装，参照 DSH 原生 Discover / Installed */
+.pg-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:10px;flex:0 0 auto}
+.pg-tab{height:34px;padding:0 15px;border:0;background:none;color:#7A8496;font-size:var(--f4);
+  cursor:pointer;position:relative;font-weight:500}
+.pg-tab:hover{color:#33405A}
+.pg-tab.on{color:#1B8B7E;font-weight:600}
+.pg-tab.on:after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:#1B8B7E;border-radius:2px}
+.pg-tab .n{font-size:10px;background:#EEF2F7;border-radius:8px;padding:1px 6px;margin-left:5px;color:#7A8496}
+.pg-tab.on .n{background:#DDF3EE;color:#1B8B7E}
+/* 状态标签（对齐 DSH 原生：已装 / 随包 / 未装） */
+.pg-row .u-tag.gold{background:#FBF1DC;color:#9A6B12}
+/* 重启提示条：装/改/卸后出现，一键重启 */
+.pg-restart{display:none;align-items:center;gap:10px;padding:9px 13px;margin-bottom:10px;
+  background:#FFF8E9;border:1px solid #F0DCA8;border-radius:var(--r-md);font-size:var(--f5);color:#7A5B18}
+.pg-restart.on{display:flex}
+.pg-restart .txt{flex:1;min-width:0}
+.pg-restart b{color:#5C4410}
+.pg-restart .u-btn{height:27px;font-size:var(--f5);flex:0 0 auto}
+/* 信任提示（DSH 原生同款） */
+.pg-trust{display:flex;gap:7px;align-items:flex-start;color:#9A6B12;line-height:1.55}
+.pg-trust svg{flex:0 0 auto;width:14px;height:14px;margin-top:2px}
+.pg-empty-hint{font-size:var(--f5);color:#8A92A2;line-height:1.6}
+</style>
+
+<section class="page" data-page="plugins">
+  <div class="u-head">
+    <div class="txt">
+      <div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-grid"/></svg>插件市场</div>
+      <div class="u-sub">DSH 生态里别人做的扩展 · 装了就有新能力 · 装完要重启软件</div>
+    </div>
+    <div class="u-actions">
+      <button class="u-btn" id="pgRefresh"><svg class="ic"><use href="#i-refresh"/></svg>刷新索引</button>
+      <button class="u-btn" id="pgRestart" style="display:none"><svg class="ic"><use href="#i-refresh"/></svg>重启软件</button>
+    </div>
+  </div>
+
+  <div class="pg-tabs">
+    <button class="pg-tab on" data-tab="market">插件市场</button>
+    <button class="pg-tab" data-tab="installed">已安装<span class="n" id="pgInstalledN">0</span></button>
+  </div>
+
+  <div class="pg-restart" id="pgRestartBar">
+    <svg class="ic" style="width:16px;height:16px;color:#C99A2E"><use href="#i-refresh"/></svg>
+    <div class="txt"><b>改动要重启才生效。</b>内核只在启动时读一次插件配置，重启软件后新装的才会加载。</div>
+    <button class="u-btn gold" id="pgRestart2">一键重启</button>
+  </div>
+
+  <div class="pg-bar" id="pgSearchBar">
+    <div class="pg-search">
+      <svg class="ic"><use href="#i-search"/></svg>
+      <input id="pgKw" placeholder="搜插件名、说明、关键词，如 语音 / memory / 微信">
+    </div>
+    <div class="pg-stat" id="pgStat">—</div>
+  </div>
+
+  <div class="pg-body">
+    <div class="u-card pg-list">
+      <div class="pg-head">
+        <svg class="ic" style="width:15px;height:15px"><use href="#i-list"/></svg>
+        <span id="pgTitle">市场</span>
+        <span class="u-tag gray" id="pgCount">—</span>
+      </div>
+      <div class="pg-rows" id="pgRows">
+        <div class="u-empty"><svg class="ic"><use href="#i-grid"/></svg><div>读市场索引…</div></div>
+      </div>
+    </div>
+
+    <div class="pg-side">
+      <div class="u-card pg-kern">
+        <div class="h-ideas-head" style="display:flex;align-items:center;gap:6px;font-size:var(--f3);font-weight:600;margin-bottom:8px">
+          <svg class="ic" style="width:14px;height:14px"><use href="#i-cube"/></svg>内核
+        </div>
+        <div id="pgKern"><div class="pg-note">读内核状态…</div></div>
+      </div>
+      <div class="pg-note">
+        <b>市场和技能中心是两件事。</b>技能中心是我们自己写的流程，随软件走；
+        这里装的是 DSH 生态里别人做的插件，装完才有。
+        <br><br>
+        索引来自 <code>awesome-dsh-plugin.com</code>，缓存 6 小时。拉不到会明确说，
+        不会拿旧列表糊过去。
+      </div>
+      <div class="pg-note pg-trust">
+        <svg class="ic"><use href="#i-shield"/></svg>
+        <span>插件在本机以你的权限运行，装前请确认来源可信。「已安装」里能看到随包自带和市场装的全部插件。</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  /* 不能在这里把 window.api 存成局部变量：shell.html 先挂的是「排队桩」，
+     真身要等 live.js 装好后 __apiFlush 才换上。存了局部变量 = 永远拿到桩，
+     桩返回的 Promise 没有人来 resolve，页面就永远停在「读取中」。
+     用一层转发，每次调用现取。 */
+  function A(){ return window.api.apply(null, arguments) }
+  /* 自己拿一遍 $：live.js 里的 $ 是它 IIFE 内部的，页面脚本取不到，
+     直接用会报 $ is not defined —— 整页按钮全死但页面看起来是好的。 */
+  var $=function(s){return document.querySelector(s)};
+  var rows=$('#pgRows'), stat=$('#pgStat'), cnt=$('#pgCount'), ttl=$('#pgTitle');
+  var kw='', limit=60, offset=0, hits=[], tab='market', installedMap={};
+  var restartBar=$('#pgRestartBar'), restartBtn=$('#pgRestart'), restartBtn2=$('#pgRestart2');
+  var searchBar=$('#pgSearchBar');
+
+  /* 装/改/卸后弹重启条 + 头部按钮。内核只在启动时读一次 profile。 */
+  function needRestart(msg){
+    if(msg) window.say&&window.say(msg);
+    restartBar.classList.add('on');
+    restartBtn.style.display='';
+    try{ if(window.riffcut&&window.riffcut.setBadge) window.riffcut.setBadge('restart') }catch(e){}
+  }
+  function doRestart(){
+    if(!window.riffcut||!window.riffcut.restart){
+      window.say&&window.say('当前环境不支持一键重启，请手动 ⌘Q 退出后重开',true);
+      return;
+    }
+    window.__confirmAsk('现在重启软件？未保存的对话和任务会中断，装好的插件才会生效。',function(){
+      restartBtn2.disabled=true; restartBtn2.textContent='重启中…';
+      window.riffcut.restart().catch(function(){ window.say&&window.say('重启没成功，请手动 ⌘Q 重开',true) });
+    },{title:'一键重启',ok:'重启'});
+  }
+  restartBtn.addEventListener('click',doRestart);
+  restartBtn2.addEventListener('click',doRestart);
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+  function rowHtml(p){
+    var ini=esc((p.short||'?').slice(0,2).toUpperCase());
+    var isInst=!!p.installed;
+    var tag=p.category?'<span class="u-tag gray">'+esc(p.category)+'</span>':'';
+    var repo=p.repo?'<span class="u-tag gray" title="'+esc(p.repo)+'">源码</span>':'';
+
+    var btn;
+    if(tab==='installed'){
+      /* 已安装 tab：能开/关、能卸载（随包 bundle 不允许卸，只能关） */
+      btn='<button class="u-btn ghost" data-set="'+esc(p.name)+'" data-on="'+(p.enabled?1:0)+'">'
+          +(p.enabled?'关掉':'打开')+'</button>'
+        +(p.source==='market'?'<button class="u-btn ghost" data-remove="'+esc(p.name)+'" style="color:#C25B5B">卸载</button>':'');
+    }else if(isInst){
+      /* 市场 tab 里已装的：DSH 原生同款——不在列表里重装，点去「已安装」管理 */
+      btn='<button class="u-btn ghost" data-goto="installed">已安装</button>';
+    }else{
+      btn='<button class="u-btn gold" data-inst="'+esc(p.name)+'" data-spec="'+esc(p.spec)+'">装上</button>';
+    }
+
+    var stateTag = isInst
+      ? '<span class="u-tag gold">'+(p.source==='market'?'已安装':'随 DSH 提供')+'</span>' : '';
+    return '<div class="pg-row'+(p.enabled?' on':'')+'">'
+      + '<div class="ic-box">'+ini+'</div>'
+      + '<div class="mid">'
+      +   '<div class="nm">'+esc(p.short||p.name)+'<span class="own">'+(p.owner?esc(p.owner):'')+'</span></div>'
+      +   (p.desc?'<div class="ds">'+esc(p.desc)+'</div>':'')
+      +   '<div class="meta">'+tag+repo+stateTag+'</div>'
+      + '</div>'
+      + '<div class="right"><div class="ver">'+(p.version?'v'+esc(p.version):'')+'</div>'+btn+'</div>'
+      + '</div>';
+  }
+
+  function paint(){
+    if(!hits.length){
+      rows.innerHTML='<div class="u-empty"><svg class="ic"><use href="#i-search"/></svg>'
+        +'<div>'+(kw?'没找到匹配「'+esc(kw)+'」的插件':'市场是空的')+'</div></div>';
+      return;
+    }
+    var html=hits.map(rowHtml).join('');
+    if(offset+hits.length<limitTotal){
+      html+='<div class="pg-more"><button class="u-btn" id="pgMore">再多看一些</button></div>';
+    }
+    rows.innerHTML=html;
+  }
+
+  var limitTotal=0;
+
+  function load(force){
+    rows.innerHTML='<div class="u-empty"><svg class="ic"><use href="#i-grid"/></svg><div>读市场索引…第一次要下 5MB，稍等</div></div>';
+    A('/api/plugins',{action:'market',query:kw,limit:limit,offset:offset,force:!!force}).then(function(d){
+      var r=d||{};
+      limitTotal=r.matched||0;
+      hits=r.plugins||[];
+      markMarketInstalled();
+      ttl.textContent=kw?('搜索「'+kw+'」'):(r.title||'市场');
+      cnt.textContent=(r.matched||0)+' 个';
+      stat.innerHTML='市场共 <b>'+(r.total||0)+'</b> 个 · 匹配 <b>'+(r.matched||0)+'</b> · 已显示 <b>'+(r.shown||0)+'</b>'
+        +(r.note?' · <span style="color:#C25B5B">'+esc(r.note)+'</span>':'');
+      paint();
+    }).catch(function(e){
+      rows.innerHTML='<div class="u-empty"><svg class="ic"><use href="#i-grid"/></svg><div>读不到：'
+        +esc((e&&e.message)||e)+'</div></div>';
+      stat.textContent='失败';
+    });
+  }
+
+  function loadKern(){
+    A('/api/plugins',{action:'list'}).then(function(d){
+      var r=d||{}, k=r.kernel||{};
+      var on=(r.enabled||[]).length, tot=r.total||0;
+      $('#pgKern').innerHTML=
+        '<div class="k"><span>状态</span><span><i class="pg-dot'+(k.running?'':' off')+'"></i>'
+          +(k.running?'在跑':'没起')+'</span></div>'
+        +'<div class="k"><span>版本</span><span>'+esc(k.version||'?')+'</span></div>'
+        +'<div class="k"><span>随包 bundle</span><span>'+tot+' 个</span></div>'
+        +'<div class="k"><span>已开</span><span>'+on+' 个</span></div>';
+    }).catch(function(){});
+  }
+
+  function loadList(){
+    /* 「已安装」：随包 bundle + 市场装的第三方，都来自 list（后端已合并） */
+    A('/api/plugins',{action:'list'}).then(function(d){
+      var r=d||{};
+      var all=r.bundles||[];
+      /* 建索引，市场 tab 判断某个插件是否已装要用 */
+      syncInstalled(r);
+      var items=all.filter(function(b){return b.enabled||b.installed});
+      ttl.textContent='已安装';
+      cnt.textContent=items.length+' 个';
+      var mkt=items.filter(function(b){return b.source==='market'}).length;
+      stat.innerHTML='随包 <b>'+(all.length-mkt)+'</b> · 市场装 <b>'+mkt+'</b> · 已开 <b>'+(r.enabled||[]).length+'</b>';
+      hits=items.map(function(b){
+        return {name:b.name, short:(b.name||'').split('/').pop(), owner:'',
+                desc:b.desc||(b.source==='market'?'从插件市场安装':'随 DSH 内核一起提供的扩展包'),
+                version:b.version, category:b.source==='market'?'市场':'内核', source:b.source||'bundle',
+                installed:true, enabled:!!b.enabled, spec:''};
+      });
+      limitTotal=hits.length;
+      paint();
+    }).catch(function(e){
+      rows.innerHTML='<div class="u-empty"><svg class="ic"><use href="#i-grid"/></svg><div>读取失败：'+esc((e&&e.message)||e)+'</div></div>';
+    });
+  }
+
+  /* 市场列表加载成功后，把每条的 installed 状态按后端 list 标注出来 */
+  function markMarketInstalled(){
+    hits.forEach(function(p){ if(installedMap[p.name]) p.installed=true });
+  }
+
+  function switchTab(t){
+    tab=t;
+    document.querySelectorAll('.pg-tab').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-tab')===t) });
+    searchBar.style.display = (t==='market')?'':'none';
+    offset=0; kw=''; $('#pgKw').value='';
+    if(t==='installed') loadList(); else load(false);
+  }
+  document.querySelectorAll('.pg-tab').forEach(function(b){
+    b.addEventListener('click',function(){ switchTab(b.getAttribute('data-tab')) });
+  });
+
+  rows.addEventListener('click', function(e){
+    var m=e.target.closest('[data-inst]');
+    if(m){
+      var nm=m.getAttribute('data-inst'), sp=m.getAttribute('data-spec');
+      m.disabled=true; m.textContent='装…';
+      A('/api/plugins',{action:'install',name:nm,spec:sp}).then(function(d){
+        m.textContent='已安装';
+        needRestart('装上 '+(d&&d.name||nm)+'。点「一键重启」后生效。');
+        installedMap[nm]={name:nm,installed:true};
+        loadKern(); refreshInstalled();
+      }).catch(function(err){
+        m.disabled=false; m.textContent='重试';
+        window.say&&window.say('装失败：'+((err&&err.message)||err),true);
+      });
+      return;
+    }
+    var s=e.target.closest('[data-set]');
+    if(s){
+      var n=s.getAttribute('data-set'), on=s.getAttribute('data-on')==='1';
+      A('/api/plugins',{action:'set',name:n,enabled:!on}).then(function(){
+        s.setAttribute('data-on',on?'0':'1');
+        s.textContent=on?'打开':'关掉';
+        needRestart(on?'已关掉 '+n:'已启用 '+n+'，重启后生效。');
+        loadKern(); refreshInstalled();
+      }).catch(function(err){ window.say&&window.say('改失败：'+((err&&err.message)||err),true) });
+      return;
+    }
+    var rm=e.target.closest('[data-remove]');
+    if(rm){
+      var rn=rm.getAttribute('data-remove');
+      window.__confirmAsk('卸载「'+rn+'」？会删掉它的插件记录和依赖，重启后生效。（不删你下载的素材/成片）',function(){
+        A('/api/plugins',{action:'remove',name:rn}).then(function(){
+          needRestart('已卸载 '+rn+'，重启后生效。');
+          loadList(); loadKern(); refreshInstalled();
+        }).catch(function(err){ window.say&&window.say('卸载失败：'+((err&&err.message)||err),true) });
+      },{title:'卸载插件',ok:'卸载'});
+      return;
+    }
+    var go=e.target.closest('[data-goto]');
+    if(go){ switchTab(go.getAttribute('data-goto')); return; }
+    var more=e.target.closest('#pgMore');
+    if(more){
+      offset+=hits.length;
+      load(false);
+    }
+  });
+
+  var timer=0;
+  $('#pgKw').addEventListener('input', function(e){
+    kw=e.target.value.trim();
+    offset=0;
+    clearTimeout(timer);
+    timer=setTimeout(function(){ load(false) }, 420);
+  });
+  $('#pgRefresh').addEventListener('click', function(){ offset=0; load(true) });
+
+  /* 已装索引 + 标签上的数字。原来只在点开「已安装」时才写这个数字，
+     所以刚进页面永远是 0 —— 其实后端一上来就返回了完整清单。
+     这里把「建索引」和「写数字」绑在一起，任何地方拿到 list 都能刷一次。 */
+  function syncInstalled(d){
+    var all=(d&&d.bundles)||[];
+    installedMap={};
+    all.forEach(function(b){ installedMap[b.name]=b });
+    var n=all.filter(function(b){return b.enabled||b.installed}).length;
+    var el=$('#pgInstalledN');
+    if(el) el.textContent=n;
+    return n;
+  }
+  function refreshInstalled(){
+    return A('/api/plugins',{action:'list'}).then(syncInstalled).catch(function(){});
+  }
+
+  var booted=false;
+  function boot(){
+    if(booted)return; booted=true;
+    loadKern();
+    /* 先用 list 建已装索引并点亮数字，再加载市场列表，这样市场里已装的能标出来 */
+    A('/api/plugins',{action:'list'}).then(function(d){
+      syncInstalled(d);
+      return load(false);
+    }).catch(function(){ load(false) });
+  }
+  document.addEventListener('riffcut-ready', boot);
+  if(window.RiffCut) boot()
+})();
+</script>

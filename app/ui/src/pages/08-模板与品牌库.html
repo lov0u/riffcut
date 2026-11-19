@@ -1,0 +1,541 @@
+<style>
+/* ══ 模板与品牌库：技能=怎么写 / 出片预设=怎么排 / 品牌套件=用什么皮 ══ */
+.b-body{flex:1;min-height:0;display:grid;grid-template-columns:clamp(200px,21%,260px) minmax(0,1fr) clamp(220px,24%,300px);gap:clamp(8px,1%,14px)}
+.b-role{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:8px 12px;margin-bottom:9px;border:1px solid #BFE0DA;background:#FDF8EE;border-radius:var(--r-md);font-size:var(--f5)}
+.b-role b{color:#5A6272;font-weight:600}
+.b-role .sep{color:#F4F6FA}
+.b-role .note{margin-left:auto;color:var(--ink3)}
+.b-kits{padding:12px;display:flex;flex-direction:column;min-height:0}
+.b-gh{display:flex;align-items:center;gap:6px;font-size:var(--f5);color:var(--ink3);font-weight:600;
+  margin:10px 0 7px;padding-left:2px}
+.b-gh:first-child{margin-top:2px}
+.b-gh .u-tag{margin-left:auto}
+.b-kit{border:1px solid var(--line);border-radius:var(--r-md);padding:9px 11px;margin-bottom:7px;box-shadow:var(--sh-btn);cursor:pointer}
+.b-kit:hover{background:#FAFBFD}
+.b-kit.on{background:#EAF5F3;border-color:#BFE0DA}
+.b-kit b{font-size:var(--f4);display:flex;align-items:center;gap:6px;min-width:0}
+.b-kit b .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-kit b .u-tag{margin-left:auto;flex:0 0 auto}
+.b-kit span{font-size:var(--f5);color:var(--ink3);display:flex;align-items:center;gap:5px;margin-top:5px}
+.b-kit .dot{width:10px;height:10px;border-radius:4px;flex:0 0 auto;box-shadow:var(--sh-btn)}
+.b-main{display:flex;flex-direction:column;min-height:0;overflow:auto;scrollbar-width:none}
+.b-main::-webkit-scrollbar{display:none}
+.b-hero{padding:13px 15px;display:flex;align-items:center;gap:14px;flex:0 0 auto;flex-wrap:wrap}
+.b-hero .logo{height:52px;max-width:150px;object-fit:contain;flex:0 0 auto}
+.b-hero .ph{width:52px;height:52px;border-radius:8px;background:#20262F;color:#F0F3F8;
+  display:grid;place-items:center;font-size:20px;font-weight:700;flex:0 0 auto}
+.b-hero .txt{flex:1;min-width:180px}
+.b-hero b{font-size:var(--f2);display:block}
+.b-hero span{font-size:var(--f5);color:var(--ink3);display:block;margin-top:4px}
+.b-hero .u-row{margin-top:7px;flex-wrap:wrap}
+.b-hero .acts{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.b-sec{flex:0 0 auto;padding:12px 14px}
+.b-sec h4{font-size:var(--f3);font-weight:600;margin:0 0 10px;display:flex;align-items:center;gap:7px}
+.b-sec h4 .u-tag{margin-left:auto}
+.b-assets{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:9px}
+.b-asset{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--sh-btn);cursor:pointer}
+.b-asset:hover{box-shadow:var(--sh-1)}
+.b-asset .pic{height:72px;background:#F7F9FC;display:grid;place-items:center;overflow:hidden}
+.b-asset .pic img{max-height:56px;max-width:88%;object-fit:contain}
+.b-asset .pic .ph{font-size:12px;color:#8A92A2;background:#EEF1F7;padding:5px 8px;border-radius:8px}
+.b-asset.add{border-style:dashed;background:#FCFDFE}
+.b-asset.add .pic{background:#FBFCFE;color:#9AA2B0;font-size:var(--f5);gap:5px}
+.b-asset.add .pic .plus{font-size:20px;line-height:1;color:#1B8B7E}
+.b-asset .nm{font-size:var(--f5);padding:6px 8px;color:#3E4655;display:flex;align-items:center;gap:5px}
+.b-asset .nm .u-tag{margin-left:auto}
+.b-colors{display:flex;gap:9px;flex-wrap:wrap}
+.b-color{width:58px;text-align:center;font-size:var(--f5);color:var(--ink3)}
+.b-color i{display:block;height:36px;border-radius:8px;box-shadow:var(--sh-btn);margin-bottom:4px}
+.b-color em{display:block;font-style:normal;color:var(--ink2);font-size:var(--f5);margin-top:2px}
+.b-slogans{display:flex;gap:7px;flex-wrap:wrap}
+.b-line{font-size:var(--f5);color:var(--ink3);line-height:1.75;margin-top:8px}
+.b-right{padding:12px;display:flex;flex-direction:column;min-height:0;overflow:auto;scrollbar-width:none}
+.b-right::-webkit-scrollbar{display:none}
+.b-sec2{margin-bottom:13px}
+.b-sec2 h4{font-size:var(--f4);font-weight:600;margin:0 0 9px;display:flex;align-items:center;gap:7px}
+.b-sec2 h4 .u-btn{margin-left:auto}
+.b-tpl{position:relative;border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 26px 9px 9px;
+  margin-bottom:7px;box-shadow:var(--sh-btn);cursor:pointer}
+.b-tpl:hover{background:#FAFBFD}
+.b-tpl .t1{font-size:var(--f5);font-weight:600;color:#3E4655;display:flex;align-items:center;gap:6px}
+.b-tpl .t1 .u-tag{margin-left:auto}
+.b-tpl .t2{font-size:var(--f5);color:var(--ink3);margin-top:5px;line-height:1.6;word-break:break-all}
+.b-tpl .del{position:absolute;right:5px;top:6px;width:18px;height:18px;border:0;background:transparent;
+  color:#A8AFBC;font-size:12px;line-height:1;border-radius:4px;cursor:pointer}
+.b-tpl .del:hover{background:#FFF1F1;color:#B45B5B}
+.b-check{display:flex;align-items:center;gap:7px;font-size:var(--f5);color:#4A5262;margin-bottom:6px;line-height:1.5}
+.b-check .ic{width:13px;height:13px;flex:0 0 auto;color:#2E9B62}
+.b-check.todo{color:#5A6272}
+.b-check.todo .ic{color:#1B8B7E}
+.b-check .fix{margin-left:auto;border:0;background:transparent;color:#5A6272;font-size:var(--f5);cursor:pointer;text-decoration:underline}
+.b-path{font-family:ui-monospace,Menlo,monospace;font-size:var(--f5);color:#6B7484;
+  word-break:break-all;line-height:1.65;background:#F8FAFD;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.b-path b{color:var(--ink2);font-weight:600;font-family:inherit}
+.b-strong{font-size:var(--f5);color:#5A6272;line-height:1.75;background:#FDF8EE;border:1px solid #BFE0DA;
+  border-radius:8px;padding:8px 10px;margin-top:8px}
+.b-empty{padding:22px 10px;text-align:center;color:var(--ink3);font-size:var(--f5);line-height:1.8}
+.compact .b-body{grid-template-columns:clamp(170px,20%,210px) minmax(0,1fr) clamp(190px,22%,240px)}
+.tiny .b-body{grid-template-columns:1fr 1.2fr}
+.tiny .b-right{display:none}
+</style>
+
+<section class="page" data-page="brand">
+  <div class="u-head">
+    <div class="u-tabs" id="bTabs">
+      <button data-goto="assets"><svg class="ic"><use href="#i-folder"/></svg>客户与素材</button>
+      <button class="on" data-goto="brand"><svg class="ic"><use href="#i-board"/></svg>品牌资产</button>
+    </div>
+    <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-board"/></svg>品牌资产</div>
+      <div class="u-sub">按客户存的 Logo / 配色 / 片头片尾 / 口号 · 出片时自动套用</div></div>
+    <div class="u-actions">
+      <button class="u-btn" id="bUploadBtn"><svg class="ic"><use href="#i-upload"/></svg>上传资产</button>
+      <button class="u-btn gold" id="bNewKitBtn"><svg class="ic"><use href="#i-plus"/></svg>新建品牌套件</button>
+    </div>
+  </div>
+
+  <div class="b-role">
+    <span><b>品牌套件</b> 一个客户一套：Logo / 配色 / 字体 / 片头片尾 / 水印 / 口号</span>
+    <span class="note">片头片尾与 Logo 出片时真的会拼进成片、烧成水印；配色与口号会进 AI 写脚本的提示词</span>
+  </div>
+
+  <div class="b-body">
+    <div class="u-card b-kits">
+      <div class="u-head" style="flex:0 0 auto"><div class="txt"><div class="u-title" style="font-size:var(--f3)">品牌套件</div>
+        <div class="u-sub">按客户分组 · 一个客户一个文件夹</div></div></div>
+      <div class="u-scroll" id="bKitList" style="margin-top:8px"></div>
+      <div class="u-divider" style="margin-top:10px"></div>
+      <div class="v-tip" style="margin-top:10px;font-size:var(--f5);line-height:1.75">
+        <b>目录不会乱：</b>套件文件只放在软件内 <b>客户/&lt;客户名&gt;/品牌套件/</b> 里；内部目录按客户名称创建，跟你素材文件夹叫什么完全无关。素材夹只是只读来源，可稍后在「客户与素材库」里绑定。
+      </div>
+    </div>
+
+    <div class="b-main" id="bMain"></div>
+
+    <div class="u-card b-right" id="bRight"></div>
+  </div>
+</section>
+
+<!-- ══ 悬浮框 1：新建 / 编辑品牌套件 ══ -->
+<div class="v-modal" id="bKitModal" role="dialog" aria-modal="true" aria-label="新建品牌套件">
+  <div class="v-shade" data-close="bKitModal"></div>
+  <div class="v-dialog v-dialog-wide">
+    <div class="v-dhd"><b id="bKitTitle">新建品牌套件</b><button class="v-x" data-close="bKitModal">×</button></div>
+    <div class="v-dbd">
+      <div class="v-f"><label>归属客户</label>
+        <select class="v-sel" id="bKitCust"></select></div>
+      <div class="v-f" id="bKitNewWrap" style="display:none"><label>新客户名称（会在根目录 客户/ 下建一个同名文件夹）</label>
+        <div class="u-input"><input id="bKitNewCust" placeholder="例如：青衣网络" autocomplete="off"></div>
+        <label class="v-chk" style="margin-top:7px"><input type="checkbox" id="bKitActivate">同时切换为当前工作客户（默认不切换，避免打乱）</label>
+      </div>
+      <div class="v-f"><label>品牌套件名称</label>
+        <div class="u-input"><input id="bKitName" placeholder="例如：主品牌 / 2026 新版" autocomplete="off"></div></div>
+      <div class="v-sep"></div>
+      <div class="v-f"><label>品牌配色（每行一条：名称 #色值）</label>
+        <textarea class="v-ta" id="bKitColors" placeholder="主色 #1E2430&#10;辅色 #5A6272&#10;香槟 #F0F3F8"></textarea></div>
+      <div class="v-f"><label>口号与品牌文案（每行一条）</label>
+        <textarea class="v-ta" id="bKitSlogans" placeholder="让创意，成为影像。&#10;A NEW ERA OF VISUAL CREATION."></textarea></div>
+      <div class="v-row">
+        <div class="v-f"><label>品牌字体</label><div class="u-input"><input id="bKitFont" placeholder="苹方 / PingFang SC"></div></div>
+        <div class="v-f"><label>水印位置</label><div class="u-input"><input id="bKitWm" placeholder="右下"></div></div>
+      </div>
+      <div class="v-f"><label>备注</label><div class="u-input"><input id="bKitNote" placeholder="选填"></div></div>
+      <div class="v-tip" id="bKitPath"></div>
+      <div class="v-tip">新建客户只会往<b>同一份客户名单</b>里加一条，不会生成第二套状态；同名客户会直接复用，不会重复建文件夹。素材文件夹叫什么、放在哪，都不影响这里的目录。<span class="v-path" id="bKitRule"></span></div>
+    </div>
+    <div class="v-dft"><button class="u-btn" data-close="bKitModal">取消</button>
+      <button class="u-btn gold" id="bKitSave">保存品牌套件</button></div>
+  </div>
+</div>
+
+<!-- ══ 悬浮框 2：上传品牌资产 ══ -->
+<div class="v-modal" id="bUpModal" role="dialog" aria-modal="true" aria-label="上传品牌资产">
+  <div class="v-shade" data-close="bUpModal"></div>
+  <div class="v-dialog">
+    <div class="v-dhd"><b>上传品牌资产</b><button class="v-x" data-close="bUpModal">×</button></div>
+    <div class="v-dbd">
+      <div class="v-tip" id="bUpTarget"></div>
+      <div class="v-f"><label>放到哪个位置</label><select class="v-sel" id="bUpSlot"></select></div>
+      <div class="v-tip" id="bUpHint"></div>
+      <button class="u-btn gold" id="bUpPick" style="align-self:flex-start"><svg class="ic"><use href="#i-upload"/></svg>选择文件…</button>
+      <div class="v-sep"></div>
+      <div class="v-f"><label>或者粘贴文件路径（Finder 里右键拷贝路径，⌘V 粘贴）</label>
+        <div class="v-inline"><div class="u-input"><input id="bUpPath" placeholder="/Users/…/logo.png" autocomplete="off"></div>
+          <button class="v-paste" id="bUpPaste" title="粘贴"><svg class="ic"><use href="#i-copy"/></svg></button></div></div>
+      <div class="v-tip">文件会复制进这个客户的品牌套件目录，原文件不动；替换同位置旧资产时旧文件先进备份区，不会丢。</div>
+    </div>
+    <div class="v-dft"><button class="u-btn" data-close="bUpModal">取消</button>
+      <button class="u-btn" id="bUpPathGo">用这个路径上传</button></div>
+  </div>
+</div>
+
+<!-- ══ 悬浮框 3：新建 / 编辑出片预设 ══ -->
+<div class="v-modal" id="bPresetModal" role="dialog" aria-modal="true" aria-label="新建出片预设">
+  <div class="v-shade" data-close="bPresetModal"></div>
+  <div class="v-dialog">
+    <div class="v-dhd"><b id="bPresetTitle">新建出片预设</b><button class="v-x" data-close="bPresetModal">×</button></div>
+    <div class="v-dbd">
+      <div class="v-f"><label>预设名称</label><div class="u-input"><input id="bPName" placeholder="例如：企业宣传片 · 60s"></div></div>
+      <div class="v-f"><label>引用技能（怎么写脚本）</label><select class="v-sel" id="bPSkill"></select></div>
+      <div class="v-f"><label>引用品牌套件（用什么皮）</label><select class="v-sel" id="bPKit"></select></div>
+      <div class="v-row">
+        <div class="v-f"><label>画幅</label><select class="v-sel" id="bPRatio">
+          <option value="16:9">16:9 横屏</option><option value="9:16">9:16 竖屏</option>
+          <option value="1:1">1:1 方形</option><option value="4:3">4:3</option></select></div>
+        <div class="v-f"><label>时长（秒）</label><div class="u-input"><input id="bPDuration" type="number" min="5" max="600" value="60"></div></div>
+      </div>
+      <div class="v-f"><label>备注</label><div class="u-input"><input id="bPNote" placeholder="选填"></div></div>
+      <div class="v-tip"><b>为什么和技能不重复：</b>预设只存「引用哪个技能 + 哪套品牌 + 画幅 + 时长」，不写脚本、镜头、节奏；怎么写由技能决定。首页 AI 导演出方案时会读到这些规格与品牌规范。</div>
+    </div>
+    <div class="v-dft"><button class="u-btn" data-close="bPresetModal">取消</button>
+      <button class="u-btn gold" id="bPSave">保存预设</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $ =function(s){return document.querySelector(s)};
+  var $$=function(s){return [].slice.call(document.querySelectorAll(s))};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function A(path,data){return window.api(path,data)}
+  function say(m){if(window.say)window.say(m)}
+  function confirm(o){if(window.confirmAction)window.confirmAction(o);
+    else if(window.confirm&&window.confirm(o.title))o.onOk()}
+  function openM(id){var m=$('#'+id);if(m){m.classList.add('open');document.body.classList.add('modal-open')}}
+  function closeM(id){var m=$('#'+id);if(m){m.classList.remove('open');document.body.classList.remove('modal-open')}}
+
+  var CAT=null, SLOTS=[], CUR=null, EDIT_KIT=null, EDIT_PRESET=null;
+
+  function load(quiet){
+    return A('/api/brand',{action:'bootstrap'}).then(function(d){
+      CAT=d; SLOTS=d.slots||[];
+      var keys=(d.kits||[]).map(kkey);
+      if(!CUR||keys.indexOf(CUR)<0){
+        var pick=(d.kits||[]).filter(function(k){return k.current})[0]||(d.kits||[])[0];
+        CUR=pick?kkey(pick):'';
+      }
+      render();
+      if(!quiet)say('品牌库已刷新');
+      return d;
+    }).catch(function(e){ $('#bKitList').innerHTML='<div class="b-empty">读取失败：'+esc(e.message)+'</div>'; });
+  }
+  function kkey(k){return (k.customer||'')+'/'+ (k.id||'')}
+  function kit(){return (CAT&&CAT.kits||[]).filter(function(k){return kkey(k)===CUR})[0]||null}
+  function custOf(k){return (CAT&&CAT.customers||[]).filter(function(c){return c.name===(k&&k.customer)})[0]||null}
+  function slotMeta(s){return SLOTS.filter(function(x){return x.slot===s})[0]||{label:s,hint:''}}
+  function assetsOf(k){var m={};(k&&k.assets||[]).forEach(function(a){m[a.slot]=a});return m}
+  function colorsText(k){return (k&&k.colors||[]).map(function(c){return (c.name||'品牌色')+' '+(c.hex||'#000000')}).join('\n')}
+  function parseColors(t){
+    var out=[];String(t||'').split('\n').forEach(function(line){
+      line=line.trim();if(!line)return;
+      var m=line.match(/^(.+?)\s+(#[0-9a-fA-F]{3,8})\s*$/);
+      if(m)out.push({name:m[1].trim(),hex:m[2]});
+      else if(/^#[0-9a-fA-F]{3,8}$/.test(line))out.push({name:'品牌色',hex:line});
+    });return out;
+  }
+  function lines(t){return String(t||'').split('\n').map(function(x){return x.trim()}).filter(Boolean)}
+
+  /* ── 左栏：按客户分组 ── */
+  function renderKits(){
+    var box=$('#bKitList'),ks=CAT.kits||[];
+    if(!ks.length){box.innerHTML='<div class="b-empty">还没有品牌套件<br>点右上「新建品牌套件」</div>';return}
+    var groups={},order=[];
+    (CAT.customers||[]).forEach(function(c){groups[c.name]=[];order.push(c.name)});
+    ks.forEach(function(k){if(!groups[k.customer]){groups[k.customer]=[];order.push(k.customer)}groups[k.customer].push(k)});
+    var h='';
+    order.forEach(function(name){
+      var arr=groups[name]||[];if(!arr.length)return;
+      var cc=(CAT.customers||[]).filter(function(c){return c.name===name})[0]||{};
+      h+='<div class="b-gh">'+esc(name)+(cc.current?'<span class="u-tag green">当前客户</span>':'')+'</div>';
+      arr.forEach(function(k){
+        var c0=(k.colors||[])[0]||{}, key=kkey(k);
+        h+='<div class="b-kit'+(key===CUR?' on':'')+'" data-key="'+esc(key)+'">'+
+           '<b><span class="nm">'+esc(k.name)+'</span><span class="u-tag">v'+esc(k.version||1)+'</span></b>'+
+           '<span><i class="dot" style="background:'+esc(c0.hex||'#DDE2EA')+'"></i>'+esc(c0.hex||'未设配色')+' · '+esc(k.asset_count||0)+' 个资产</span></div>';
+      });
+    });
+    box.innerHTML=h;
+  }
+
+  /* ── 中栏：当前套件 ── */
+  function renderMain(){
+    var box=$('#bMain'),k=kit();
+    if(!k){box.innerHTML='<div class="u-card b-sec"><div class="b-empty">先在左侧选一个品牌套件，或新建一个</div></div>';return}
+    var am=assetsOf(k),logo=am.logo_full||am.logo_main||am.logo_invert;
+    var h='<div class="u-card b-hero">'+
+      (logo?'<img class="logo" src="'+esc(logo.url)+'" alt="Logo">':'<div class="ph">V</div>')+
+      '<div class="txt"><b>'+esc(k.name)+'</b><span>归属客户：'+esc(k.customer)+(k.current?' · 当前工作客户':'')+'</span>'+
+      '<div class="u-row" style="gap:6px"><span class="u-tag green">已启用</span><span class="u-tag">v'+esc(k.version||1)+'</span>'+
+      '<span class="u-tag">'+esc(k.asset_count||0)+' 个资产</span><span class="u-tag gray">'+esc(k.updated||'')+'</span></div></div>'+
+      '<div class="acts"><button class="u-btn sm" data-b="editkit">编辑</button>'+
+      '<button class="u-btn sm" data-b="reveal">打开文件夹</button>'+
+      '<button class="u-btn sm" data-b="delkit">删除</button></div></div>';
+
+    h+='<div class="u-card b-sec"><h4>品牌视觉资产 <span class="u-tag">点击可预览 / 替换</span></h4><div class="b-assets">';
+    SLOTS.forEach(function(s){
+      var a=am[s.slot];
+      if(a){
+        var pic=(a.kind==='image'||/\.(png|jpg|jpeg|webp|svg|heic|tif|tiff)$/i.test(a.file||''))
+          ? '<img src="'+esc(a.url)+'" alt="">'
+          : '<span class="ph">▶ 视频资产</span>';
+        h+='<div class="b-asset" data-upload="'+esc(s.slot)+'"><div class="pic">'+pic+'</div>'+
+           '<div class="nm">'+esc(a.label||s.label)+'<span class="u-tag">已上传</span></div></div>';
+      }else{
+        h+='<div class="b-asset add" data-upload="'+esc(s.slot)+'"><div class="pic"><span class="plus">+</span>待上传</div>'+
+           '<div class="nm">'+esc(s.label)+'<span class="u-tag gray">空</span></div></div>';
+      }
+    });
+    h+='</div><div class="b-line">缺的资产点一下就能传；出片时片头、片尾、水印与配色会按这套规范统一套用。</div></div>';
+
+    h+='<div class="u-card b-sec"><h4>品牌配色 <span class="u-tag gray">自动应用到字幕 / 片头</span></h4><div class="b-colors">';
+    (k.colors||[]).forEach(function(c){
+      h+='<div class="b-color"><i style="background:'+esc(c.hex||'#DDD')+'"></i>'+esc(c.hex||'')+'<em>'+esc(c.name||'')+'</em></div>';
+    });
+    if(!(k.colors||[]).length)h+='<div class="b-empty" style="padding:6px;text-align:left">还没设配色，点「编辑」补上</div>';
+    h+='</div></div>';
+
+    h+='<div class="u-card b-sec"><h4>口号与品牌文案</h4><div class="b-slogans">';
+    (k.slogans||[]).forEach(function(s){h+='<span class="u-tag gold">'+esc(s)+'</span>'});
+    if(!(k.slogans||[]).length)h+='<span class="u-tag gray">还没填口号</span>';
+    h+='</div><div class="b-line">字体：'+esc(k.font||'未设')+' · 水印位置：'+esc(k.watermark_pos||'未设')+
+       (k.note?'<br>备注：'+esc(k.note):'')+'</div></div>';
+
+    h+='<div class="u-card b-sec"><div class="b-strong">这一页不是摆设：首页 AI 导演写方案时会读取当前客户的品牌规范与出片预设，脚本、配色、口号都会按这套来。</div></div>';
+    box.innerHTML=h;
+  }
+
+  /* ── 右栏：出片预设 / 规范检查 / 归属路径 ── */
+  function renderRight(){
+    var box=$('#bRight'),k=kit(),ps=CAT.presets||[];
+    // 出片预设搬去剪辑台导出了 —— 那是它真正被用到的时刻。
+    // 这一页只留品牌资料，不再让用户在两处之间来回找。
+    var h='';
+    if(ps.length){
+      h+='<div class="b-sec2"><h4>出片预设 <span class="u-tag gray">已移到剪辑台</span></h4>';
+      ps.forEach(function(p){
+        h+='<div class="b-tpl" data-preset="'+esc(p.id)+'">'+
+           '<div class="t1">'+esc(p.name)+'<span class="u-tag">'+esc(p.ratio||'')+
+           (p.duration?' · '+esc(p.duration)+'s':'')+'</span></div>'+
+           '<div class="t2">技能：'+esc(p.skill||'由首页对话决定')+'<br>品牌：'+esc(p.kit||'未指定')+
+           (p.note?'<br>'+esc(p.note):'')+'</div>'+
+           '<button class="del" data-pdel="'+esc(p.id)+'" title="删除">×</button></div>';
+      });
+      h+='<div class="b-line">这些预设现在在<b>「专业剪辑台 → 导出成片」</b>旁边的下拉里选，'
+        +'选中会连画幅一起套上。</div></div><div class="u-divider"></div>';
+    }
+
+    var checks=[
+      ['Logo 主版',!!(k&&assetsOf(k).logo_main),'logo_main'],
+      ['品牌配色至少 3 色',!!(k&&(k.colors||[]).length>=3),''],
+      ['片头资产',!!(k&&assetsOf(k).intro),'intro'],
+      ['片尾资产',!!(k&&assetsOf(k).outro),'outro'],
+      ['水印资产',!!(k&&assetsOf(k).watermark),'watermark'],
+      ['品牌口号',!!(k&&(k.slogans||[]).length),'']
+    ];
+    h+='<div class="b-sec2" style="margin-top:12px"><h4>品牌规范检查</h4>';
+    checks.forEach(function(c){
+      h+='<div class="b-check'+(c[1]?'':' todo')+'"><svg class="ic"><use href="#i-'+(c[1]?'check':'plus')+'"/></svg>'+
+         esc(c[0])+(c[1]?' 已就绪':' 待补齐')+
+         (c[1]?'':'<button class="fix" data-fix="'+(c[2]||'edit')+'">去补齐</button>')+'</div>';
+    });
+    h+='</div><div class="u-divider"></div>';
+
+    var cc=k?custOf(k):null;
+    h+='<div class="b-sec2" style="margin-top:12px"><h4>归属与路径 <button class="u-btn sm" data-b="revealall">打开</button></h4>'+
+       '<div class="b-path"><b>数据根目录</b> '+esc((CAT.layout||{}).数据根目录||'')+'<br>'+
+       '<b>客户总目录</b> '+(CAT.layout?esc(CAT.layout.客户目录):'')+'<br>'+
+       (k?'<b>本套件目录</b> '+esc(k.dir||'')+'<br>':'')+
+       '<b>素材来源（只读）</b> '+(cc&&cc.root?esc(cc.root):'尚未绑定，可在「客户与素材库」里选')+'</div>'+
+       '<div class="b-strong">内部资料夹按<b>客户名称</b>创建，和你的素材文件夹叫什么、放在哪完全无关；生成的一切都留在软件自己的 数据/ 里，按客户隔离。</div></div>';
+    box.innerHTML=h;
+  }
+
+  function render(){
+    if(!CAT)return;
+    renderKits();renderMain();renderRight();syncKitPath();
+  }
+
+  /* ── 弹窗下拉 ── */
+  function fillSelects(){
+    var cs=CAT.customers||[],ks=CAT.kits||[],sk=CAT.skills||[];
+    $('#bKitCust').innerHTML=cs.map(function(c){
+      return '<option value="'+esc(c.name)+'">'+esc(c.name)+(c.current?'（当前客户）':'')+'</option>'
+    }).join('')+'<option value="__new__">＋ 新建客户…</option>';
+    $('#bPSkill').innerHTML='<option value="">不指定（由首页对话决定）</option>'+sk.map(function(s){
+      return '<option value="'+esc(s.title)+'">'+esc(s.title)+' · '+esc(s.tag)+'</option>'}).join('');
+    $('#bPKit').innerHTML='<option value="">不指定品牌套件</option>'+ks.map(function(k){
+      return '<option value="'+esc(k.customer+'/'+k.name)+'">'+esc(k.customer+' · '+k.name)+'</option>'}).join('');
+    $('#bUpSlot').innerHTML=SLOTS.map(function(s){
+      return '<option value="'+esc(s.slot)+'">'+esc(s.label)+'</option>'}).join('');
+  }
+  function syncKitPath(){
+    var sel=$('#bKitCust'),v=sel?sel.value:'',name=($('#bKitName').value||'').trim()||'新套件';
+    var cust=(v==='__new__')?(($('#bKitNewCust').value||'').trim()||'新客户'):(v||CAT.customer);
+    var base=(CAT.layout||{}).客户目录||'…/客户';
+    $('#bKitPath').innerHTML='将保存到：<span class="v-path">'+esc(base+'/'+cust+'/品牌套件/'+name+'/')+'</span>';
+    $('#bKitRule').textContent='客户名单：配置/客户.json（与「客户与素材库」同一份）';
+    if($('#bKitNewWrap'))$('#bKitNewWrap').style.display=(v==='__new__')?'':'none';
+  }
+
+  /* ── 新建 / 编辑套件 ── */
+  function openKit(k){
+    if(!CAT)return;
+    EDIT_KIT=k||null;fillSelects();
+    $('#bKitTitle').textContent=k?'编辑品牌套件':'新建品牌套件';
+    $('#bKitName').value=k?k.name:'';$('#bKitName').disabled=!!k;
+    $('#bKitCust').value=k?k.customer:(CAT.customer||'');$('#bKitCust').disabled=!!k;
+    $('#bKitNewCust').value='';$('#bKitActivate').checked=false;
+    $('#bKitColors').value=k?colorsText(k):'主色 #1E2430\n辅色 #5A6272\n香槟 #F0F3F8';
+    $('#bKitSlogans').value=k?(k.slogans||[]).join('\n'):'';
+    $('#bKitFont').value=k?(k.font||''):'';$('#bKitWm').value=k?(k.watermark_pos||''):'';
+    $('#bKitNote').value=k?(k.note||''):'';
+    syncKitPath();openM('bKitModal');
+  }
+  function saveKit(){
+    var v=$('#bKitCust').value,name=($('#bKitName').value||'').trim();
+    if(!name){say('请填品牌套件名称');return}
+    var d={action:'save_kit',name:name,colors:parseColors($('#bKitColors').value),
+           slogans:lines($('#bKitSlogans').value),font:$('#bKitFont').value.trim(),
+           watermark_pos:$('#bKitWm').value.trim(),note:$('#bKitNote').value.trim()};
+    if(EDIT_KIT){d.kit_id=EDIT_KIT.id;d.customer=EDIT_KIT.customer}
+    else if(v==='__new__'){
+      var nc=$('#bKitNewCust').value.trim();
+      if(!nc){say('请填新客户名称');return}
+      d.new_customer=nc;d.activate=$('#bKitActivate').checked;
+    }else d.customer=v;
+    A('/api/brand',d).then(function(r){
+      var newCust=(v==='__new__')?$('#bKitNewCust').value.trim():v;
+      CAT=r;
+      if(!EDIT_KIT){
+        var hit=(r.kits||[]).filter(function(x){
+          return x.name===name&&x.customer===newCust})[0];
+        if(hit)CUR=kkey(hit);
+      }
+      closeM('bKitModal');render();fillSelects();
+      say(EDIT_KIT?'品牌套件已保存':'已新建品牌套件「'+name+'」');
+    }).catch(function(e){say(e.message)});
+  }
+
+  /* ── 上传资产 ── */
+  function openUpload(slot){
+    var k=kit();if(!k){say('先选一个品牌套件');return}
+    fillSelects();
+    if(slot)$('#bUpSlot').value=slot;
+    $('#bUpTarget').innerHTML='上传到：<b>'+esc(k.customer+' · '+k.name)+'</b><span class="v-path">'+esc(k.dir||'')+'/资产/</span>';
+    $('#bUpPath').value='';syncUpHint();openM('bUpModal');
+  }
+  function syncUpHint(){
+    var m=slotMeta($('#bUpSlot').value);
+    $('#bUpHint').innerHTML='<b>'+esc(m.label)+'</b>：'+esc(m.hint||'任意文件');
+  }
+  function doUpload(extra){
+    var k=kit();if(!k)return;
+    var d={action:'upload',customer:k.customer,kit:k.name,slot:$('#bUpSlot').value};
+    if(extra.path)d.path=extra.path;
+    A('/api/brand',d).then(function(r){
+      if(!r||!r.ok){say(r&&r.error||'上传没完成');return}
+      closeM('bUpModal');say('已上传「'+r.asset.label+'」');return load(true);
+    }).catch(function(e){say(e.message)});
+  }
+
+  /* ── 出片预设 ── */
+  function openPreset(p){
+    EDIT_PRESET=p||null;fillSelects();
+    $('#bPresetTitle').textContent=p?'编辑出片预设':'新建出片预设';
+    $('#bPName').value=p?p.name:'';$('#bPSkill').value=p?(p.skill||''):'';
+    $('#bPKit').value=p?(p.kit||''):'';$('#bPRatio').value=p?(p.ratio||'16:9'):'16:9';
+    $('#bPDuration').value=p?(p.duration||60):60;$('#bPNote').value=p?(p.note||''):'';
+    openM('bPresetModal');
+  }
+  function savePreset(){
+    var name=$('#bPName').value.trim();if(!name){say('请填预设名称');return}
+    var d={action:'save_preset',name:name,skill:$('#bPSkill').value,kit:$('#bPKit').value,
+           ratio:$('#bPRatio').value,duration:parseInt($('#bPDuration').value,10)||60,
+           note:$('#bPNote').value.trim()};
+    if(EDIT_PRESET)d.id=EDIT_PRESET.id;
+    A('/api/brand',d).then(function(r){
+      CAT=r;closeM('bPresetModal');render();say(EDIT_PRESET?'预设已保存':'已新建出片预设「'+name+'」');
+    }).catch(function(e){say(e.message)});
+  }
+
+  /* ── 删除与 Finder ── */
+  function delKit(){
+    var k=kit();if(!k)return;
+    confirm({title:'删除品牌套件',phrase:'删除品牌套件',okText:'确认删除',
+      html:'将删除 <b>'+esc(k.customer+' · '+k.name)+'</b>。<br>整个套件目录会移到 <b>数据/资源/备份/</b>，可以找回，不会直接抹掉。引用它的出片预设会被清空品牌引用。<br>请输入「<b>删除品牌套件</b>」，或点右侧粘贴按钮自动填入。',
+      onOk:function(){
+        A('/api/brand',{action:'delete_kit',customer:k.customer,kit:k.name}).then(function(r){
+          CAT=r;CUR='';closeM('bKitModal');render();say('已删除，备份在：'+(r.backup||''));
+        }).catch(function(e){say(e.message)});
+      }});
+  }
+  function delPreset(id){
+    var p=(CAT.presets||[]).filter(function(x){return x.id===id})[0];if(!p)return;
+    confirm({title:'删除出片预设',html:'确定删除「'+esc(p.name)+'」？',onOk:function(){
+      A('/api/brand',{action:'delete_preset',id:id}).then(function(r){
+        CAT=r;render();say('已删除预设');
+      }).catch(function(e){say(e.message)});
+    }});
+  }
+  function reveal(){
+    var k=kit();
+    A('/api/brand',{action:'reveal',customer:k?k.customer:'',kit:k?k.name:''})
+      .then(function(r){say('已在 Finder 打开：'+(r&&r.path||''))}).catch(function(e){say(e.message)});
+  }
+
+  /* ── 事件（统一委托，避免脚本早于 window.api 初始化） ── */
+  document.addEventListener('riffcut-ready',function(){load(true)});
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    /* 进这页时刷新，保证能拿到在「客户与素材库」里刚新建的客户 */
+    var nav=t.closest&&t.closest('a[data-page="brand"]');
+    if(nav){load(true)}
+    var c=t.closest&&t.closest('[data-close]');
+    if(c){closeM(c.getAttribute('data-close'));return}
+    var kk=t.closest&&t.closest('.b-kit[data-key]');
+    if(kk){CUR=kk.getAttribute('data-key');render();return}
+
+    if(t.closest('#bNewKitBtn')){load(true).then(function(){openKit(null)});return}
+    if(t.closest('#bUploadBtn')){openUpload('');return}
+    if(t.closest('#bNewPresetBtn')){openPreset(null);return}
+    if(t.closest('#bKitSave')){saveKit();return}
+    if(t.closest('#bUpPick')){doUpload({});return}
+    if(t.closest('#bUpPathGo')){
+      var p=$('#bUpPath').value.trim();if(!p){say('请粘贴文件路径，或点「选择文件…」');return}
+      doUpload({path:p});return}
+    if(t.closest('#bUpPaste')){
+      if(navigator.clipboard&&navigator.clipboard.readText){
+        navigator.clipboard.readText().then(function(x){$('#bUpPath').value=x||'';say('已粘贴路径')})
+          .catch(function(){say('请按 ⌘V 粘贴路径')});
+      }else say('请按 ⌘V 粘贴路径');
+      return}
+    if(t.closest('#bPSave')){savePreset();return}
+
+    var up=t.closest&&t.closest('[data-upload]');
+    if(up){openUpload(up.getAttribute('data-upload'));return}
+    var pd=t.closest&&t.closest('[data-pdel]');
+    if(pd){delPreset(pd.getAttribute('data-pdel'));return}
+    var pt=t.closest&&t.closest('[data-preset]');
+    if(pt){openPreset((CAT.presets||[]).filter(function(x){return x.id===pt.getAttribute('data-preset')})[0]);return}
+    var fx=t.closest&&t.closest('[data-fix]');
+    if(fx){var f=fx.getAttribute('data-fix');if(f==='edit')openKit(kit());else openUpload(f);return}
+    var b=t.closest&&t.closest('[data-b]');
+    if(b){
+      var a=b.getAttribute('data-b');
+      if(a==='editkit')openKit(kit());
+      else if(a==='delkit')delKit();
+      else if(a==='reveal'||a==='revealall')reveal();
+      else if(a==='newpreset')openPreset(null);
+      return;
+    }
+  });
+  document.addEventListener('change',function(e){
+    if(e.target.id==='bKitCust'||e.target.id==='bKitName'||e.target.id==='bKitNewCust')syncKitPath();
+    if(e.target.id==='bUpSlot')syncUpHint();
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){$$('.v-modal.open').forEach(function(m){m.classList.remove('open')});document.body.classList.remove('modal-open')}
+  });
+})();
+</script>
