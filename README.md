@@ -2,6 +2,7 @@
 
 > Electron + Node.js 本地视频剪辑工作台，内置 AI 导演内核，支持从分镜策划、素材生成、剪辑合成、字幕配音到多平台发布的全流程。可离线运行，客户数据本地存储，不上传云端。
 
+[![下载 macOS 版](https://img.shields.io/badge/⬇_下载-macOS_安装包-2F6BFF?style=for-the-badge)](../../releases/latest)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Electron](https://img.shields.io/badge/Electron-45.3.4-blue.svg)](https://www.electronjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-26-green.svg)](https://nodejs.org/)
@@ -12,7 +13,11 @@
 
 ## 一、这是什么
 
-**RiffCut 影创** 是一款面向短视频创作者、自媒体从业者和内容团队的**本地剪辑智能体软件**。它不是在线剪辑网站，也不需要把素材上传到云端——所有的剪辑、渲染、发布都在你自己的 Mac 上完成。
+**RiffCut 影创** 是一款面向短视频创作者、自媒体从业者和内容团队的**本地剪辑智能体软件**。
+
+它不是在线剪辑网站，也不需要把素材上传到云端——所有的剪辑、渲染、发布都在你自己的 Mac 上完成。
+
+> **⬇ [下载 macOS 安装包](DOWNLOAD.md)** —— 完整版 3.0 GB（装完即用，含语音模型）· 轻量版 1.2 GB
 
 核心定位：
 
