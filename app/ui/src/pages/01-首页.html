@@ -656,6 +656,20 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-aiinput input::placeholder,.h-aiinput textarea::placeholder{color:#A6ADBB}
 /* 录音中的实时识别是草稿：浅一档，停止后转正变深 */
 .h-aiinput input.live,.h-aiinput textarea.live{color:#8A93A3}
+/* 忙碌时排队消息条：贴在输入框上方，每条可删除 / 插话发送。
+   DSH 同款交互（busyEnter 默认 queue，Cmd/Ctrl+Enter 互补 steer）。 */
+.h-queue{display:flex;flex-direction:column;gap:4px;margin:0 0 6px;
+  padding:8px 10px 9px;border:1px solid #E3E9F2;border-radius:14px;background:#F8FAFD;
+  max-height:150px;overflow-y:auto}
+.h-queue[hidden]{display:none}
+.hq-hd{font-size:11px;color:#7E8BA3;letter-spacing:.02em;padding:0 2px 2px}
+.hq-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:9px;
+  background:#fff;border:1px solid #E8EDF5;font-size:12px;color:#39424F}
+.hq-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hq-row button{flex:0 0 auto;width:22px;height:22px;border:0;border-radius:6px;cursor:pointer;
+  background:transparent;color:#8A93A3;font-size:13px;line-height:1}
+.hq-row button:hover{background:#EEF2F8;color:#252B36}
+.hq-row .hq-steer:hover{background:#E4F4F0;color:#1B8B7E}
 /* 输入底部一行：工具按钮 | 模型选择器 | 发送 */
 .h-inputbar{display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0}
 .h-toolgrp{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto;flex-wrap:nowrap}
@@ -1750,6 +1764,7 @@ body.rws-dragging *{cursor:col-resize !important}
                 aria-label="开始语音通话">
           <img src="assets/mascot.png" alt="影创小助手">
         </button>
+        <div class="h-queue" id="hQueue" hidden></div>
         <textarea id="hChatInput" rows="1" placeholder="今天，想做什么片？ @ 添加上下文，/ 调用技能与指令" autocomplete="off"></textarea>
         <div class="h-ws-pop" id="hWsPop" role="listbox" aria-label="工作区列表"></div>
         <div class="h-inputbar">
@@ -3930,6 +3945,45 @@ body.rws-dragging *{cursor:col-resize !important}
   });
   /* ── 真实对话：发送后按钮变「停止方块」，点一下立刻中断，不再卡在「正在思考」 ── */
   var chatCtrl=null,chatPending=null,chatTimer=null;
+  /* ── 忙碌时排队发送（对齐 DSH 的 busyEnter，默认 queue）。
+      后端已有串行队列，这里再排一层是为了「一次只发一条」——
+      多条同时灌进内核会把一轮 turn 搞乱。当前轮结束后 qDrain 自动发下一条。
+      Cmd/Ctrl+Enter 或排队条上的 ↑ = 插话：打断当前轮，把队列立即发出去。 ── */
+  var Q=[];
+  function qRender(){
+    var el=$('#hQueue');if(!el)return;
+    if(!Q.length){el.hidden=true;el.innerHTML='';return}
+    el.hidden=false;
+    el.innerHTML='<div class="hq-hd">排队 '+Q.length+' 条 · 本轮结束后依次发送 · Cmd/Ctrl+Enter 插话</div>'
+      +Q.map(function(t,i){
+        return '<div class="hq-row"><span class="hq-t">'+hEsc(t)+'</span>'
+          +'<button class="hq-steer" data-i="'+i+'" title="插话发送：打断当前，立即发全部">↑</button>'
+          +'<button class="hq-del" data-i="'+i+'" title="删除这条">✕</button></div>';
+      }).join('');
+  }
+  function queueAdd(t){ if(!t)return; Q.push(t); qRender() }
+  function qDrain(){
+    if(chatCtrl||!Q.length)return;
+    var t=Q.shift();qRender();
+    var inp=$('#hChatInput');if(inp)inp.value=t;
+    doSend();
+  }
+  function qSteerAll(){
+    if(!Q.length)return;
+    var texts=Q.slice();Q=[];qRender();
+    if(chatCtrl)abortChat();
+    var inp=$('#hChatInput');if(inp)inp.value=texts.join('\n');
+    doSend();
+  }
+  (function(){
+    var el=$('#hQueue');if(!el)return;
+    el.addEventListener('click',function(e){
+      var b=e.target.closest('button[data-i]');if(!b)return;
+      var i=parseInt(b.getAttribute('data-i'),10);if(isNaN(i))return;
+      if(b.classList.contains('hq-del')){Q.splice(i,1);qRender()}
+      else if(b.classList.contains('hq-steer'))qSteerAll();
+    });
+  })();
   /* 对话 id → 正在进行的那一轮 {stepId,text,at}。切走再切回来靠它恢复进度。 */
   var RUNNING_CONV={};
   try{Object.defineProperty(window,'__running',{get:function(){return RUNNING_CONV}})}catch(e){}
@@ -4169,7 +4223,7 @@ body.rws-dragging *{cursor:col-resize !important}
     var b=$('#hChatSend'),inp=$('#hChatInput');if(!b)return;
     b.classList.toggle('stopping',!!on);
     b.title=on?'停止对话':'发送';b.setAttribute('aria-label',on?'停止对话':'发送');
-    if(inp)inp.placeholder=on?'正在等模型回复，点右侧方块可停止…':'今天，想做什么片？ @ 添加上下文，/ 调用技能与指令';
+    if(inp)inp.placeholder=on?'正在回复中 · 回车排队，Cmd/Ctrl+Enter 插话 · 点方块停止':'今天，想做什么片？ @ 添加上下文，/ 调用技能与指令';
   }
   function abortChat(){
     if(chatTimer){clearTimeout(chatTimer);chatTimer=null}
@@ -4181,6 +4235,8 @@ body.rws-dragging *{cursor:col-resize !important}
   }
   function stopChat(){
     var p=chatPending;
+    /* 用户主动停止 = 真的停：把排队消息一起清掉，别停完又自动冒出下一条 */
+    Q=[];qRender();
     /* 空的工作流卡（0 步）留着是个误导 —— 一起收掉 */
     var _f=document.querySelectorAll('#hMsgs .h-flow');
     for(var _i=0;_i<_f.length;_i++){
@@ -4510,6 +4566,8 @@ body.rws-dragging *{cursor:col-resize !important}
     try{ delete RUNNING_CONV[turnConv]; delete RUNNING_CONV['@pending'] }catch(e){}
     if(chatPending&&chatPending.parentNode)chatPending.parentNode.removeChild(chatPending);
     chatPending=null;chatCtrl=null;setSending(false);
+    /* 本轮收尾了 → 队列里还有的话，下一轮自动发出去（等本轮渲染完再发，避免串台） */
+    setTimeout(qDrain,0);
     var txt=String((d&&d.text)||'');
     if(txt)pushHist('assistant',txt);
     try{
@@ -4652,8 +4710,15 @@ body.rws-dragging *{cursor:col-resize !important}
   $('#hChatInput').addEventListener('keydown',function(e){
     if(e.key!=='Enter'||e.shiftKey)return;   /* Shift+Enter 换行 */
     e.preventDefault();
-    /* 等回复期间按回车既不误停也不重复发；要停就点右侧方块 */
-    if(chatCtrl)return;
+    var t=$('#hChatInput').value.trim();
+    if(chatCtrl){
+      /* 忙碌时（DSH busyEnter 默认 queue）：
+         普通 Enter → 入队，本轮结束后自动依次发；
+         Cmd/Ctrl+Enter → 插话，把草稿（若有）连同队列一起立即发出，打断当前轮。 */
+      if(e.metaKey||e.ctrlKey){ if(t){queueAdd(t);$('#hChatInput').value=''} qSteerAll(); }
+      else if(t){ queueAdd(t);$('#hChatInput').value=''; window.say('已排队，本轮结束后自动发送 · Cmd/Ctrl+Enter 插话'); }
+      return;
+    }
     $('#hChatSend').click();
   });
   $('#hChatSend').addEventListener('click',function(){ doSend() });
@@ -4760,6 +4825,7 @@ body.rws-dragging *{cursor:col-resize !important}
       if(chatTimer){clearTimeout(chatTimer);chatTimer=null}
       if(chatPending&&chatPending.parentNode)chatPending.parentNode.removeChild(chatPending);
       chatPending=null;chatCtrl=null;setSending(false);
+      setTimeout(qDrain,0);   /* 这条失败也要让队列继续，别卡死后面几条 */
       addMsg('RiffCut','没连上模型：'+(e.message||'未知错误')+'。本地出片不受影响，点「开始生成」即可。');
     });
   }
