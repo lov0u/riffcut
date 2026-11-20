@@ -552,6 +552,18 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-msg:not(.me) .bub b{font-weight:650;color:#232A36}
 .h-msg:not(.me) .bub code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.94em;
   background:#E9EDF4;border-radius:4px;padding:1px 5px}
+/* 代码块：AI 给整段 jsx/js/python 时用。深色底 + 等宽 + 横向滑，
+  不再让代码裸在正文里占满一屏。pre 里的 code 去掉行内样式 */
+.h-msg .bub pre{margin:7px 0 9px;background:#1B2230;color:#DCE4F0;border-radius:10px;
+  padding:11px 14px;overflow-x:auto;overflow-y:hidden;max-width:100%;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
+  line-height:1.62;white-space:pre;tab-size:2;-webkit-overflow-scrolling:touch}
+.h-msg .bub pre::-webkit-scrollbar{height:7px}
+.h-msg .bub pre::-webkit-scrollbar-thumb{background:#4A566B;border-radius:7px}
+.h-msg .bub pre::-webkit-scrollbar-track{background:transparent}
+.h-msg .bub pre code{background:none;border-radius:0;padding:0;color:inherit;font-size:inherit;white-space:pre}
+.h-msg .bub pre[data-lang]::before{content:attr(data-lang);display:block;margin:-3px 0 7px;
+  font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7E8BA3}
 .h-msg:not(.me) .bub h3,.h-msg:not(.me) .bub h4,.h-msg:not(.me) .bub h5{
   margin:10px 0 5px;font-size:15px;font-weight:650;color:#232A36}
 .h-msg:not(.me) .bub blockquote{margin:4px 0 6px;padding-left:8px;border-left:2px solid #D5DCE8;color:#5A6473}
@@ -1438,6 +1450,20 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-flow-out{flex-basis:100%;padding-left:20px;color:#8A93A6;font-size:12px;line-height:1.5;
   white-space:pre-wrap;word-break:break-all;max-height:72px;overflow:hidden}
 .h-flow-step.bad .h-flow-out{color:#A5766F}
+/* 每步耗时：靠右的小灰字，等宽数字对齐 */
+.h-flow-ms{flex:0 0 auto;margin-left:auto;font-size:10.5px;color:#A2AABB;
+  font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,monospace}
+/* 有细节的步骤：箭头可点，展开后看完整入参与返回 */
+.h-flow-step.expandable{cursor:pointer}
+.h-flow-d2{width:12px;height:12px;flex:0 0 auto;color:#A2AABB;transition:transform .16s}
+.h-flow-step.det-open .h-flow-d2{transform:rotate(180deg)}
+.h-flow-det{flex-basis:100%;display:none;padding:6px 0 4px 20px;min-width:0}
+.h-flow-step.det-open .h-flow-det{display:block}
+.h-flow-det-lb{font-size:10.5px;color:#98A0B0;letter-spacing:.04em;margin:5px 0 3px}
+.h-flow-det pre{margin:0 0 5px;background:#F3F6FA;border:1px solid #E6EBF2;border-radius:7px;
+  padding:8px 10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+  line-height:1.55;color:#4A5464;white-space:pre-wrap;word-break:break-word;
+  max-height:190px;overflow:auto}
 .h-steps.open .h-steps-b{display:flex}
 .h-step.bad{background:#FDECEC;color:#B04A4A}
 
@@ -2237,6 +2263,20 @@ body.rws-dragging *{cursor:col-resize !important}
       var ln=lines[i];
       var m, t=ln.trim();
       if(!t){closeList();continue}
+      /* ★ 代码块：```lang 起、下一个 ``` 收。
+         以前没有这个分支，AI 给的 jsx/js/python 代码被当成一堆普通段落——
+         代码符号裸在正文、缩进被吃掉、还占满整屏，用户没法横向滑。
+         块内内容只做 HTML 转义，绝不走 mdInline（否则代码里的 ** 会被当加粗）。 */
+      if(/^```/.test(t)){
+        closeList();
+        var lang=t.slice(3).trim().toLowerCase().replace(/[^a-z0-9+#.-]/g,'');
+        var buf=[];
+        i++;
+        while(i<lines.length && !/^\s*```/.test(lines[i])){buf.push(lines[i]);i++}
+        out.push('<pre><code'+(lang?' class="lang-'+lang+'" data-lang="'+lang+'"':'')
+          +'>'+escMd(buf.join('\n'))+'</code></pre>');
+        continue;
+      }
       if(/^(-{3,}|\*{3,}|_{3,})$/.test(t)){closeList();out.push('<hr>');continue}
       /* ★ 表格：分镜文档里全是 | 镜头 | 时长 | 画面 | 这种表格，
          以前没有表格分支，渲染出来就是一排 `| --- |` 的乱码。
@@ -3984,6 +4024,10 @@ body.rws-dragging *{cursor:col-resize !important}
     var okN=steps.filter(function(x){return x.ok}).length,badN=steps.length-okN;
     var t=w.querySelector('.h-flow-t'),n=w.querySelector('.h-flow-n'),bd=w.querySelector('.h-flow-b');
     w.classList.toggle('done',!!done);
+    /* ★ 跑完自动折叠：过程中为了看进度一直开着，跑完就收起来，
+       让对话回到主位；用户想复查再点开。只有"从没跑完变成跑完"这一次才收。 */
+    if(done && !w.__wasDone && w.classList.contains('open')) w.classList.remove('open');
+    w.__wasDone=!!done;
     /* 标题说人话：用户只关心「他在干嘛 / 干完没」，不关心"几步"。
        正在跑的时候显示当前那一步在干什么（比如「翻模板库」），
        跑完显示「做了 N 件事，全部完成」。 */
@@ -4027,9 +4071,32 @@ body.rws-dragging *{cursor:col-resize !important}
       if(hint==='undefined'||hint==='null')hint='';
       if(hint.length>42)hint=hint.slice(0,42)+'…';
       var mark=isRun?'·':(x.ok===false?'✕':'✓');
+      /* 每步耗时：后端在工具返回时填了 ms。格式化成好读的 1.2s / 380ms。 */
+      var dur=Number(x.ms||0);
+      var durTxt=dur>0?(dur>=1000?(dur/1000).toFixed(dur<10000?1:0)+'s':Math.round(dur)+'ms'):'';
+      /* 这一步有没有可展开的细节（参数 / 返回）。有就整行可点，点击展开。 */
+      var inTxt=x.args?JSON.stringify(x.args,null,2):'';
+      var outTxt=x.out||'';
+      var hasDetail=!!(inTxt||outTxt);
       r.innerHTML='<span class="h-flow-i">'+mark+'</span>'
         +'<span class="h-flow-nm">'+esc(nm)+'</span>'
-        +(hint?'<span class="h-flow-dt">'+esc(hint)+'</span>':'');
+        +(hint?'<span class="h-flow-dt">'+esc(hint)+'</span>':'')
+        +(durTxt?'<span class="h-flow-ms">'+durTxt+'</span>':'')
+        +(hasDetail?'<svg class="ic h-flow-d2" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          +'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>':'');
+      if(hasDetail){
+        r.classList.add('expandable');
+        var det=document.createElement('div');det.className='h-flow-det';
+        var parts='';
+        if(inTxt)parts+='<div class="h-flow-det-lb">入参</div><pre>'+esc(inTxt)+'</pre>';
+        if(outTxt)parts+='<div class="h-flow-det-lb">返回</div><pre>'+esc(outTxt)+'</pre>';
+        det.innerHTML=parts;
+        r.appendChild(det);
+        r.onclick=function(e){
+          if(e.target.closest('pre'))return;
+          r.classList.toggle('det-open');
+        };
+      }
       bd.appendChild(r);
     });
     /* 新步骤在下面：跑的过程中自动滚到底，用户总能看到"现在在干嘛"。

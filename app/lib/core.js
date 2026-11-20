@@ -276,7 +276,7 @@ function setScope(v) {
   const s = settings(); s.agent_scope = v; saveSettings(s); return v
 }
 
-/** 范围允许的根目录。只给「看得见」的目录，不放开整个家目录。 */
+/** 范围允许的根目录。本机档放开整个用户家目录（跟界面「完全访问」一致）。 */
 function scopeRoots(customer) {
   const sc = scopeOf(customer)
   const c = custPaths(customer)
@@ -292,7 +292,7 @@ function scopeRoots(customer) {
     { label: '素材目录', path: P.RES },
     { label: '模板库', path: P.RES_TEMPLATES },
     { label: '技能库', path: P.RES_SKILLS },
-    { label: '本机素材', path: join(require('node:os').homedir(), 'Movies') },
+    { label: '本机（用户目录）', path: require('node:os').homedir() },
   ]
 }
 

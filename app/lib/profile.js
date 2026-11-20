@@ -56,6 +56,12 @@ const PERSONA_PREFIX = [
   'for a reply to "hi", while treating work as talk only costs one extra question — so when unsure,',
   'reply as conversation and let them say more.',
   'Conversation gets words. A work order gets tools, and then a finished cut.',
+  'Describing a tool call in your message is not making one. Writing "→ run edit_timeline",',
+  'pasting a JSON parameter block, or saying "I have created the project" / "now doing step 1"',
+  'produces no project and no workflow step — the editor will be empty and the user stops',
+  'believing you. A real tool call shows up on its own in the interface; you do not narrate it.',
+  'When someone says "do not make it yet, just explain the design", that is conversation:',
+  'give the thinking and the options, then wait for the word to actually start.',
   'Your working directory is already clean and its layout is described in the workspace instructions,',
   'so there is nothing to discover by listing directories first.',
 ].join(' ')

@@ -158,6 +158,10 @@ function stepOf(ev) {
       tool: name, what: TOOL_CN[name] || name || '操作',
       hint: argHin(dt),
       callId: String((ev.data && ev.data.callId) || ''),
+      /* 每步耗时 + 完整输入输出：前端展开卡片能看到这步到底传了什么、返回了什么。
+         _at 是内部计时锚点，结果回来时算 ms。args/out 只在此存，展示由前端截断。 */
+      _at: Date.now(),
+      args: dt,
     }
   }
   return null
@@ -215,6 +219,9 @@ async function chat(body) {
         // 结果只留一句摘要，正文太长没意义（用户要的是"做完没"）
         hit.done = out ? out.replace(/\s+/g, ' ').slice(0, 90) : ''
         if (!hit.ok && !hit.done) hit.done = '没成功'
+        /* 每步耗时 + 完整返回（展开卡片用）。in/out 可能很大，前端懒渲染时才格式化。 */
+        if (hit._at) { hit.ms = Date.now() - hit._at; delete hit._at }
+        hit.out = out
         rec.seq++
       }
     }
