@@ -34,6 +34,10 @@ function resolveHome() {
   return join(ROOT, 'home')
 }
 const HOME = resolveHome()
+/* ★ 内核状态目录（2026-11-20）：DSH 的 profiles/sessions/storages 不该跟
+   业务数据混在 HOME 根下 —— 一个 ls 就分不清哪些是用户的、哪些是内核的。
+   见 lib/paths.js 的 KERNEL_HOME。这里保持同一份命名，避免两处不一致。 */
+const KERNEL_HOME = join(HOME, '内核')
 const KERNEL = process.env.RiffCut_KERNEL || join(ROOT, 'kernel', 'dsh')
 const PROFILE = 'velora'
 const WIN_W = 1440, WIN_H = 900
@@ -70,8 +74,52 @@ app.setName('RiffCut影创')
    ★ 必须在 whenReady 之前调用，晚了 Chromium 已经开始往旧位置写。 */
 const USER_HOME = resolveHome()
 const CHROME_DIR = join(USER_HOME, '运行时')
+/* ★ 老用户升级时，根目录已经有一批 Chromium 残留（旧版本没设 userData 时写的）。
+   只把新位置设过去是不够的 —— 旧的一堆 Cache/GPUCache/Local Storage 会原样留在
+   根目录里，用户点开看到的还是那片垃圾。所以先搬再设。
+
+   搬的名单是 Chromium userData 的标准内容，逐项列出来而不是通配 —— 通配很容易
+   误伤用户自己放的文件（他可能往数据目录里丢个 .mp4 试试）。
+   只搬「根目录有、运行时/ 里还没有」的，一个都不覆盖；
+   同盘 renameSync 是原子的，跨盘会自动退回 cp+rm。 */
+const CHROME_LEFTOVERS = [
+  'Cache', 'Code Cache', 'GPUCache', 'GPUPersistentCache',
+  'DawnGraphiteCache', 'DawnWebGPUCache', 'GraphiteDawnCache',
+  'Local Storage', 'Session Storage', 'Shared Dictionary', 'blob_storage',
+  'Extension State', 'Extension Rules', 'Extension Scripts',
+  'DIPS', 'DIPS-wal', 'Trust Tokens', 'Trust Tokens-journal',
+  'Network Persistent State', 'Preferences', 'Local State',
+  'SingletonCookie', 'SingletonLock', 'SingletonSocket', 'DevToolsActivePort',
+  'declarative_performance_observer.db',
+  'declarative_performance_observer.db-journal',
+]
+function moveChromeLeftovers() {
+  const { existsSync, renameSync, cpSync, rmSync } = require('node:fs')
+  let n = 0
+  for (const name of CHROME_LEFTOVERS) {
+    const from = join(USER_HOME, name)
+    const to = join(CHROME_DIR, name)
+    try {
+      if (!existsSync(from) || existsSync(to)) continue
+      renameSync(from, to)
+      n++
+    } catch (e) {
+      /* 跨盘时 rename 会 EXDEV，退回复制再删 */
+      try {
+        cpSync(from, to, { recursive: true })
+        rmSync(from, { recursive: true, force: true })
+        n++
+      } catch (e2) {
+        /* 搬不动就算了 —— 留着不影响功能，只是根目录难看一点。
+           这里绝不能抛：抛了主进程直接死，用户看到的是「双击没反应」。 */
+      }
+    }
+  }
+  if (n) process.stderr.write('[main] 运行时残留已归位: ' + n + ' 项\n')
+}
 try {
   mkdirSync(CHROME_DIR, { recursive: true })
+  moveChromeLeftovers()
   app.setPath('userData', CHROME_DIR)
   app.setPath('sessionData', CHROME_DIR)
 } catch (e) {
@@ -120,7 +168,7 @@ protocol.registerSchemesAsPrivileged([
 function openUiUrl() { return process.env.RiffCut_UI_URL || null }
 
 function startKernel(win) {
-  const k = new Kernel({ kernelDir: KERNEL, homeDir: HOME, profile: PROFILE })
+  const k = new Kernel({ kernelDir: KERNEL, homeDir: KERNEL_HOME, profile: PROFILE })
   k.on('event', (sid, ev) => {
     if (win.isDestroyed()) return
     // ★ assistant/message 里混着 reasoning 和 tool-call，直接整条转给界面
@@ -501,8 +549,11 @@ app.whenReady().then(async () => {
   // 开机自启内核 —— 用户打开软件就该能用，不该先点一下「启动」。
   // 失败也不卡死：把错误送到界面，用户可以点重试。
   try {
-    const prof = buildProfile({ kernelDir: KERNEL, homeDir: HOME, profile: PROFILE })
+    const prof = buildProfile({ kernelDir: KERNEL, homeDir: KERNEL_HOME, profile: PROFILE })
     kernel = startKernel(win)
+    /* cwd 给 HOME（业务数据），homeDir 给 KERNEL_HOME（内核状态）——
+       这两个以前都是 HOME，于是内核把 profiles/sessions 写进用户数据根目录，
+       跟 客户/资源/模板库 并排躺着。AI 的 cwd 也跟着变成那一片混合区。 */
     await kernel.start({
       provider: prof.provider, model: prof.model,
       cwd: HOME, env: prof.env,
@@ -674,12 +725,12 @@ ipcMain.handle('feedback:mail', async (_e, opts = {}) => {
 ipcMain.handle('kernel:start', async (_e, opts = {}) => {
   if (kernel && kernel.ready) return { ok: true, already: true }
   try {
-    const prof = buildProfile({ kernelDir: KERNEL, homeDir: HOME, profile: PROFILE })
+    const prof = buildProfile({ kernelDir: KERNEL, homeDir: KERNEL_HOME, profile: PROFILE })
     kernel = startKernel(BrowserWindow.getAllWindows()[0])
     const info = await kernel.start({
       provider: opts.provider || prof.provider,
       model: opts.model || prof.model,
-      cwd: opts.cwd || join(ROOT, 'data'),
+      cwd: opts.cwd || HOME,
       env: prof.env,
     })
     return { ok: true, info, provider: prof.provider, model: prof.model }
