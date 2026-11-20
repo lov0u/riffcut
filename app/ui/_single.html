@@ -4718,7 +4718,7 @@ body.rws-dragging *{cursor:col-resize !important}
     var ep=kind==='video'?'/api/video/generate':'/api/image/generate';
     window.api(ep,{prompt:prompt}).then(function(d){
       if(wait&&wait.parentNode)wait.parentNode.removeChild(wait);
-      addMediaMsg('AI 导演',d,kind);
+      addMediaMsg('RiffCut',d,kind);
       window.say((kind==='video'?'视频':'图片')+'已生成，保存在软件自己的产出目录');
     }).catch(function(e){
       if(wait&&wait.parentNode)wait.parentNode.removeChild(wait);
@@ -4961,7 +4961,11 @@ body.rws-dragging *{cursor:col-resize !important}
     var arr=Array.isArray(messages)?messages:[];
     for(var i=0;i<arr.length;i++){
       var m=arr[i]||{};
-      var role=(m.who==='我')?'user':((m.who==='AI 导演')?'assistant':'');
+      /* ★ 这两个名字都要认：新存档写的是 'RiffCut'，用户历史对话里存的是 'AI 导演'。
+         只认一个的话，另一种命名的整段历史会被当成「不是对话」丢掉 ——
+         表现是切回旧对话时 AI 完全不记得聊过什么。 */
+      var aiNames={'RiffCut':1,'AI 导演':1};
+      var role=(m.who==='我')?'user':(aiNames[m.who]?'assistant':'');
       if(!role)continue;
       var t=String(m.text||'').trim();
       if(t)chatHistory.push({role:role,content:t});
@@ -5328,7 +5332,7 @@ body.rws-dragging *{cursor:col-resize !important}
         /* convo.save 支持 append 数组（见 lib/convo.js），
            这样回答会落到它自己那条对话里，用户切回去就能看到。 */
         window.api('/api/conversations',{action:'save',id:turnConv,append:[{
-          who:'AI 导演',text:txt||'（模型没有返回内容）',
+          who:'RiffCut',text:txt||'（模型没有返回内容）',
           usage:(d&&d.usage)||null,model:(d&&d.model)||'',
           time:new Date().toLocaleString('zh-CN',{hour12:false})
         }]}).catch(function(){});
@@ -5341,7 +5345,7 @@ body.rws-dragging *{cursor:col-resize !important}
     }catch(e){
       try{
         var fb=document.createElement('div');fb.className='h-msg';
-        var fw=document.createElement('div');fw.className='who';fw.textContent='AI 导演';
+        var fw=document.createElement('div');fw.className='who';fw.textContent='RiffCut';
         var fbub=document.createElement('div');fbub.className='bub';
         fbub.textContent=txt||'（模型没有返回内容）';
         fb.appendChild(fw);fb.appendChild(fbub);
@@ -7167,7 +7171,7 @@ body.rws-dragging *{cursor:col-resize !important}
     var box=$('#hBdWork'); if(!box)return;
     A('/api/works',{action:'list'}).then(function(r){
       var list=(r&&(r.data||r.items))||r||[];
-      if(!list.length){box.innerHTML='<div class="h-bd-empty">还没有成片。跟左边的 AI 导演说一句就行。</div>';return}
+      if(!list.length){box.innerHTML='<div class="h-bd-empty">还没有成片。跟左边的 RiffCut 说一句就行。</div>';return}
       var w=list[0];LASTWORK=w;
       var dur=w.duration?fmtDur(w.duration):'—';
       var cover=w.cover?'<img src="/vid/'+encodeURIComponent(w.cover)+'" alt="">'
@@ -7206,7 +7210,7 @@ body.rws-dragging *{cursor:col-resize !important}
       if(!live.length){
         /* 2026-11-16 首页重排：任务进程是常驻板块，零任务时也不能整块隐藏——
            用户要「不管 AI 做什么都能看到任务进程」。给一个正向空态，不再 display:none。 */
-        box.innerHTML='<div class="h-bd-empty">暂无进行中的任务 · AI 导演接单后，每一步进度都会显示在这里</div>';
+        box.innerHTML='<div class="h-bd-empty">暂无进行中的任务 · RiffCut 接单后，每一步进度都会显示在这里</div>';
         if(sec)sec.style.display='';
         return;
       }
@@ -12089,7 +12093,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   function newSkill(){
     var n=$('#kNewName').value.trim();if(!n){say('先填技能名称');return}
     var t=$('#kNewTag').value.trim()||'自定义',d=$('#kNewDesc').value.trim();
-    var body='# '+n+'\n\n'+(d?d+'\n\n':'')+'## 使用建议\n- 在这里写清楚节奏、转场、字幕、镜头数与质检规则。\n- 保存后 AI 导演会按这份规范挑镜头、出片。\n';
+    var body='# '+n+'\n\n'+(d?d+'\n\n':'')+'## 使用建议\n- 在这里写清楚节奏、转场、字幕、镜头数与质检规则。\n- 保存后 RiffCut 会按这份规范挑镜头、出片。\n';
     A('/api/skills',{action:'save',title:n,tag:t,params:{},body:body}).then(function(r){
       closeM('kFormModal');say('已新建技能「'+n+'」');
       return loadSkills(true).then(function(){if(r&&r.id)select(r.id)});
@@ -12961,7 +12965,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
 <section class="page" data-page="models">
   <div class="u-head">
     <div class="txt"><div class="u-title"><svg class="ic" style="width:18px;height:18px"><use href="#i-sliders"/></svg>模型管理中心</div>
-      <div class="u-sub">分「文本 / 多模态 / 视频 / 生图」四类 · 首页只选文本和多模态 · 生图 / 视频由 AI 导演自动调用</div></div>
+      <div class="u-sub">分「文本 / 多模态 / 视频 / 生图」四类 · 首页只选文本和多模态 · 生图 / 视频由 RiffCut 自动调用</div></div>
     <div class="u-actions">
       <button class="u-btn" id="mRefresh"><svg class="ic"><use href="#i-refresh"/></svg>重新检测</button>
       <button class="u-btn gold" id="mAddToggle"><svg class="ic"><use href="#i-plus"/></svg>添加模型</button>
@@ -13595,7 +13599,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     h+='</div><div class="b-line">字体：'+esc(k.font||'未设')+' · 水印位置：'+esc(k.watermark_pos||'未设')+
        (k.note?'<br>备注：'+esc(k.note):'')+'</div></div>';
 
-    h+='<div class="u-card b-sec"><div class="b-strong">这一页不是摆设：首页 AI 导演写方案时会读取当前客户的品牌规范与出片预设，脚本、配色、口号都会按这套来。</div></div>';
+    h+='<div class="u-card b-sec"><div class="b-strong">这一页不是摆设：首页 RiffCut 写方案时会读取当前客户的品牌规范与出片预设，脚本、配色、口号都会按这套来。</div></div>';
     box.innerHTML=h;
   }
 

@@ -3853,7 +3853,7 @@ body.rws-dragging *{cursor:col-resize !important}
     var ep=kind==='video'?'/api/video/generate':'/api/image/generate';
     window.api(ep,{prompt:prompt}).then(function(d){
       if(wait&&wait.parentNode)wait.parentNode.removeChild(wait);
-      addMediaMsg('AI 导演',d,kind);
+      addMediaMsg('RiffCut',d,kind);
       window.say((kind==='video'?'视频':'图片')+'已生成，保存在软件自己的产出目录');
     }).catch(function(e){
       if(wait&&wait.parentNode)wait.parentNode.removeChild(wait);
@@ -4096,7 +4096,11 @@ body.rws-dragging *{cursor:col-resize !important}
     var arr=Array.isArray(messages)?messages:[];
     for(var i=0;i<arr.length;i++){
       var m=arr[i]||{};
-      var role=(m.who==='我')?'user':((m.who==='AI 导演')?'assistant':'');
+      /* ★ 这两个名字都要认：新存档写的是 'RiffCut'，用户历史对话里存的是 'AI 导演'。
+         只认一个的话，另一种命名的整段历史会被当成「不是对话」丢掉 ——
+         表现是切回旧对话时 AI 完全不记得聊过什么。 */
+      var aiNames={'RiffCut':1,'AI 导演':1};
+      var role=(m.who==='我')?'user':(aiNames[m.who]?'assistant':'');
       if(!role)continue;
       var t=String(m.text||'').trim();
       if(t)chatHistory.push({role:role,content:t});
@@ -4463,7 +4467,7 @@ body.rws-dragging *{cursor:col-resize !important}
         /* convo.save 支持 append 数组（见 lib/convo.js），
            这样回答会落到它自己那条对话里，用户切回去就能看到。 */
         window.api('/api/conversations',{action:'save',id:turnConv,append:[{
-          who:'AI 导演',text:txt||'（模型没有返回内容）',
+          who:'RiffCut',text:txt||'（模型没有返回内容）',
           usage:(d&&d.usage)||null,model:(d&&d.model)||'',
           time:new Date().toLocaleString('zh-CN',{hour12:false})
         }]}).catch(function(){});
@@ -4476,7 +4480,7 @@ body.rws-dragging *{cursor:col-resize !important}
     }catch(e){
       try{
         var fb=document.createElement('div');fb.className='h-msg';
-        var fw=document.createElement('div');fw.className='who';fw.textContent='AI 导演';
+        var fw=document.createElement('div');fw.className='who';fw.textContent='RiffCut';
         var fbub=document.createElement('div');fbub.className='bub';
         fbub.textContent=txt||'（模型没有返回内容）';
         fb.appendChild(fw);fb.appendChild(fbub);
@@ -6302,7 +6306,7 @@ body.rws-dragging *{cursor:col-resize !important}
     var box=$('#hBdWork'); if(!box)return;
     A('/api/works',{action:'list'}).then(function(r){
       var list=(r&&(r.data||r.items))||r||[];
-      if(!list.length){box.innerHTML='<div class="h-bd-empty">还没有成片。跟左边的 AI 导演说一句就行。</div>';return}
+      if(!list.length){box.innerHTML='<div class="h-bd-empty">还没有成片。跟左边的 RiffCut 说一句就行。</div>';return}
       var w=list[0];LASTWORK=w;
       var dur=w.duration?fmtDur(w.duration):'—';
       var cover=w.cover?'<img src="/vid/'+encodeURIComponent(w.cover)+'" alt="">'
@@ -6341,7 +6345,7 @@ body.rws-dragging *{cursor:col-resize !important}
       if(!live.length){
         /* 2026-11-16 首页重排：任务进程是常驻板块，零任务时也不能整块隐藏——
            用户要「不管 AI 做什么都能看到任务进程」。给一个正向空态，不再 display:none。 */
-        box.innerHTML='<div class="h-bd-empty">暂无进行中的任务 · AI 导演接单后，每一步进度都会显示在这里</div>';
+        box.innerHTML='<div class="h-bd-empty">暂无进行中的任务 · RiffCut 接单后，每一步进度都会显示在这里</div>';
         if(sec)sec.style.display='';
         return;
       }

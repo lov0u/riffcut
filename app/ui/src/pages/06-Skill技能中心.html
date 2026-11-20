@@ -420,7 +420,7 @@
   function newSkill(){
     var n=$('#kNewName').value.trim();if(!n){say('先填技能名称');return}
     var t=$('#kNewTag').value.trim()||'自定义',d=$('#kNewDesc').value.trim();
-    var body='# '+n+'\n\n'+(d?d+'\n\n':'')+'## 使用建议\n- 在这里写清楚节奏、转场、字幕、镜头数与质检规则。\n- 保存后 AI 导演会按这份规范挑镜头、出片。\n';
+    var body='# '+n+'\n\n'+(d?d+'\n\n':'')+'## 使用建议\n- 在这里写清楚节奏、转场、字幕、镜头数与质检规则。\n- 保存后 RiffCut 会按这份规范挑镜头、出片。\n';
     A('/api/skills',{action:'save',title:n,tag:t,params:{},body:body}).then(function(r){
       closeM('kFormModal');say('已新建技能「'+n+'」');
       return loadSkills(true).then(function(){if(r&&r.id)select(r.id)});
