@@ -64,12 +64,14 @@
   padding:10px;position:relative}
 .ed-stage video,.ed-stage img{max-width:100%;max-height:100%;object-fit:contain;display:block;
   border-radius:4px;background:#000}
-/* 模板预览：模板是按 1920x1080 的绝对坐标画的，直接塞进预览框只会
-   露出左上角一小块（看着就是「黑屏」）。所以 iframe 固定 1920x1080，
-   再用 transform 等比缩到预览框里。 */
+/* 模板预览：模板内部按自己的 1920x1080 坐标系画，iframe 保持这个尺寸。
+   ★ 必须有 translate(-50%,-50%) 从中心对齐 —— 少了它，left/top:50% 会让
+   iframe 的左上角钉在容器中心，画面整体往右下延伸（用户说的「画面跑到右下角」）。
+   具体缩放比由 JS 按 layer 像素尺寸算成 --tpl-fit，跟导出端 contain 口径一致。 */
 .ed-stage iframe.ed-tpl{position:absolute;left:50%;top:50%;
   width:1920px;height:1080px;border:0;border-radius:4px;background:#000;
-  transform-origin:center center;display:block}
+  transform-origin:center center;display:block;
+  transform:translate(-50%,-50%) scale(var(--tpl-fit,1))}
 .ed-stage .ph{color:#5E6B7C;font-size:12px;text-align:center;line-height:1.9;padding:20px}
 .ed-bar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:6px 10px;
   border-top:1px solid rgba(255,255,255,.09);color:#D6DCE6;font-size:10.5px}
@@ -80,6 +82,11 @@
 .ed-bar .u-btn{margin-left:auto;height:26px;padding:0 10px;font-size:10.5px;
   background:#1B8B7E;border-color:#1B8B7E;color:#fff}
 .ed-bar .u-btn:hover{background:#16786C}
+/* 预览缩放三件套：适应 / 缩小 / 放大。跟时间线的「缩放」（只管 pps）是两回事。 */
+.ed-bar .pvbtn{width:auto;min-width:26px;height:26px;padding:0 7px;border-radius:8px;
+  font-size:10.5px;color:#D6DCE6;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);cursor:pointer}
+.ed-bar .pvbtn:hover{background:rgba(27,139,126,.3);border-color:rgba(27,139,126,.5)}
 
 /* 属性 */
 .ed-insp{display:flex;flex-direction:column;min-height:0;background:#fff;
@@ -318,6 +325,10 @@
   background:transparent;font-size:11px;line-height:1}
 .ed-lane:hover .ed-lane-lb .lb-t,.ed-lane-lb .lb-t.on{display:grid}
 .ed-lane-lb .lb-t:hover{background:rgba(27,139,126,.16);color:#12705F}
+/* 轨道删除 × 常显：用户加了多条轨道后找不到删按钮（锁/静音可继续 hover 才出，
+   只有删除常驻），颜色压低一点不抢轨道名。 */
+.ed-lane-lb .lb-del{display:grid;color:#A8634F}
+.ed-lane-lb .lb-del:hover{background:rgba(168,99,79,.18);color:#8E3524}
 .ed-lane.locked .ed-lane-b{opacity:.55}
 .ed-lane.locked .ed-cl{cursor:not-allowed}
 /* 时间线工具条分组 */
@@ -393,6 +404,9 @@
         <div class="ed-bar">
           <button id="edPlayBtn" title="播放 / 暂停"><svg class="ic"><use href="#i-play"/></svg></button>
           <span class="tm" id="edTime">00:00 / 00:00</span>
+          <button class="pvbtn" id="edFitBtn" title="自动适应：画面完整居中铺满预览框">适应</button>
+          <button class="pvbtn" id="edPvOut" title="缩小预览">−</button>
+          <button class="pvbtn" id="edPvIn" title="放大预览">＋</button>
           <button class="u-btn" id="edSaveBtn">保存</button>
         </div>
       </div>
@@ -411,6 +425,7 @@
         <span class="tlsep"></span>
         <button class="u-btn" id="edSplitBtn" title="把选中的片段从播放头处切开（S）">✂ 分割</button>
         <button class="u-btn" id="edDupBtn" title="复制选中的片段（Ctrl/Cmd+D）">复制</button>
+        <button class="u-btn danger" id="edDelBtn" title="删除选中的片段（Delete）">删除</button>
         <span class="tlsep"></span>
         <button class="u-btn" id="edAddVBtn" title="加一条视频/图形轨">＋视频轨</button>
         <button class="u-btn" id="edAddTBtn" title="加一条字幕轨">＋字幕轨</button>
@@ -585,7 +600,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
 });
 
   var ED={proj:null,data:null,assets:[],sel:null,pps:60,zoom:1,t:0,playing:false,dirty:false,
-          compose:null,layers:{},kf:{track:null,i:null,prop:'x'}};
+          compose:null,layers:{},kf:{track:null,i:null,prop:'x'},pvScale:1};
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function say(m){window.say(m)}
@@ -667,6 +682,16 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     el.style.opacity=Math.max(0,Math.min(1,v.opacity)).toFixed(3);
     if(!txt)el.style.borderRadius=(v.radius>0?(+v.radius).toFixed(1)+'px':'0');
     el.style.transform='translate(-50%,-50%) rotate('+v.rotate.toFixed(2)+'deg) scale('+Math.max(.01,v.scale).toFixed(4)+')';
+    /* 模板 iframe 固定 1920x1080 内部坐标系，按这一层在工程里的实际像素尺寸
+       等比 contain 缩放，跟导出端 fitPatchBlock 的 contain 口径一致 —— 内容完整居中，
+       不会再溢出到右下角。layer 像素 = 工程画幅 × 该层 w/h 比例。 */
+    var fr=el.querySelector&&el.querySelector('iframe.ed-tpl');
+    if(fr&&ED.data){
+      var W0=+ED.data.width||1920,H0=+ED.data.height||1080;
+      var lw=Math.max(1,W0*v.w),lh=Math.max(1,H0*v.h);
+      var fk=Math.min(lw/1920,lh/1080);
+      fr.style.setProperty('--tpl-fit',String(Math.round(fk*10000)/10000));
+    }
   }
 
   /* ── 工程列表 ── */
@@ -780,7 +805,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
         '<span class="lb-nm">'+esc(tr.name||tr.id)+'</span>'+
         '<button class="lb-t'+(tr.locked?' on':'')+'" data-track-act="lock" title="锁定 / 解锁这条轨道">'+(tr.locked?'🔒':'🔓')+'</button>'+
         '<button class="lb-t'+(tr.mute?' on':'')+'" data-track-act="mute" title="静音 / 取消静音">'+(tr.mute?'🔇':'♪')+'</button>'+
-        '<button class="lb-t" data-track-act="del" title="删除这条轨道">×</button>'+
+        '<button class="lb-t lb-del" data-track-act="del" title="删除这条轨道">×</button>'+
         '</div>'+
         '<div class="ed-lane-b" data-tr="'+esc(tr.id)+'" data-kind="'+esc(tr.kind)+'">'+
         '<div class="ed-drop"></div>'+clips+'</div></div>';
@@ -1052,11 +1077,17 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       });
     });
     var del=$('#fDel');
-    if(del)del.addEventListener('click',function(){
-      var tr=(ED.data.tracks||[]).filter(function(x){return x.id===ED.sel.track})[0];
-      if(!tr)return;
-      tr.clips.splice(ED.sel.i,1);ED.sel=null;edDirty();edLanes();edInsp();edPreview();
-    });
+    if(del)del.addEventListener('click',edDelSel);
+  }
+  /* 删掉当前选中的片段：属性面板的 #fDel、时间线工具栏的 #edDelBtn、键盘 Delete
+     都走这里，避免三处逻辑各写一份、改一处漏两处。 */
+  function edDelSel(){
+    if(!ED.sel||!ED.data){say('先点一下要删的片段，再按删除');return}
+    var tr=(ED.data.tracks||[]).filter(function(x){return x.id===ED.sel.track})[0];
+    if(!tr||tr.locked){say('这条轨道锁住了，删不了');return}
+    if(!tr.clips||ED.sel.i<0||ED.sel.i>=tr.clips.length){say('先点一下要删的片段，再按删除');return}
+    tr.clips.splice(ED.sel.i,1);ED.sel=null;edDirty();edLanes();edInsp();edPreview();
+    say('片段已删除');
   }
 
   function edSel(){
@@ -1317,14 +1348,28 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
      这样 x/y/w/h 的「比例」口径、文字的 px 字号，都跟导出端 composition 完全一致，
      编辑器里看到的构图就是出片的构图。 */
   function edComposeFit(){
-    var box=ED.compose,st=$('#edStage');if(!box||!st||!ED.data)return;
-    var W=+ED.data.width||1920,H=+ED.data.height||1080;
+    var box=ED.compose,st=$('#edStage');if(!box||!st)return;
+    var W=ED.data?(+ED.data.width||1920):1920,H=ED.data?(+ED.data.height||1080):1080;
     box.style.width=W+'px';box.style.height=H+'px';
     var bw=st.clientWidth-20,bh=st.clientHeight-20;
-    if(bw<=0||bh<=0)return;
-    var k=Math.min(bw/W,bh/H);
+    /* ★ 容器还没量到尺寸（刚打开 / 面板折叠 / display:none）时，以前直接 return，
+       translate(-50%,-50%) 没设上 → 元素左上角钉在 left/top:50% 的中心点，
+       画面整体往右下延伸。这里先把居中设上、缩放给 1，绝不让它停在右下角。 */
+    if(bw<=0||bh<=0){
+      box.style.transform='translate(-50%,-50%) scale(1)';
+      return;
+    }
+    var k=Math.min(bw/W,bh/H)*(ED.pvScale||1);
     box.style.transform='translate(-50%,-50%) scale('+k.toFixed(4)+')';
   }
+  /* 预览框尺寸变化（窗口缩放 / 面板拖动）时自动重算缩放。
+     ★ 光靠 window.resize 不够：剪辑台内部面板折叠时窗口没变，但预览框变了。 */
+  (function bindStageResize(){
+    var st=$('#edStage');
+    if(st&&window.ResizeObserver){
+      try{new ResizeObserver(function(){edComposeFit()}).observe(st)}catch(e){}
+    }
+  })();
   function edPreviewURL(c){
     return '/ed/'+encodeURIComponent(ED.proj)+'/'+encodeURIComponent((c.src||'').split('/').pop());
   }
@@ -1553,6 +1598,19 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       return edLoadList().then(function(){return edOpen(nm)});
     }).catch(function(e){say('新建失败：'+(e&&e.message||''))});
   }
+
+  /* 预览缩放：适应=恢复 1 倍自动铺满，＋/－ 手动放大缩小（0.3~3 倍）。
+     注意这是「预览画面」缩放，跟时间线那个只管像素/秒的 #edZoom 无关。 */
+  function edPvZoom(mul){
+    ED.pvScale=Math.max(0.3,Math.min(3,(ED.pvScale||1)*mul));
+    edComposeFit();
+  }
+  $('#edFitBtn') && $('#edFitBtn').addEventListener('click',function(){
+    ED.pvScale=1;edComposeFit();say('预览已自动适应');
+  });
+  $('#edPvIn') && $('#edPvIn').addEventListener('click',function(){edPvZoom(1.25)});
+  $('#edPvOut') && $('#edPvOut').addEventListener('click',function(){edPvZoom(0.8)});
+  $('#edDelBtn') && $('#edDelBtn').addEventListener('click',edDelSel);
 
   $('#edSaveBtn') && $('#edSaveBtn').addEventListener('click',function(){edSave()});
 
@@ -1942,10 +2000,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     if(e.key===' '){e.preventDefault();edPlayToggle();return}
     if(e.key==='s'||e.key==='S'){e.preventDefault();edSplit();return}
     if((e.metaKey||e.ctrlKey)&&(e.key==='d'||e.key==='D')){e.preventDefault();edDup();return}
-    if(e.key==='Delete'&&ED.sel){
-      var tr=(ED.data.tracks||[]).filter(function(x){return x.id===ED.sel.track})[0];
-      if(tr&&!tr.locked){tr.clips.splice(ED.sel.i,1);ED.sel=null;edDirty();edLanes();edInsp();edPreview()}
-    }
+    if(e.key==='Delete'&&ED.sel){edDelSel()}
   });
 
   /* 剪辑页一开始是 display:none，这时候量 clientWidth 全是 0，
