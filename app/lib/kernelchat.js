@@ -66,7 +66,7 @@ async function kernel() {
      现在：DSH_HOME → HOME/内核/（AI 看不见），cwd → HOME/（全是人话目录）。 */
   const kernelHome = P.KERNEL_HOME
   const workDir = P.HOME
-  _prof = Pr.buildProfile({ homeDir: kernelHome, profile: 'velora' })
+  _prof = Pr.buildProfile({ homeDir: kernelHome, workDir: workDir, profile: 'velora' })
   const k = new Kernel({ homeDir: kernelHome, profile: 'velora' })
   k.on('event', () => {})            // 事件在这一层按 stepId 分发，见 chat()
   await k.start({ provider: _prof.provider, model: _prof.model, cwd: workDir, env: _prof.env })

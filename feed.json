@@ -3,8 +3,8 @@
   "build": 1,
   "channel": "stable",
   "url": "https://github.com/lov0u/riffcut/releases/download/v0.1.0/RiffCut-lite-0.1.0.zip",
-  "sha256": "a2f66107b51be491811c01ef980c569bd5e928c78ec6d110a908e2fc5908fc0d",
-  "size": 448374186,
+  "sha256": "7fc2bb1e8fd801fd7fee85db101c21cce6d48ec4e646a54d42c1fd501c77f546",
+  "size": 448375043,
   "min_version": "0.0.1",
   "released_at": "2026-11-20",
   "notes": "首个可下载版本。\n\n· 首页四条建议改为等宽横排，点一下就把提示词填进输入框\n· 模型管理支持白鹿 BailuCode / Agnes 国内 / Agnes 国际三家免费额度，选中自动填好接口地址\n· 自带 auto（多模态）内置额度，装完直接能对话，不用注册\n· 语音工作室支持在线下载本地模型，断点续传、可取消\n· 新增「反馈」按钮，一键发邮件\n· 法律板块改为读取协议清单，五份协议可在软件内直接查看"

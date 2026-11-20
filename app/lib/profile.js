@@ -27,14 +27,27 @@ function q(s) { return JSON.stringify(String(s)) }
      "You are a coding agent powered by the {{model}} model."
    那句让 AI 一直以为自己在写代码，于是打招呼也去 ls 目录、列工具清单。
    改成导演身份，和 home/AGENTS.md 说的是同一件事。 */
+/* ★ 这段是内核的系统提示词前缀，写在 personaPrefix 里。
+   2026-11-20 用户两次驳正后重写，原则只有一条：
+   **不要把行为写成禁令，把判断的依据和代价交出去。**
+   上一版写的是 "Be brief"、"at most 50 Chinese characters"、"Never dump capability
+   lists" —— 全是硬约束，而且真加进去以后「你能干什么」被压成 29 字，
+   反而答不全。现在改成描述性的：它自己判断这句话是话还是活儿，
+   以及判断错了分别会怎样。 */
 const PERSONA_PREFIX = [
   'You are the AI director built into RiffCut (影创), a Chinese short-video production app.',
   'You are not a coding agent and not a general assistant; you make short videos.',
-  'If asked who you are, you are 影创的 AI 导演 — never a Harness, kernel, MCP client, or model.',
-  'Answer in Chinese. Match the length to what was actually asked: a greeting gets a greeting,',
-  'a real brief gets a plan. Never dump capability lists, tables, or tool names at people.',
+  'If asked who you are, you are 影创的 AI 导演 — not a Harness, not a kernel, not an MCP client,',
+  'not a model name. People here do not know those words and will think the wrong app opened.',
+  'Answer in Chinese.',
+  'Match the length to what was actually asked: a greeting gets a greeting, a real brief gets a plan.',
   'Judge for yourself whether a message is conversation or a work order; nobody hands you a script.',
+  'Mistaking one for the other is not symmetrical: treating talk as work makes people wait half a minute',
+  'for a reply to "hi", while treating work as talk only costs one extra question — so when unsure,',
+  'reply as conversation and let them say more.',
   'Conversation gets words. A work order gets tools, and then a finished cut.',
+  'Your working directory is already clean and its layout is described in the workspace instructions,',
+  'so there is nothing to discover by listing directories first.',
 ].join(' ')
 
 function ensureDir(p) { if (!existsSync(p)) mkdirSync(p, { recursive: true }); return p }
@@ -72,7 +85,7 @@ function readModels() {
 }
 
 /** 生成 cordis.patch.yml 的正文。 */
-function patchYaml({ models, env, homeDir }) {
+function patchYaml({ models, env, homeDir, workDir }) {
   const lines = []
   // ── 模型路由：一个 llm-pi-ai 装全部 provider（多个同名条目会互相顶掉）
   lines.push('- id: llm-pi-ai')
@@ -181,10 +194,18 @@ function patchYaml({ models, env, homeDir }) {
   lines.push(`    port: ${webPort || 0}`)
 
   // ── 沙箱：完全托管（桌面软件，用户自己的机器）
+  /* ★ workspaceRoot 以前写 process.cwd()（2026-11-20 修）。
+     内核由 kernel.js 以 cwd=kernelDir 启动，所以 process.cwd() 拿到的是
+     kernel/dsh 那个目录 —— 沙箱的「工作区根」指到了内核自己身上，
+     跟 AI 实际的 cwd（用户数据目录）完全不是一个地方。
+     打包后尤其明显：能不能写文件、写到哪，全看这个错的根。
+     改成传进来的 homeDir（= KERNEL_HOME 的父级业务目录）。
+     ★ 注入方式仍是 !!js 表达式，但取的是本函数作用域里的变量，
+       不是全局 —— patch 是字符串，闭包里的 homeDir 已经拼进去了。 */
   lines.push('- id: sandbox-policy')
   lines.push('  config:')
   lines.push('    mode: danger-full-access')
-  lines.push('    workspaceRoot: !!js process.cwd()')
+  lines.push(`    workspaceRoot: ${q(workDir || homeDir)}`)
   lines.push('- id: approval')
   lines.push('  config:')
   lines.push('    policy: never')
@@ -295,7 +316,7 @@ function patchYaml({ models, env, homeDir }) {
  * 写 profile 并返回 {provider, model, env}。
  * 幂等：只在内容确实变了时才写盘，避免内核每次启动都重载。
  */
-function buildProfile({ kernelDir, homeDir, profile }) {
+function buildProfile({ kernelDir, homeDir, workDir, profile }) {
   const dir = join(homeDir, 'profiles', profile)
   ensureDir(dir)
 
@@ -322,7 +343,7 @@ function buildProfile({ kernelDir, homeDir, profile }) {
 
   const env = {}
   const models = readModels()
-  const patch = patchYaml({ models, env, homeDir })
+  const patch = patchYaml({ models, env, homeDir, workDir })
 
   /* ★ 不能整体重写 package.json —— 会把用户装的插件抹掉。
      踩过的坑：这个函数每次 /api/chat 都跑一次，原来直接写

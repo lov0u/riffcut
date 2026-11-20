@@ -549,7 +549,7 @@ app.whenReady().then(async () => {
   // 开机自启内核 —— 用户打开软件就该能用，不该先点一下「启动」。
   // 失败也不卡死：把错误送到界面，用户可以点重试。
   try {
-    const prof = buildProfile({ kernelDir: KERNEL, homeDir: KERNEL_HOME, profile: PROFILE })
+    const prof = buildProfile({ kernelDir: KERNEL, homeDir: KERNEL_HOME, workDir: HOME, profile: PROFILE })
     kernel = startKernel(win)
     /* cwd 给 HOME（业务数据），homeDir 给 KERNEL_HOME（内核状态）——
        这两个以前都是 HOME，于是内核把 profiles/sessions 写进用户数据根目录，
@@ -725,7 +725,7 @@ ipcMain.handle('feedback:mail', async (_e, opts = {}) => {
 ipcMain.handle('kernel:start', async (_e, opts = {}) => {
   if (kernel && kernel.ready) return { ok: true, already: true }
   try {
-    const prof = buildProfile({ kernelDir: KERNEL, homeDir: KERNEL_HOME, profile: PROFILE })
+    const prof = buildProfile({ kernelDir: KERNEL, homeDir: KERNEL_HOME, workDir: HOME, profile: PROFILE })
     kernel = startKernel(BrowserWindow.getAllWindows()[0])
     const info = await kernel.start({
       provider: opts.provider || prof.provider,
