@@ -100,11 +100,16 @@ NEVER = {
 }
 
 # ── 进包但必须洗掉特定字段 ────────────────────────────────────────────
-# 更新.json 的结构和说明文字都是产品的一部分，但 feed_url 里躺着一个开发机路径
-# （实测是 /private/tmp/volena-tests-c_10q6zb/发布/feed.json）。打包出去等于把
+# 更新.json 的结构和说明文字都是产品的一部分，但 feed_url 里可能躺着开发机路径
+# （曾实测到 /private/tmp/volena-tests-c_10q6zb/发布/feed.json）。打包出去等于把
 # 本地临时目录结构公开，而且用户点「检查更新」会去读一个不存在的路径。
+#
+# ★ feed_url 现在固定写成 GitHub 的正式发布地址，不再是空串。
+#   写成空串的后果：新装的用户「检查更新」永远只看到「还没配更新地址」，
+#   自动更新对所有人都是死的。这里是发布链路的唯一入口，改版本时不用动它。
+PUBLIC_FEED = 'https://github.com/lov0u/riffcut/releases/latest/download/feed.json'
 SANITIZE = {
-    '更新.json': {'feed_url': ''},
+    '更新.json': {'feed_url': PUBLIC_FEED, 'check_on_start': True},
 }
 
 # ── 子目录：整目录复制 ────────────────────────────────────────────────

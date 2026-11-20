@@ -962,7 +962,12 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
   var toast=document.getElementById('toast'),tm;
   var SAY_ERR=/失败|出错|报错|错误|异常|超时|读不到|不能|无法|不可用|不支持|没连上|连不上|未响应|没起来|拒绝|中止|中断|无效|找不到|不存在|请先|先选|先说|太短|没听清|没权限|没有权限|禁用|缺少|不足|超限|HTTP\s*\d|fetch|ffmpeg|ffprobe|Error|Exception|Failed|Cannot|Could not|denied|NotAllowed|refused|timeout/i;
   function sayIsError(s,bad){return !!bad||SAY_ERR.test(s)}
-  window.say=function(m,bad){
+  /* 第三个参数 force：用户主动点了按钮、必须有结果反馈的操作传 true。
+     ★ 2026-11-20 用户报「点测试没有提示」。根因就是下面那句静默过滤：
+     测试成功的文案是「✓ 连接正常：收到」，不含任何错误关键词 → err=false →
+     被 `if(!err&&!verbose)return` 直接吞掉。于是失败能看到、成功反而没反应，
+     用户以为按钮坏了。按钮类操作的成功/进行中提示必须显式放行。 */
+  window.say=function(m,bad,force){
     if(!toast)return;
     var s=String(m==null?'':m);
     var err=sayIsError(s,bad);
@@ -971,7 +976,7 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
        &&(window.sysAlert.has('service')||window.sysAlert.has('ffmpeg')))return;
     var verbose=false;
     try{verbose=localStorage.getItem('riffcut.say.verbose')==='1'}catch(e){}
-    if(!err&&!verbose)return;   /* 信息性反馈：不弹，也不动上一条提示 */
+    if(!err&&!verbose&&!force)return;   /* 信息性反馈：不弹，也不动上一条提示 */
     toast.textContent=s;
     toast.title=s;   /* 单行省略后，鼠标悬停仍能读到全文 */
     /* 页眉正中已被系统级告警占着 → 这条落到页眉下方一行，别和红条叠在一起 */

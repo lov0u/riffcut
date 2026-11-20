@@ -222,6 +222,32 @@
         <ul class="lg-todo" id="gTodo"></ul>
       </div>
 
+      <div class="u-card g-card" data-sec="update">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-download"/></svg>在线更新 <span class="u-tag" id="gUpdTag">读取中</span></h4>
+        <div class="g-row"><div class="lab"><b>当前版本</b><span id="gUpdCur">读取中…</span></div>
+          <span class="u-tag" id="gUpdLatest">—</span></div>
+        <div class="g-row"><div class="lab"><b>更新清单地址</b><span>一个静态 JSON 的 https 地址。留空 = 不检查更新，不影响使用</span></div>
+          <div class="u-input"><input id="gUpdFeed" placeholder="https://…/feed.json"></div></div>
+        <div class="g-row"><div class="lab"><b>更新通道</b><span>清单里的 channel 跟这里不一致就跳过，避免把测试版推给稳定版用户</span></div>
+          <div class="u-select"><select id="gUpdChannel">
+            <option value="stable">stable（稳定版）</option>
+            <option value="beta">beta（测试版）</option>
+          </select></div></div>
+        <div class="g-row"><div class="lab"><b>启动时自动检查</b><span>只检查、不下载。有新版在页眉提示一条，点了才动</span></div>
+          <label class="g-sw"><input type="checkbox" id="gUpdOnStart"><i></i></label></div>
+        <div class="g-row"><div class="lab"><b>下载后自动安装</b><span>默认关。开着的话下载完直接换 App（旧版会先备份）</span></div>
+          <label class="g-sw"><input type="checkbox" id="gUpdAuto"><i></i></label></div>
+        <div class="g-row"><div class="lab"><b>必须校验 sha256</b><span>强烈建议开着。关掉等于愿意装一个没校验过的包</span></div>
+          <label class="g-sw"><input type="checkbox" id="gUpdSha"><i></i></label></div>
+        <div class="v-row" style="margin:10px 0 4px;gap:7px;flex-wrap:wrap">
+          <button class="u-btn gold" id="gUpdCheck"><svg class="ic"><use href="#i-refresh"/></svg>检查更新</button>
+          <button class="u-btn" id="gUpdSave">保存设置</button>
+          <button class="u-btn" id="gUpdInstall" disabled>下载并安装</button>
+          <button class="u-btn" id="gUpdOpen">打开更新目录</button>
+        </div>
+        <div class="g-note" id="gUpdNote">更新只替换 App 本身。数据目录（工程、素材、密钥、规则、模型）在 App 同级，不会被覆盖；旧版会备份到 系统/备份/，随时能移回来。</div>
+      </div>
+
       <div class="u-card g-card" data-sec="keys">
         <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-board"/></svg>快捷键 <span class="u-tag gray">系统默认</span></h4>
         <div class="g-row"><div class="lab"><b>新建项目</b><span>⌘ N</span></div><span class="u-tag">系统默认</span></div>
@@ -351,8 +377,8 @@
     $('#gRevokeBtn').disabled=!c.current;
     $('#gConsentWarn').innerHTML=c.current?
       ('<b>授权状态正常。</b>已同意协议版本 '+esc(d.legal_version)+'；协议更新后会在这里要求重新同意。'):
-      ('<b>尚未同意当前版本协议。</b>正式出售前请点「同意并继续」完成授权留痕；'+
-       '禁止逆向、破解、绕过授权校验与二次分发的条款见《软件许可与反逆向声明》第 2 条。');
+      ('<b>尚未同意当前版本协议。</b>请点「同意并继续」完成授权留痕。'+
+       '本软件以 AGPL-3.0 开源发布，商业授权另议 —— 详见《开源许可与商业授权说明》。');
     $('#gDocs').innerHTML=(d.docs||[]).map(function(x){
       return '<div class="lg-doc"><span class="nm"><b>'+esc(x.title)+(x.key?' <span class="u-tag gold">核心</span>':'')+'</b>'
         +'<span>'+esc(x.file)+' · '+(x.exists?x.size+' 字节':'文件缺失')+'</span></span>'
@@ -675,5 +701,189 @@
       window.say(e.message||'联网测试失败',true);
     });
   });
+})();
+</script>
+<script>
+/* 在线更新：状态 / 检查 / 下载 / 安装。
+   刻意不做「静默自动更新」—— 换 App 是有感的动作，必须让人知道、
+   并且能在页面上看到「正在下第几 MB / 校验 / 已装好 / 怎么回滚」。 */
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var tag=$('#gUpdTag'),cur=$('#gUpdCur'),latest=$('#gUpdLatest'),
+      feed=$('#gUpdFeed'),ch=$('#gUpdChannel'),
+      swStart=$('#gUpdOnStart'),swAuto=$('#gUpdAuto'),swSha=$('#gUpdSha'),
+      bCheck=$('#gUpdCheck'),bSave=$('#gUpdSave'),bInstall=$('#gUpdInstall'),
+      bOpen=$('#gUpdOpen'),note=$('#gUpdNote');
+  if(!tag)return;
+  var ST={job:null,ready:null,poll:0};
+
+  function say(m,bad){ if(window.say)window.say(m,bad,true) }
+  function setTag(t,cls){ if(tag){tag.textContent=t;tag.className='u-tag '+(cls||'gray')} }
+
+  function paint(s){
+    if(!s)return;
+    if(cur)cur.textContent='本机 '+s.app_version+'（'+(s.installable?'已打包':'源码态')+'）';
+    if(feed&&document.activeElement!==feed)feed.value=s.feed_url||'';
+    if(ch)ch.value=s.channel||'stable';
+    if(swStart)swStart.checked=!!s.check_on_start;
+    if(swAuto)swAuto.checked=!!s.auto_download;
+    if(swSha)swSha.checked=!!s.require_sha256;
+    if(!s.enabled){setTag('已关闭','gray')}
+    else if(!s.feed_url){setTag('未配置','gray')}
+    else{setTag('已启用','green')}
+    if(note&&s.note)note.textContent=s.note;
+    if(bInstall&&!ST.ready)bInstall.disabled=true;
+    if(bCheck)bCheck.disabled=false;
+  }
+
+  function load(){
+    return window.api('/api/update',{action:'status'}).then(function(s){paint(s);return s})
+      .catch(function(e){setTag('读不到','gray');if(note)note.textContent=e.message||'读不到更新状态'});
+  }
+
+  /* 检查：有新版就把「下载并安装」点亮，并把版本号与更新说明贴到页面上 */
+  function doCheck(quiet){
+    if(bCheck)bCheck.disabled=true;
+    setTag('检查中…','blue');
+    return window.api('/api/update',{action:'check'}).then(function(r){
+      if(bCheck)bCheck.disabled=false;
+      if(!r.ok){ setTag('检查失败','gray'); if(note)note.textContent=r.error||'检查失败'; if(!quiet)say(r.error||'检查失败',true); return }
+      if(!r.configured){
+        setTag('未配置','gray');
+        if(latest)latest.textContent='—';
+        if(note)note.textContent=r.note||'还没配更新地址';
+        if(!quiet)say('还没配更新清单地址，填了才能检查');
+        return;
+      }
+      if(!r.has_update){
+        setTag('已是最新','green');
+        if(latest)latest.textContent='最新 '+(r.latest||'')+'';
+        if(note)note.textContent=r.note||'已是最新版';
+        ST.ready=null;
+        if(bInstall)bInstall.disabled=true;
+        if(!quiet)say(r.note||'已是最新版');
+        return;
+      }
+      /* 有新版 */
+      setTag('有新版本','gold');
+      if(latest)latest.textContent='可升级到 '+r.latest;
+      var sizeTxt=r.size?(' · '+Math.round(r.size/1048576)+' MB'):'';
+      if(note)note.textContent=(r.notes||('新版本 '+r.latest))+sizeTxt+
+        (r.forced?'（这一版要求最低 '+r.min_version+'，必须升级）':'');
+      ST.ready=r;
+      if(bInstall)bInstall.disabled=false;
+      if(!quiet)say('发现新版本 '+r.latest);
+    }).catch(function(e){
+      if(bCheck)bCheck.disabled=false;
+      setTag('检查失败','gray');
+      if(note)note.textContent=e.message||'检查失败';
+      if(!quiet)say(e.message||'检查失败',true);
+    });
+  }
+
+  /* 下载：起一个后台任务，每 700ms 拉一次进度。
+     进度条直接写进 note 那行文字，不额外加 DOM。 */
+  function stopPoll(){ if(ST.poll){clearInterval(ST.poll);ST.poll=0} }
+
+  function startPoll(){
+    stopPoll();
+    ST.poll=setInterval(function(){
+      if(!ST.job)return stopPoll();
+      window.api('/api/update',{action:'progress',job_id:ST.job}).then(function(j){
+        if(!j)return;
+        if(j.state==='downloading'){
+          setTag('下载中 '+j.progress+'%','blue');
+          if(note)note.textContent=j.step||'下载中…';
+          return;
+        }
+        stopPoll();
+        if(j.state==='done'){
+          setTag('校验通过','green');
+          if(note)note.textContent='下载完成，sha256 校验通过。点「下载并安装」替换 App。';
+          ST.file=j.file;
+          if(bInstall){bInstall.disabled=false;bInstall.textContent='安装已下载的版本'}
+          say('更新包已下载并通过校验');
+        }else if(j.state==='error'){
+          setTag('下载失败','gray');
+          if(note)note.textContent=j.error||'下载失败';
+          say(j.error||'下载失败',true);
+        }
+      }).catch(function(){});
+    },700);
+  }
+
+  function doDownload(){
+    if(!ST.ready){say('先点「检查更新」',true);return}
+    bInstall.disabled=true;bInstall.textContent='下载中…';
+    setTag('准备下载','blue');
+    window.api('/api/update',{action:'download'}).then(function(r){
+      if(!r.ok){setTag('下载失败','gray');if(note)note.textContent=r.error;bInstall.disabled=false;bInstall.textContent='下载并安装';say(r.error||'下载失败',true);return}
+      ST.job=r.job_id;
+      startPoll();
+    }).catch(function(e){
+      setTag('下载失败','gray');if(note)note.textContent=e.message;
+      bInstall.disabled=false;bInstall.textContent='下载并安装';
+      say(e.message||'下载失败',true);
+    });
+  }
+
+  function doInstall(){
+    if(!ST.file){say('还没有下载好的更新包',true);return}
+    var go=function(){
+      bInstall.disabled=true;bInstall.textContent='安装中…';
+      setTag('安装中','blue');
+      window.api('/api/update',{action:'install',file:ST.file,sha256:(ST.ready&&ST.ready.sha256)||''}).then(function(r){
+        if(!r.ok){
+          setTag('安装失败','gray');
+          if(note)note.textContent=r.error||'安装失败';
+          bInstall.disabled=false;bInstall.textContent='重试安装';
+          say(r.error||'安装失败',true);
+          return;
+        }
+        setTag('已装好','green');
+        if(note)note.textContent=r.note||'新版本已就位，关掉软件重开即生效';
+        bInstall.textContent='已安装';
+        say('新版本已装好，关掉软件重新打开就生效');
+      }).catch(function(e){
+        setTag('安装失败','gray');if(note)note.textContent=e.message;
+        bInstall.disabled=false;bInstall.textContent='重试安装';
+        say(e.message||'安装失败',true);
+      });
+    };
+    /* 装 App 是不可逆动作（虽然会自动备份），必须二次确认 */
+    if(window.__confirmAsk){
+      window.__confirmAsk('确定用新版本替换当前的 App？旧版会自动备份到 系统/备份/，装坏了可以移回来。',
+        go,{title:'安装更新',ok:'安装'});
+    }else if(window.confirm){
+      if(window.confirm('确定替换当前 App？旧版会备份。'))go();
+    }else go();
+  }
+
+  if(bCheck)bCheck.addEventListener('click',function(){doCheck(false)});
+  if(bInstall)bInstall.addEventListener('click',function(){
+    if(ST.file)doInstall(); else doDownload();
+  });
+  if(bSave)bSave.addEventListener('click',function(){
+    var patch={action:'save',
+      feed_url:(feed?feed.value.trim():''),
+      channel:(ch?ch.value:'stable'),
+      check_on_start:!!(swStart&&swStart.checked),
+      auto_download:!!(swAuto&&swAuto.checked),
+      require_sha256:!!(swSha&&swSha.checked)};
+    window.api('/api/update',patch).then(function(r){
+      if(!r.ok){say(r.error||'保存失败',true);return}
+      paint(Object.assign({},r,{app_version:(cur?cur.textContent.replace('本机 ',''):'')}));
+      say('更新设置已保存');
+      load();
+    }).catch(function(e){say(e.message||'保存失败',true)});
+  });
+  if(bOpen)bOpen.addEventListener('click',function(){
+    window.api('/api/update',{action:'status'}).then(function(s){
+      if(s&&s.dir&&window.riffcut&&window.riffcut.openPath)window.riffcut.openPath(s.dir);
+    }).catch(function(){});
+  });
+
+  document.addEventListener('riffcut-ready',function(){load()});
+  if(window.RiffCut&&window.RiffCut.layout)load();
 })();
 </script>

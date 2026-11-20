@@ -4,7 +4,7 @@
   var $=function(s){return document.querySelector(s)},
       $$=function(s){return [].slice.call(document.querySelectorAll(s))},
       A=function(p,d){return window.api(p,d)},
-      say=function(m){window.say(m)},
+      say=function(m,bad,force){window.say(m,bad,force)},
       V=function(){return window.RiffCut||{}};
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -308,16 +308,17 @@
         '<div class="mc-meta">' + esc2(m.vendor || '自定义') +
         ' · 模型 ID：<span>' + esc2(m.model || '未填') + '</span>' +
         (m.key_set
-          ? '<div class="mc-key">' + (m.preset ? '内置额度 · 开箱即用，可换成自己的' : '密钥 ' + esc2(m.key_hint || '已保存')) + '</div>'
-          : (m.preset ? '<div class="mc-key">内置额度</div>' : '')) +
+          ? '<div class="mc-key">' + (m.preset ? (m.presetKey ? '已填自己的 Key' : '内置额度 · 开箱即用，可换成自己的') : '密钥 ' + esc2(m.key_hint || '已保存')) + '</div>'
+          : (m.preset ? '<div class="mc-key">' + (m.presetKey ? '点「编辑」去注册拿 Key' : '内置额度') + '</div>' : '')) +
         '</div>' +
         '<div class="mc-acts">' +
-          (m.preset
-            ? '<button data-act="edit" data-id="' + esc2(id) + '">编辑</button>' +
-              (m.url ? '<button data-act="test" data-id="' + esc2(id) + '">测试</button>' : '')
-            : '<button data-act="edit" data-id="' + esc2(id) + '">编辑</button>' +
-              (m.url ? '<button data-act="test" data-id="' + esc2(id) + '">测试</button>' : '') +
-              (!m.builtin ? '<button class="danger" data-act="del" data-id="' + esc2(id) + '">删除</button>' : '')) +
+          '<button data-act="edit" data-id="' + esc2(id) + '">编辑</button>' +
+          (m.url ? '<button data-act="test" data-id="' + esc2(id) + '">测试</button>' : '') +
+          /* 删除按钮的规则：内置额度卡（preset-auto）不给删 —— 删了就没有开箱即用的
+             默认模型了；但「预设供应商卡」（白鹿这种 presetKey 有值的）允许删，
+             它是给用户省事用的入口，不想用白鹿的人应该能把它去掉。
+             以前 preset 一律不给删，结果白鹿卡永远钉在「我的模型」里。 */
+          ((!m.builtin || (m.preset && m.presetKey)) ? '<button class="danger" data-act="del" data-id="' + esc2(id) + '">删除</button>' : '') +
         '</div></div>';
     }).join('') : '<div class="m-empty">还没有模型。点右上「添加模型」，填接口地址、API Key，再点「读取可用模型」勾选要添加的几个；也可手动填一个模型 ID。</div>';
     box.innerHTML = '<div class="u-card m-my-hd">' +
@@ -343,19 +344,19 @@
         b.disabled = true; b.textContent = '测试中…';
         var back = function(){ b.disabled = false; b.textContent = '测试' };
         var m2 = M_STATE.models[id2] || {};
-        say('正在测试「' + (m2.name || id2) + '」…');
+        say('正在测试「' + (m2.name || id2) + '」…', false, true);
         var fin = false;
         var guard = setTimeout(function(){
-          if(fin) return; fin = true; back(); say('✗ 测试超时（12 秒没回应）');
+          if(fin) return; fin = true; back(); say('✗ 测试超时（12 秒没回应）', true, true);
         }, 12000);
         A('/api/models', {action: (m2.vision ? 'test_vision' : 'test'), id: id2}).then(function(r){
           if(fin) return; fin = true; clearTimeout(guard); back();
           var ok = !!(r && r.ok);
           var txt = (r && (r.text || r.reply)) || '';
-          say(ok ? ('✓ 连接正常：' + (txt || '（空回答）')) : ('✗ 连接失败：' + (txt || '未知错误')));
+          say(ok ? ('✓ 连接正常：' + (txt || '（空回答）')) : ('✗ 连接失败：' + (txt || '未知错误')), !ok, true);
         }).catch(function(e){
           if(fin) return; fin = true; clearTimeout(guard); back();
-          say('✗ 连接失败：' + ((e && e.message) || e));
+          say('✗ 连接失败：' + ((e && e.message) || e), true, true);
         });
       });
     });
@@ -624,6 +625,8 @@
     var m = id ? (M_STATE.models[id] || {}) : {};
     if($('#mFormTitle')) $('#mFormTitle').textContent = id ? ('编辑：' + (m.name||id)) : '添加模型';
     if($('#mfPreset')) $('#mfPreset').value = 'custom';
+    /* 自绘下拉的按钮文字是独立的一行，赋值不会自动刷新 —— 手动同步一次 */
+    if(window.__mfPresetSync) window.__mfPresetSync();
     if($('#mfName')) $('#mfName').value = m.name || '';
     if($('#mfVision')) $('#mfVision').checked = !!m.vision;
     if($('#mfImage')) $('#mfImage').checked = !!m.image;
@@ -634,6 +637,20 @@
     if($('#mfModel')) $('#mfModel').value = m.model || '';
     var sw = $('#mScanWrap'); if(sw) sw.style.display = id ? 'none' : '';
     scanReset();
+
+    /* ★ 编辑预设卡（preset-auto / preset-bailu）时，把供应商下拉自动切到
+       对应的预设，让「去注册拿 Key / 控制台」那两个按钮自己浮出来。
+       不这么做的话，用户点「编辑」进来看到的是「自定义」，
+       下拉里明明有白鹿却要自己找一遍 —— 那正是他要的那一步。 */
+    if(id && m.preset && m.presetKey && $('#mfPreset')){
+      var hasOpt = Array.prototype.some.call($('#mfPreset').options, function(o){ return o.value === m.presetKey });
+      if(hasOpt){
+        $('#mfPreset').value = m.presetKey;
+        if(window.__mfPresetSync) window.__mfPresetSync();
+        applyPreset();
+      }
+    }
+
     modal.classList.add('open');
     document.body.classList.add('modal-open');
     syncButtons();
@@ -813,7 +830,11 @@
     if(btn){
       var id = btn.dataset.id, act = btn.dataset.act;
       if(act === 'edit'){
-        if((M_STATE.models[id]||{}).preset) return;
+        /* ★ 2026-11-20 用户报「点编辑没反应」。
+           以前这里对 preset 卡直接 return —— 本意是「内置卡不用编辑」，
+           但用户要的正是「点进去改自己的 key、顺便拿注册链接」。
+           现在放行：preset 卡也能编辑，openForm 会按 presetKey 自动选中
+           对应预设，把「去注册拿 Key」的按钮带出来。 */
         openForm('', id);
       }
       if(act === 'test'){
@@ -1133,6 +1154,38 @@
       }
     });
   }
+  /* ★ 启动时自动检查更新（原来这个开关是死的）
+     踩过的坑：`check_on_start` 只被读写进 更新.json，全项目没有任何代码
+     在启动时读过它 —— 用户把开关打开，也永远等不到「发现新版本」。
+     现在补上：启动后延迟 8 秒查一次（别和首屏渲染抢），只在真有新版时提示，
+     「已是最新」不弹窗，避免每次开机都被打扰。 */
+  var _startChecked = false
+  function _autoCheckOnStart(){
+    if (_startChecked) return
+    _startChecked = true
+    A('/api/update',{action:'status'}).then(function(st){
+      var s0 = st || {}
+      if (!s0.enabled || !s0.check_on_start || !s0.feed_url) return
+      return A('/api/update',{action:'check'}).then(function(r){
+        var q = r || {}
+        if (q.ok === false) return               // 连不上就不吵，用户下次手动点
+        if (!q.has_update) return                // 已是最新：静默
+        var rm = q.remote || {}, lo = q.local || {}
+        window.confirmAction({
+          title: '发现新版本 ' + esc(rm.version || '?'),
+          html: '当前 ' + esc(lo.version || '?') + ' → 新版本 <b>' + esc(rm.version || '?') + '</b>'
+            + '<br><br>' + esc(rm.notes || '（发布说明为空）')
+            + '<br><br><span style="color:#888">只替换 App 本体，工程/素材/模型/密钥都不动。</span>',
+          okText: '下载并安装', altText: '稍后再说',
+          onOk: function(){ window.riffcutUpdate('download') }
+        })
+      })
+    }).catch(function(){ /* 静默：启动检查失败不该弹错误框 */ })
+  }
+  /* 等首屏稳下来再查。用 readyState 判断，避免在 DOM 还没铺完时插对话框。 */
+  if (document.readyState === 'complete') setTimeout(_autoCheckOnStart, 8000)
+  else window.addEventListener('load', function(){ setTimeout(_autoCheckOnStart, 8000) })
+
   window.riffcutUpdate=function(action){
     if(action==='download'){
       say('正在下载新版本…');

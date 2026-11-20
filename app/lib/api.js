@@ -42,7 +42,7 @@ async function bootstrap(d) {
       mtype: v.kind || 'text', mtype_label: label[v.kind || 'text'] || '文本',
       chat: v.chat !== false, roles: v.roles || [], note: v.note || '',
       fallback: v.fallback || '', is_default: k === (M.defaultModelId ? M.defaultModelId() : ''),
-      locked: !!v.locked, preset: !!v.preset,
+      locked: !!v.locked, preset: !!v.preset, presetKey: v.presetKey || '',
     }
   })
   const ready = (v) => !!(str(v.url).trim() && str(v.key).trim())
@@ -318,7 +318,7 @@ async function models(d) {
     price: v.price, builtin: !!v.builtin, key_set: !!v.key, kind: v.kind || 'text',
     vision: !!v.vision, video: !!v.video, image: !!v.image, chat: v.chat !== false,
     roles: v.roles || [], note: v.note || '', fallback: v.fallback || '',
-    locked: !!v.locked, preset: !!v.preset,
+    locked: !!v.locked, preset: !!v.preset, presetKey: v.presetKey || '',
   })
   if (act === 'list') return r_ok(Object.fromEntries(Object.entries(ms).map(([k, v]) => [k, pub(Object.assign({ id: k }, v))])))
   if (act === 'presets') return r_ok({ presets: M.snapshot().presets })
@@ -603,13 +603,46 @@ async function visionAnalyze(d = {}) { return r_ok(await lazy('./assetsview').an
 function assetsOrganize(d = {}) { return r_ok(lazy('./assetsview').organize(d)) }
 
 /** /api/update —— 本版没有在线更新通道，如实说没有，不假装在下载 */
-function update(d = {}) {
-  return r_ok({
-    action: str(d.action, 'status'),
-    supported: false,
-    current: require('../package.json').version,
-    note: '这一版还没有在线更新通道。要升级内核就把 kernel/dsh 整个目录换成新版，界面不用改。',
-  })
+/* 在线更新。以前这里固定返回 supported:false（占位），现在接真模块。
+   action: status（默认）/ check / download / install / cancel / save */
+async function update(d = {}) {
+  const U = lazy('./updater')
+  const act = str(d.action, 'status')
+  try {
+    if (act === 'status') return r_ok(U.status())
+    if (act === 'check') return r_ok(await U.check({ force: !!d.force, feed_url: d.feed_url }))
+    if (act === 'download') {
+      const r = await U.download({ feed: d.feed && typeof d.feed === 'object' ? d.feed : undefined })
+      return r_ok(r)
+    }
+    if (act === 'progress') return r_ok(U.job(str(d.job_id)) || { state: 'unknown' })
+    if (act === 'jobs') return r_ok(U.listJobs())
+    if (act === 'cancel') return r_ok(U.cancelDownload(str(d.job_id)))
+    if (act === 'install') {
+      /* 装之前再校一次 sha256：下载和安装是两次 IPC，
+         中间包有可能被换掉（尤其更新包放在共享目录时）。 */
+      const f = str(d.file)
+      if (!f) return rErr('缺少更新包路径')
+      const c = U.cfg()
+      if (c.require_sha256 && d.sha256) {
+        const got = await U.sha256File(f)
+        if (String(got).toLowerCase() !== String(d.sha256).toLowerCase()) {
+          return rErr('安装前复核 sha256 不通过（包可能被替换过），已中止')
+        }
+      }
+      return r_ok(await U.install({ file: f }))
+    }
+    if (act === 'save') {
+      const patch = {}
+      for (const k of ['feed_url', 'channel', 'check_on_start', 'auto_download', 'require_sha256', 'timeout_seconds', 'enabled']) {
+        if (d[k] !== undefined) patch[k] = d[k]
+      }
+      return r_ok(U.saveCfg(patch))
+    }
+    return rErr('在线更新：不认识的 action「' + act + '」')
+  } catch (e) {
+    return rErr(String((e && e.message) || e))
+  }
 }
 async function localmodels(d = {}) {
   const LM = lazy('./localmodels')
@@ -914,7 +947,50 @@ function legal(d) {
   const CFG = path.join(P.HOME, '配置', '授权同意.json')
   let rec = null
   try { rec = JSON.parse(fs.readFileSync(CFG, 'utf8')) } catch (e) { rec = null }
-  const VER = '2026-11-01'
+  /* ★ 协议清单不再硬编码在代码里。
+     踩过的坑（2026-11-20）：这里原来写死两份旧协议
+     `许可协议.md` / `隐私说明.md`，标题还是「软件许可与反逆向声明」。
+     后来五份新协议（AGPL-3.0 双许可那套）落在 home/资源/法律/ 下，
+     代码没跟着改 —— 结果界面显示「文件缺失」，点开正文还写着
+     「禁止逆向、破解、绕过授权校验」，与开源许可证自相矛盾。
+     现在唯一事实源是 协议清单.json：加一份协议只改 JSON，不用碰代码。 */
+  /* 清单可能在三处：随包 资源/法律/、构建时拷进用户目录 配置/协议/、
+     仓库源码树 home/资源/法律/。按这个顺序找，第一个存在的算数。 */
+  /* ★ 打包后 P.ROOT 是 Contents/Resources（paths.js 里 join(__dirname,'..','..')），
+     不是仓库根。所以随包数据在 P.ROOT/seed-home/ 下，不在 P.ROOT/home/ 下。
+     这个区别踩过一次：源码态跑得好好的，一打包全变「文件缺失」。 */
+  const MANIFEST_FILE = [
+    path.join(P.HOME, '配置', '协议', '协议清单.json'),
+    path.join(P.HOME, '资源', '法律', '协议清单.json'),
+    path.join(P.ROOT, 'seed-home', '配置', '协议', '协议清单.json'),
+    path.join(P.ROOT, 'home', '资源', '法律', '协议清单.json'),
+  ].find((f) => { try { return existsSync(f) } catch (e) { return false } }) || ''
+  let MANIFEST = null
+  try {
+    if (MANIFEST_FILE && existsSync(MANIFEST_FILE)) MANIFEST = JSON.parse(readFileSync(MANIFEST_FILE, 'utf8'))
+  } catch (e) { MANIFEST = null }
+  const VER = str((MANIFEST && MANIFEST.version) || '2026-11-20-1')
+  const DOCS = (MANIFEST && Array.isArray(MANIFEST.docs) && MANIFEST.docs.length)
+    ? MANIFEST.docs
+    : [
+        { id: 'license', title: '开源许可与商业授权说明', file: '01-开源许可与商业授权.md', key: true },
+        { id: 'terms', title: '服务条款', file: '02-服务条款.md', key: true },
+        { id: 'privacy', title: '隐私政策', file: '03-隐私政策.md', key: true },
+        { id: 'ip', title: '知识产权声明', file: '04-知识产权声明.md', key: false },
+        { id: 'disclaimer', title: '免责声明', file: '05-免责声明.md', key: true },
+      ]
+  /* 协议文件可能落在两处：随包数据 资源/法律/，或用户目录 配置/协议/。
+     先查用户目录（允许用户自己改），没有再回落到随包目录。 */
+  const docFile = (name) => {
+    const cands = [
+      path.join(P.HOME, '配置', '协议', name),
+      path.join(P.HOME, '资源', '法律', name),
+      path.join(P.ROOT, 'seed-home', '配置', '协议', name),
+      path.join(P.ROOT, 'home', '资源', '法律', name),
+    ]
+    for (const f of cands) { try { if (existsSync(f)) return f } catch (e) { /* 下一个 */ } }
+    return cands[0]
+  }
   const act = str(d.action, 'bootstrap')
   if (act === 'consent') {
     rec = { version: VER, time: new Date().toISOString().slice(0, 19).replace('T', ' '), machine: '' }
@@ -929,15 +1005,11 @@ function legal(d) {
     return r_ok({ consent: { current: false } })
   }
   if (act === 'doc') {
-    const docs = [
-      { id: 'license', key: 'license', title: '软件许可与反逆向声明', file: '许可协议.md' },
-      { id: 'privacy', key: 'privacy', title: '隐私说明', file: '隐私说明.md' },
-    ]
-    const hit = docs.find((x) => x.id === str(d.id)) || docs[0]
+    const hit = DOCS.find((x) => x.id === str(d.id)) || DOCS[0]
     /* ★ 以前这里是死代码：docs 数组里 body 写死成 ''，接口永远返回
        「（协议正文还没放进来）」—— 用户点开只看到一个空框，以为软件坏了。
-       现在真的去读盘：配置/协议/<文件名>。读不到就如实说是文件缺失，别装没事。 */
-    const f = path.join(P.HOME, '配置', '协议', hit.file)
+       现在真的去读盘：配置/协议/<文件名> → 资源/法律/<文件名>。读不到就如实说缺失。 */
+    const f = docFile(hit.file)
     let body = ''
     let exists = false
     try {
@@ -951,7 +1023,17 @@ function legal(d) {
     })
   }
   return r_ok({
-    legal_version: VER, software_version: '1.0.0',
+    legal_version: VER,
+    /* ★ 软件版本必须读真包里的，不能写死。
+       踩过的坑：这里原来是 '1.0.0' 字符串，而 package.json 是 0.1.0 ——
+       界面上「软件 1.0.0」和「本机 0.1.0（已打包）」并排出现，用户不知道信哪个。
+       现在读 package.json，读不到再退回 0.0.0。 */
+    software_version: (() => {
+      try {
+        const pj = JSON.parse(readFileSync(path.join(P.ROOT, 'app', 'package.json'), 'utf8'))
+        return String(pj.version || '0.0.0')
+      } catch (e) { return '0.0.0' }
+    })(),
     /* ★ layout / hardware 必须一起给。
        系统设置页有二十多个字段（数据根目录、配置夹、客户目录、产出、本地模型、
        硬件检测、可用编码器…）全靠这两个对象填。不给的话它们永远停在「读取中…」，
@@ -959,10 +1041,17 @@ function legal(d) {
     layout: layoutPaths(),
     hardware: hardwareInfo(),
     consent: { current: !!(rec && rec.version === VER), time: (rec && rec.time) || '', machine: '' },
-    docs: [
-      { id: 'license', key: 'license', title: '软件许可与反逆向声明', file: '许可协议.md', exists: false, size: 0 },
-      { id: 'privacy', key: 'privacy', title: '隐私说明', file: '隐私说明.md', exists: false, size: 0 },
-    ],
+    /* docs 必须真的探一遍盘：以前这里 exists 写死 false、size 写死 0，
+       界面永远显示「文件缺失」，哪怕文件就在那儿。 */
+    docs: DOCS.map((x) => {
+      const f = docFile(x.file)
+      let size = 0
+      let exists = false
+      try {
+        if (existsSync(f)) { size = fs.statSync(f).size; exists = size > 0 }
+      } catch (e) { /* 读不了就当没有 */ }
+      return { id: x.id, key: !!x.key, title: x.title, file: x.file, exists, size }
+    }),
     integrity: { ok: true, baseline: false, checked: 0, changed: [] },
     codesign: { signed: null },
     runtime: { suspicious: false, hits: [] },

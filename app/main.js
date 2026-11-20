@@ -233,6 +233,31 @@ function pickPort() {
    ★ 逐个子目录搬，不整体搬：整体 cpSync 遇到 HOME 里已有同名目录时
      行为取决 force 选项，容易把人家的配置覆盖掉。 */
 const SEED_DIRS = ['模板库', '内置', '配置', '系统']
+
+/** 把 src 里「dst 还没有」的文件补过去，已存在的一律不覆盖。
+ *  只用于初始数据铺底：目的是让升级后新增的默认文件能到位，
+ *  绝不能拿包内默认值盖掉用户改过的配置。 */
+function fillMissing(src, dst) {
+  const { existsSync, mkdirSync, copyFileSync, readdirSync, statSync } = require('node:fs')
+  const { join: j } = require('node:path')
+  if (!existsSync(dst)) { mkdirSync(dst, { recursive: true }) }
+  for (const name of readdirSync(src)) {
+    if (name === '.DS_Store') continue
+    const s = j(src, name)
+    const d = j(dst, name)
+    let st
+    try { st = statSync(s) } catch (e) { continue }
+    if (st.isDirectory()) {
+      // 本地模型目录整个跳过：几百 MB，交给 linkBigModels 建软链
+      if (name === '本地模型') continue
+      fillMissing(s, d)
+    } else {
+      if (existsSync(d)) continue
+      try { copyFileSync(s, d) } catch (e) { /* 单个失败不影响其他 */ }
+    }
+  }
+}
+
 function seedHomeIfEmpty() {
   if (!app.isPackaged) return
   const { existsSync, mkdirSync, cpSync } = require('node:fs')
@@ -243,8 +268,17 @@ function seedHomeIfEmpty() {
     const src = join(seedRoot, d)
     const dst = join(HOME, d)
     if (!existsSync(src)) continue
-    // 已经有了就不动（用户可能改过配置）
-    if (existsSync(dst)) continue
+    /* ★ 「目标已存在就整目录跳过」曾经埋了个坑：
+       老用户升级后 HOME/配置 早就有了，于是包内新加的东西永远铺不进去 ——
+       典型症状是「五份新协议明明打进了包，界面上却全是文件缺失」。
+       改成递归补：只补目标里**不存在**的文件，一个都不覆盖。
+       用户改过的配置不动，但新加的文件能进来。 */
+    if (existsSync(dst)) {
+      try { fillMissing(src, dst) } catch (e) {
+        console.error('[main] 补 ' + d + ' 缺失文件失败（不影响启动）: ' + e.message)
+      }
+      continue
+    }
     try {
       /* ★ 排除本地模型：那是几百 MB 的权重（语音识别 241MB、情感配音 1.5GB），
          复制一遍首次启动要卡十几秒、用户磁盘还要多占一份。
@@ -304,6 +338,29 @@ function linkBigModels(seedRoot) {
   try {
     mkdirSync(dstLM, { recursive: true })
     walk(srcLM, dstLM)
+    /* ★ 断链自愈：包内没有权重（轻量版）时，walk 一个文件都不会碰，
+       于是用户目录里指向「上一版包内权重」的软链会一直断着 ——
+       界面上就是「这台机器缺东西 · 缺 asr」，而且点重装也修不好，
+       因为 localmodels 看到目录存在就以为装好了。
+       这里主动扫一遍：凡是软链但目标不存在的，直接删掉，
+       让 localmodels 的状态判定回到「没装」，用户可以重新点下载。 */
+    let broken = 0
+    const sweep = (dir) => {
+      let ents = []
+      try { ents = require('node:fs').readdirSync(dir, { withFileTypes: true }) } catch (e) { return }
+      for (const e of ents) {
+        const p = join(dir, e.name)
+        if (e.isDirectory()) { sweep(p); continue }
+        let st = null
+        try { st = lstatSync(p, { throwIfNoEntry: false }) } catch (err) { st = null }
+        if (!st || !st.isSymbolicLink()) continue
+        let ok = false
+        try { ok = existsSync(p) } catch (err) { ok = false }
+        if (!ok) { try { unlinkSync(p); broken++ } catch (err) {} }
+      }
+    }
+    sweep(dstLM)
+    if (broken) console.log('[main] 清理了 ' + broken + ' 个失效的模型软链（包内没有权重，请到语音工作室重新下载）')
     console.log('[main] 本地模型已软链到安装包（不占用户磁盘）')
   } catch (e) {
     console.error('[main] 软链本地模型失败（不影响启动）: ' + e.message)

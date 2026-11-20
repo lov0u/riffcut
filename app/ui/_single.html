@@ -12710,6 +12710,42 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   display:flex;flex-direction:column;gap:9px;background:#FBFCFE}
 
 /* 预设说明卡：选中一家供应商后告诉用户「接口已填好，密钥得你自己去注册」 */
+/* ── 自绘供应商下拉 ────────────────────────────────
+   原生 select 的弹层以当前项为中心展开，「自定义」在最后一项就会往上顶，
+   把上面的表单整个盖住。换成按钮 + 固定定位面板，永远在按钮下方展开，
+   空间不够时往上收（但那种情况只在窗口很矮时出现，且面板最多 260px 高）。
+   值仍然存在隐藏的 <select id="mfPreset"> 里，既有逻辑不用改。 */
+.m-sel{position:relative;display:block;padding:0;border:0;background:none;
+  box-shadow:none;height:36px}
+/* 隐藏的原生 select 必须真的不占位。
+   .u-select 是 display:flex，里面的 select 有 width:100% ——
+   不 display:none 的话它会和按钮平分宽度，按钮被压成半宽，
+   右边还会露出一份重复的文字（实测就是这个现象）。 */
+.m-sel select{display:none!important}
+.m-sel-btn{width:100%;height:36px;display:flex;align-items:center;gap:8px;
+  padding:0 11px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:#FFFFFF;cursor:pointer;text-align:left;
+  font-size:var(--f5);color:var(--ink);transition:border-color .14s,box-shadow .14s}
+.m-sel-btn:hover{border-color:#CFDAE9}
+.m-sel-btn:focus-visible{outline:0;border-color:#9FB6D8;box-shadow:0 0 0 3px rgba(53,105,214,.12)}
+.m-sel-btn span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-sel-btn .ic{width:13px;height:13px;flex:0 0 auto;color:var(--ink3);transition:transform .16s}
+.m-sel.open .m-sel-btn{border-color:#9FB6D8}
+.m-sel.open .m-sel-btn .ic{transform:rotate(180deg)}
+.m-sel-pop{position:fixed;z-index:420;display:none;
+  max-height:min(260px,calc(100vh - 140px));overflow:auto;
+  background:#fff;border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 14px 38px rgba(20,28,44,.18);padding:5px}
+.m-sel.open .m-sel-pop{display:block}
+.m-sel-pop .grp{font-size:10px;color:var(--ink3);padding:6px 9px 4px;letter-spacing:.02em}
+.m-sel-pop .it{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:6px;
+  font-size:var(--f5);color:var(--ink);cursor:pointer;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.m-sel-pop .it:hover{background:#F5F8FD}
+.m-sel-pop .it.on{background:#EEF4FE;color:#1F5FCC;font-weight:600}
+.m-sel-pop .it .ck{width:12px;height:12px;flex:0 0 auto;opacity:0}
+.m-sel-pop .it.on .ck{opacity:1}
+
 .m-preset{border:1px solid #E8EEF7;border-radius:var(--r-md);padding:11px 13px;
   display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg,#FCFDFF 0%,#F8FAFE 100%)}
 .m-preset-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -12945,7 +12981,17 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
         <div class="m-f">
           <label for="mfPreset">供应商 <span class="u-tag gold" style="margin-left:4px">选一家自动填好接口</span>
             <span style="font-weight:400;color:var(--ink3);margin-left:6px">密钥要自己填，软件不带密钥</span></label>
-          <div class="u-select"><select id="mfPreset">
+          <!-- ★ 原生 select 的弹层方向由 macOS 决定：以当前选中项为中心展开，
+               而「自定义」是最后一项 → 弹层一路往上顶，把上面的表单盖住。
+               原生控件改不了这个行为，所以换成自绘面板：固定在按钮下方展开。
+               里面的 <select id="mfPreset"> 仍然保留（display:none）当值的唯一来源，
+               所有既有逻辑（applyPreset / change 监听 / formPayload）一行不用改。 -->
+          <div class="u-select m-sel" id="mfPresetWrap">
+            <button type="button" class="m-sel-btn" id="mfPresetBtn" aria-haspopup="listbox" aria-expanded="false">
+              <span id="mfPresetLabel">自定义（需填接口地址）</span>
+              <svg class="ic"><use href="#i-chev"/></svg>
+            </button>
+            <select id="mfPreset" tabindex="-1" aria-hidden="true">
             <optgroup label="免费额度 · 注册就能用，不用充值">
               <option value="bailu">白鹿 BailuCode（每天领 500 万 Tokens）</option>
               <option value="agnes-cn">Agnes 国内（免费档 · 10 rpm · 能读图）</option>
@@ -12961,7 +13007,8 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
               <option value="minimax">MiniMax</option>
               <option value="custom" selected>自定义（需填接口地址）</option>
             </optgroup>
-          </select><svg class="ic"><use href="#i-chev"/></svg></div>
+            </select>
+          </div>
         </div>
 
         <!-- 预设说明 + 去注册：密钥不在软件里，用户得自己注册一个 -->
@@ -13132,6 +13179,117 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
 
   <!-- 通用确认框已移到 shell.html 全局区：任意页面都能弹出，不受 page 隐藏影响 -->
 </section>
+<script>
+/* 自绘供应商下拉。
+   为什么不用原生 select：macOS 的 select 弹层以当前选中项为中心展开，
+   而「自定义」是最后一项 —— 点开时弹层一路往上顶，把接口地址、API Key
+   那几个输入框全盖住（用户 2026-11-20 报的就是这个）。
+   原生控件的展开方向改不了，只能自己画：按钮 + position:fixed 面板，
+   永远在按钮正下方展开；下面空间不够时才往上翻，并且限制最大高度。
+   值仍然写回隐藏的 <select id="mfPreset"> 并 dispatch change，
+   所以 applyPreset / formPayload / 保存逻辑一行都不用动。 */
+(function(){
+  var wrap=document.getElementById('mfPresetWrap');
+  var btn=document.getElementById('mfPresetBtn');
+  var lab=document.getElementById('mfPresetLabel');
+  var sel=document.getElementById('mfPreset');
+  if(!wrap||!btn||!sel)return;
+
+  var pop=document.createElement('div');
+  pop.className='m-sel-pop';
+  pop.setAttribute('role','listbox');
+  wrap.appendChild(pop);
+
+  function build(){
+    var html='';
+    Array.prototype.forEach.call(sel.children,function(node){
+      if(node.tagName==='OPTGROUP'){
+        html+='<div class="grp">'+node.label+'</div>';
+        Array.prototype.forEach.call(node.children,function(o){
+          html+=item(o);
+        });
+      }else if(node.tagName==='OPTION'){
+        html+=item(node);
+      }
+    });
+    pop.innerHTML=html;
+  }
+  function item(o){
+    var on=o.value===sel.value;
+    return '<div class="it'+(on?' on':'')+'" role="option" aria-selected="'+on+'" data-v="'+
+      o.value.replace(/"/g,'&quot;')+'">'+
+      '<svg class="ic ck"><use href="#i-check"/></svg>'+
+      '<span>'+o.textContent.replace(/</g,'&lt;')+'</span></div>';
+  }
+  function syncLabel(){
+    var o=sel.options[sel.selectedIndex];
+    if(lab)lab.textContent=o?o.textContent:'';
+  }
+  function place(){
+    var r=btn.getBoundingClientRect();
+    pop.style.width=r.width+'px';
+    pop.style.left=r.left+'px';
+    /* 先按「下方展开」摆，量完高度再看会不会溢出视口底 */
+    pop.style.top=(r.bottom+4)+'px';
+    pop.style.maxHeight='min(260px,calc(100vh - 140px))';
+    var ph=pop.getBoundingClientRect().height;
+    var below=window.innerHeight-r.bottom-8;
+    var above=r.top-8;
+    if(ph>below&&above>below){
+      pop.style.top=Math.max(8,r.top-4-Math.min(ph,above))+'px';
+    }
+  }
+  function open(){
+    build(); syncLabel();
+    wrap.classList.add('open');
+    btn.setAttribute('aria-expanded','true');
+    place();
+  }
+  function close(){
+    wrap.classList.remove('open');
+    btn.setAttribute('aria-expanded','false');
+  }
+  function pick(v){
+    if(sel.value!==v){
+      sel.value=v;
+      syncLabel();
+      sel.dispatchEvent(new Event('change',{bubbles:true}));
+    }else{
+      syncLabel();
+    }
+    close();
+  }
+
+  btn.addEventListener('click',function(e){
+    e.stopPropagation();
+    if(wrap.classList.contains('open'))close(); else open();
+  });
+  pop.addEventListener('click',function(e){
+    var it=e.target.closest('.it');
+    if(it)pick(it.getAttribute('data-v'));
+  });
+  document.addEventListener('click',function(e){
+    if(!wrap.contains(e.target))close();
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&wrap.classList.contains('open'))close();
+  });
+  window.addEventListener('resize',function(){ if(wrap.classList.contains('open'))place() });
+  /* 弹窗自身滚动时面板位置会飘，直接关掉最省事也最不容易错 */
+  var dlg=wrap.closest('.m-dialog');
+  if(dlg)dlg.addEventListener('scroll',function(){ if(wrap.classList.contains('open'))place() });
+
+  /* 外部用 $('#mfPreset').value=... 赋值不会触发 change，
+     按钮上的文字就不会跟着变。暴露一个同步函数给 openForm 调用。 */
+  window.__mfPresetSync=syncLabel;
+  sel.addEventListener('change',syncLabel);
+  var mo=new MutationObserver(syncLabel);
+  Array.prototype.forEach.call(sel.querySelectorAll('option'),function(o){
+    mo.observe(o,{attributes:true,attributeFilter:['selected','value']});
+  });
+  syncLabel();
+})();
+</script>
 
 
 <style>
@@ -14147,6 +14305,32 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
         <ul class="lg-todo" id="gTodo"></ul>
       </div>
 
+      <div class="u-card g-card" data-sec="update">
+        <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-download"/></svg>在线更新 <span class="u-tag" id="gUpdTag">读取中</span></h4>
+        <div class="g-row"><div class="lab"><b>当前版本</b><span id="gUpdCur">读取中…</span></div>
+          <span class="u-tag" id="gUpdLatest">—</span></div>
+        <div class="g-row"><div class="lab"><b>更新清单地址</b><span>一个静态 JSON 的 https 地址。留空 = 不检查更新，不影响使用</span></div>
+          <div class="u-input"><input id="gUpdFeed" placeholder="https://…/feed.json"></div></div>
+        <div class="g-row"><div class="lab"><b>更新通道</b><span>清单里的 channel 跟这里不一致就跳过，避免把测试版推给稳定版用户</span></div>
+          <div class="u-select"><select id="gUpdChannel">
+            <option value="stable">stable（稳定版）</option>
+            <option value="beta">beta（测试版）</option>
+          </select></div></div>
+        <div class="g-row"><div class="lab"><b>启动时自动检查</b><span>只检查、不下载。有新版在页眉提示一条，点了才动</span></div>
+          <label class="g-sw"><input type="checkbox" id="gUpdOnStart"><i></i></label></div>
+        <div class="g-row"><div class="lab"><b>下载后自动安装</b><span>默认关。开着的话下载完直接换 App（旧版会先备份）</span></div>
+          <label class="g-sw"><input type="checkbox" id="gUpdAuto"><i></i></label></div>
+        <div class="g-row"><div class="lab"><b>必须校验 sha256</b><span>强烈建议开着。关掉等于愿意装一个没校验过的包</span></div>
+          <label class="g-sw"><input type="checkbox" id="gUpdSha"><i></i></label></div>
+        <div class="v-row" style="margin:10px 0 4px;gap:7px;flex-wrap:wrap">
+          <button class="u-btn gold" id="gUpdCheck"><svg class="ic"><use href="#i-refresh"/></svg>检查更新</button>
+          <button class="u-btn" id="gUpdSave">保存设置</button>
+          <button class="u-btn" id="gUpdInstall" disabled>下载并安装</button>
+          <button class="u-btn" id="gUpdOpen">打开更新目录</button>
+        </div>
+        <div class="g-note" id="gUpdNote">更新只替换 App 本身。数据目录（工程、素材、密钥、规则、模型）在 App 同级，不会被覆盖；旧版会备份到 系统/备份/，随时能移回来。</div>
+      </div>
+
       <div class="u-card g-card" data-sec="keys">
         <h4><svg class="ic" style="width:15px;height:15px"><use href="#i-board"/></svg>快捷键 <span class="u-tag gray">系统默认</span></h4>
         <div class="g-row"><div class="lab"><b>新建项目</b><span>⌘ N</span></div><span class="u-tag">系统默认</span></div>
@@ -14276,8 +14460,8 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     $('#gRevokeBtn').disabled=!c.current;
     $('#gConsentWarn').innerHTML=c.current?
       ('<b>授权状态正常。</b>已同意协议版本 '+esc(d.legal_version)+'；协议更新后会在这里要求重新同意。'):
-      ('<b>尚未同意当前版本协议。</b>正式出售前请点「同意并继续」完成授权留痕；'+
-       '禁止逆向、破解、绕过授权校验与二次分发的条款见《软件许可与反逆向声明》第 2 条。');
+      ('<b>尚未同意当前版本协议。</b>请点「同意并继续」完成授权留痕。'+
+       '本软件以 AGPL-3.0 开源发布，商业授权另议 —— 详见《开源许可与商业授权说明》。');
     $('#gDocs').innerHTML=(d.docs||[]).map(function(x){
       return '<div class="lg-doc"><span class="nm"><b>'+esc(x.title)+(x.key?' <span class="u-tag gold">核心</span>':'')+'</b>'
         +'<span>'+esc(x.file)+' · '+(x.exists?x.size+' 字节':'文件缺失')+'</span></span>'
@@ -14600,6 +14784,190 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       window.say(e.message||'联网测试失败',true);
     });
   });
+})();
+</script>
+<script>
+/* 在线更新：状态 / 检查 / 下载 / 安装。
+   刻意不做「静默自动更新」—— 换 App 是有感的动作，必须让人知道、
+   并且能在页面上看到「正在下第几 MB / 校验 / 已装好 / 怎么回滚」。 */
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var tag=$('#gUpdTag'),cur=$('#gUpdCur'),latest=$('#gUpdLatest'),
+      feed=$('#gUpdFeed'),ch=$('#gUpdChannel'),
+      swStart=$('#gUpdOnStart'),swAuto=$('#gUpdAuto'),swSha=$('#gUpdSha'),
+      bCheck=$('#gUpdCheck'),bSave=$('#gUpdSave'),bInstall=$('#gUpdInstall'),
+      bOpen=$('#gUpdOpen'),note=$('#gUpdNote');
+  if(!tag)return;
+  var ST={job:null,ready:null,poll:0};
+
+  function say(m,bad){ if(window.say)window.say(m,bad,true) }
+  function setTag(t,cls){ if(tag){tag.textContent=t;tag.className='u-tag '+(cls||'gray')} }
+
+  function paint(s){
+    if(!s)return;
+    if(cur)cur.textContent='本机 '+s.app_version+'（'+(s.installable?'已打包':'源码态')+'）';
+    if(feed&&document.activeElement!==feed)feed.value=s.feed_url||'';
+    if(ch)ch.value=s.channel||'stable';
+    if(swStart)swStart.checked=!!s.check_on_start;
+    if(swAuto)swAuto.checked=!!s.auto_download;
+    if(swSha)swSha.checked=!!s.require_sha256;
+    if(!s.enabled){setTag('已关闭','gray')}
+    else if(!s.feed_url){setTag('未配置','gray')}
+    else{setTag('已启用','green')}
+    if(note&&s.note)note.textContent=s.note;
+    if(bInstall&&!ST.ready)bInstall.disabled=true;
+    if(bCheck)bCheck.disabled=false;
+  }
+
+  function load(){
+    return window.api('/api/update',{action:'status'}).then(function(s){paint(s);return s})
+      .catch(function(e){setTag('读不到','gray');if(note)note.textContent=e.message||'读不到更新状态'});
+  }
+
+  /* 检查：有新版就把「下载并安装」点亮，并把版本号与更新说明贴到页面上 */
+  function doCheck(quiet){
+    if(bCheck)bCheck.disabled=true;
+    setTag('检查中…','blue');
+    return window.api('/api/update',{action:'check'}).then(function(r){
+      if(bCheck)bCheck.disabled=false;
+      if(!r.ok){ setTag('检查失败','gray'); if(note)note.textContent=r.error||'检查失败'; if(!quiet)say(r.error||'检查失败',true); return }
+      if(!r.configured){
+        setTag('未配置','gray');
+        if(latest)latest.textContent='—';
+        if(note)note.textContent=r.note||'还没配更新地址';
+        if(!quiet)say('还没配更新清单地址，填了才能检查');
+        return;
+      }
+      if(!r.has_update){
+        setTag('已是最新','green');
+        if(latest)latest.textContent='最新 '+(r.latest||'')+'';
+        if(note)note.textContent=r.note||'已是最新版';
+        ST.ready=null;
+        if(bInstall)bInstall.disabled=true;
+        if(!quiet)say(r.note||'已是最新版');
+        return;
+      }
+      /* 有新版 */
+      setTag('有新版本','gold');
+      if(latest)latest.textContent='可升级到 '+r.latest;
+      var sizeTxt=r.size?(' · '+Math.round(r.size/1048576)+' MB'):'';
+      if(note)note.textContent=(r.notes||('新版本 '+r.latest))+sizeTxt+
+        (r.forced?'（这一版要求最低 '+r.min_version+'，必须升级）':'');
+      ST.ready=r;
+      if(bInstall)bInstall.disabled=false;
+      if(!quiet)say('发现新版本 '+r.latest);
+    }).catch(function(e){
+      if(bCheck)bCheck.disabled=false;
+      setTag('检查失败','gray');
+      if(note)note.textContent=e.message||'检查失败';
+      if(!quiet)say(e.message||'检查失败',true);
+    });
+  }
+
+  /* 下载：起一个后台任务，每 700ms 拉一次进度。
+     进度条直接写进 note 那行文字，不额外加 DOM。 */
+  function stopPoll(){ if(ST.poll){clearInterval(ST.poll);ST.poll=0} }
+
+  function startPoll(){
+    stopPoll();
+    ST.poll=setInterval(function(){
+      if(!ST.job)return stopPoll();
+      window.api('/api/update',{action:'progress',job_id:ST.job}).then(function(j){
+        if(!j)return;
+        if(j.state==='downloading'){
+          setTag('下载中 '+j.progress+'%','blue');
+          if(note)note.textContent=j.step||'下载中…';
+          return;
+        }
+        stopPoll();
+        if(j.state==='done'){
+          setTag('校验通过','green');
+          if(note)note.textContent='下载完成，sha256 校验通过。点「下载并安装」替换 App。';
+          ST.file=j.file;
+          if(bInstall){bInstall.disabled=false;bInstall.textContent='安装已下载的版本'}
+          say('更新包已下载并通过校验');
+        }else if(j.state==='error'){
+          setTag('下载失败','gray');
+          if(note)note.textContent=j.error||'下载失败';
+          say(j.error||'下载失败',true);
+        }
+      }).catch(function(){});
+    },700);
+  }
+
+  function doDownload(){
+    if(!ST.ready){say('先点「检查更新」',true);return}
+    bInstall.disabled=true;bInstall.textContent='下载中…';
+    setTag('准备下载','blue');
+    window.api('/api/update',{action:'download'}).then(function(r){
+      if(!r.ok){setTag('下载失败','gray');if(note)note.textContent=r.error;bInstall.disabled=false;bInstall.textContent='下载并安装';say(r.error||'下载失败',true);return}
+      ST.job=r.job_id;
+      startPoll();
+    }).catch(function(e){
+      setTag('下载失败','gray');if(note)note.textContent=e.message;
+      bInstall.disabled=false;bInstall.textContent='下载并安装';
+      say(e.message||'下载失败',true);
+    });
+  }
+
+  function doInstall(){
+    if(!ST.file){say('还没有下载好的更新包',true);return}
+    var go=function(){
+      bInstall.disabled=true;bInstall.textContent='安装中…';
+      setTag('安装中','blue');
+      window.api('/api/update',{action:'install',file:ST.file,sha256:(ST.ready&&ST.ready.sha256)||''}).then(function(r){
+        if(!r.ok){
+          setTag('安装失败','gray');
+          if(note)note.textContent=r.error||'安装失败';
+          bInstall.disabled=false;bInstall.textContent='重试安装';
+          say(r.error||'安装失败',true);
+          return;
+        }
+        setTag('已装好','green');
+        if(note)note.textContent=r.note||'新版本已就位，关掉软件重开即生效';
+        bInstall.textContent='已安装';
+        say('新版本已装好，关掉软件重新打开就生效');
+      }).catch(function(e){
+        setTag('安装失败','gray');if(note)note.textContent=e.message;
+        bInstall.disabled=false;bInstall.textContent='重试安装';
+        say(e.message||'安装失败',true);
+      });
+    };
+    /* 装 App 是不可逆动作（虽然会自动备份），必须二次确认 */
+    if(window.__confirmAsk){
+      window.__confirmAsk('确定用新版本替换当前的 App？旧版会自动备份到 系统/备份/，装坏了可以移回来。',
+        go,{title:'安装更新',ok:'安装'});
+    }else if(window.confirm){
+      if(window.confirm('确定替换当前 App？旧版会备份。'))go();
+    }else go();
+  }
+
+  if(bCheck)bCheck.addEventListener('click',function(){doCheck(false)});
+  if(bInstall)bInstall.addEventListener('click',function(){
+    if(ST.file)doInstall(); else doDownload();
+  });
+  if(bSave)bSave.addEventListener('click',function(){
+    var patch={action:'save',
+      feed_url:(feed?feed.value.trim():''),
+      channel:(ch?ch.value:'stable'),
+      check_on_start:!!(swStart&&swStart.checked),
+      auto_download:!!(swAuto&&swAuto.checked),
+      require_sha256:!!(swSha&&swSha.checked)};
+    window.api('/api/update',patch).then(function(r){
+      if(!r.ok){say(r.error||'保存失败',true);return}
+      paint(Object.assign({},r,{app_version:(cur?cur.textContent.replace('本机 ',''):'')}));
+      say('更新设置已保存');
+      load();
+    }).catch(function(e){say(e.message||'保存失败',true)});
+  });
+  if(bOpen)bOpen.addEventListener('click',function(){
+    window.api('/api/update',{action:'status'}).then(function(s){
+      if(s&&s.dir&&window.riffcut&&window.riffcut.openPath)window.riffcut.openPath(s.dir);
+    }).catch(function(){});
+  });
+
+  document.addEventListener('riffcut-ready',function(){load()});
+  if(window.RiffCut&&window.RiffCut.layout)load();
 })();
 </script>
 
@@ -16971,7 +17339,12 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   var toast=document.getElementById('toast'),tm;
   var SAY_ERR=/失败|出错|报错|错误|异常|超时|读不到|不能|无法|不可用|不支持|没连上|连不上|未响应|没起来|拒绝|中止|中断|无效|找不到|不存在|请先|先选|先说|太短|没听清|没权限|没有权限|禁用|缺少|不足|超限|HTTP\s*\d|fetch|ffmpeg|ffprobe|Error|Exception|Failed|Cannot|Could not|denied|NotAllowed|refused|timeout/i;
   function sayIsError(s,bad){return !!bad||SAY_ERR.test(s)}
-  window.say=function(m,bad){
+  /* 第三个参数 force：用户主动点了按钮、必须有结果反馈的操作传 true。
+     ★ 2026-11-20 用户报「点测试没有提示」。根因就是下面那句静默过滤：
+     测试成功的文案是「✓ 连接正常：收到」，不含任何错误关键词 → err=false →
+     被 `if(!err&&!verbose)return` 直接吞掉。于是失败能看到、成功反而没反应，
+     用户以为按钮坏了。按钮类操作的成功/进行中提示必须显式放行。 */
+  window.say=function(m,bad,force){
     if(!toast)return;
     var s=String(m==null?'':m);
     var err=sayIsError(s,bad);
@@ -16980,7 +17353,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
        &&(window.sysAlert.has('service')||window.sysAlert.has('ffmpeg')))return;
     var verbose=false;
     try{verbose=localStorage.getItem('riffcut.say.verbose')==='1'}catch(e){}
-    if(!err&&!verbose)return;   /* 信息性反馈：不弹，也不动上一条提示 */
+    if(!err&&!verbose&&!force)return;   /* 信息性反馈：不弹，也不动上一条提示 */
     toast.textContent=s;
     toast.title=s;   /* 单行省略后，鼠标悬停仍能读到全文 */
     /* 页眉正中已被系统级告警占着 → 这条落到页眉下方一行，别和红条叠在一起 */
@@ -18384,7 +18757,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   var $=function(s){return document.querySelector(s)},
       $$=function(s){return [].slice.call(document.querySelectorAll(s))},
       A=function(p,d){return window.api(p,d)},
-      say=function(m){window.say(m)},
+      say=function(m,bad,force){window.say(m,bad,force)},
       V=function(){return window.RiffCut||{}};
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -18688,16 +19061,17 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
         '<div class="mc-meta">' + esc2(m.vendor || '自定义') +
         ' · 模型 ID：<span>' + esc2(m.model || '未填') + '</span>' +
         (m.key_set
-          ? '<div class="mc-key">' + (m.preset ? '内置额度 · 开箱即用，可换成自己的' : '密钥 ' + esc2(m.key_hint || '已保存')) + '</div>'
-          : (m.preset ? '<div class="mc-key">内置额度</div>' : '')) +
+          ? '<div class="mc-key">' + (m.preset ? (m.presetKey ? '已填自己的 Key' : '内置额度 · 开箱即用，可换成自己的') : '密钥 ' + esc2(m.key_hint || '已保存')) + '</div>'
+          : (m.preset ? '<div class="mc-key">' + (m.presetKey ? '点「编辑」去注册拿 Key' : '内置额度') + '</div>' : '')) +
         '</div>' +
         '<div class="mc-acts">' +
-          (m.preset
-            ? '<button data-act="edit" data-id="' + esc2(id) + '">编辑</button>' +
-              (m.url ? '<button data-act="test" data-id="' + esc2(id) + '">测试</button>' : '')
-            : '<button data-act="edit" data-id="' + esc2(id) + '">编辑</button>' +
-              (m.url ? '<button data-act="test" data-id="' + esc2(id) + '">测试</button>' : '') +
-              (!m.builtin ? '<button class="danger" data-act="del" data-id="' + esc2(id) + '">删除</button>' : '')) +
+          '<button data-act="edit" data-id="' + esc2(id) + '">编辑</button>' +
+          (m.url ? '<button data-act="test" data-id="' + esc2(id) + '">测试</button>' : '') +
+          /* 删除按钮的规则：内置额度卡（preset-auto）不给删 —— 删了就没有开箱即用的
+             默认模型了；但「预设供应商卡」（白鹿这种 presetKey 有值的）允许删，
+             它是给用户省事用的入口，不想用白鹿的人应该能把它去掉。
+             以前 preset 一律不给删，结果白鹿卡永远钉在「我的模型」里。 */
+          ((!m.builtin || (m.preset && m.presetKey)) ? '<button class="danger" data-act="del" data-id="' + esc2(id) + '">删除</button>' : '') +
         '</div></div>';
     }).join('') : '<div class="m-empty">还没有模型。点右上「添加模型」，填接口地址、API Key，再点「读取可用模型」勾选要添加的几个；也可手动填一个模型 ID。</div>';
     box.innerHTML = '<div class="u-card m-my-hd">' +
@@ -18723,19 +19097,19 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
         b.disabled = true; b.textContent = '测试中…';
         var back = function(){ b.disabled = false; b.textContent = '测试' };
         var m2 = M_STATE.models[id2] || {};
-        say('正在测试「' + (m2.name || id2) + '」…');
+        say('正在测试「' + (m2.name || id2) + '」…', false, true);
         var fin = false;
         var guard = setTimeout(function(){
-          if(fin) return; fin = true; back(); say('✗ 测试超时（12 秒没回应）');
+          if(fin) return; fin = true; back(); say('✗ 测试超时（12 秒没回应）', true, true);
         }, 12000);
         A('/api/models', {action: (m2.vision ? 'test_vision' : 'test'), id: id2}).then(function(r){
           if(fin) return; fin = true; clearTimeout(guard); back();
           var ok = !!(r && r.ok);
           var txt = (r && (r.text || r.reply)) || '';
-          say(ok ? ('✓ 连接正常：' + (txt || '（空回答）')) : ('✗ 连接失败：' + (txt || '未知错误')));
+          say(ok ? ('✓ 连接正常：' + (txt || '（空回答）')) : ('✗ 连接失败：' + (txt || '未知错误')), !ok, true);
         }).catch(function(e){
           if(fin) return; fin = true; clearTimeout(guard); back();
-          say('✗ 连接失败：' + ((e && e.message) || e));
+          say('✗ 连接失败：' + ((e && e.message) || e), true, true);
         });
       });
     });
@@ -19004,6 +19378,8 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     var m = id ? (M_STATE.models[id] || {}) : {};
     if($('#mFormTitle')) $('#mFormTitle').textContent = id ? ('编辑：' + (m.name||id)) : '添加模型';
     if($('#mfPreset')) $('#mfPreset').value = 'custom';
+    /* 自绘下拉的按钮文字是独立的一行，赋值不会自动刷新 —— 手动同步一次 */
+    if(window.__mfPresetSync) window.__mfPresetSync();
     if($('#mfName')) $('#mfName').value = m.name || '';
     if($('#mfVision')) $('#mfVision').checked = !!m.vision;
     if($('#mfImage')) $('#mfImage').checked = !!m.image;
@@ -19014,6 +19390,20 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     if($('#mfModel')) $('#mfModel').value = m.model || '';
     var sw = $('#mScanWrap'); if(sw) sw.style.display = id ? 'none' : '';
     scanReset();
+
+    /* ★ 编辑预设卡（preset-auto / preset-bailu）时，把供应商下拉自动切到
+       对应的预设，让「去注册拿 Key / 控制台」那两个按钮自己浮出来。
+       不这么做的话，用户点「编辑」进来看到的是「自定义」，
+       下拉里明明有白鹿却要自己找一遍 —— 那正是他要的那一步。 */
+    if(id && m.preset && m.presetKey && $('#mfPreset')){
+      var hasOpt = Array.prototype.some.call($('#mfPreset').options, function(o){ return o.value === m.presetKey });
+      if(hasOpt){
+        $('#mfPreset').value = m.presetKey;
+        if(window.__mfPresetSync) window.__mfPresetSync();
+        applyPreset();
+      }
+    }
+
     modal.classList.add('open');
     document.body.classList.add('modal-open');
     syncButtons();
@@ -19193,7 +19583,11 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     if(btn){
       var id = btn.dataset.id, act = btn.dataset.act;
       if(act === 'edit'){
-        if((M_STATE.models[id]||{}).preset) return;
+        /* ★ 2026-11-20 用户报「点编辑没反应」。
+           以前这里对 preset 卡直接 return —— 本意是「内置卡不用编辑」，
+           但用户要的正是「点进去改自己的 key、顺便拿注册链接」。
+           现在放行：preset 卡也能编辑，openForm 会按 presetKey 自动选中
+           对应预设，把「去注册拿 Key」的按钮带出来。 */
         openForm('', id);
       }
       if(act === 'test'){
@@ -19513,6 +19907,38 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       }
     });
   }
+  /* ★ 启动时自动检查更新（原来这个开关是死的）
+     踩过的坑：`check_on_start` 只被读写进 更新.json，全项目没有任何代码
+     在启动时读过它 —— 用户把开关打开，也永远等不到「发现新版本」。
+     现在补上：启动后延迟 8 秒查一次（别和首屏渲染抢），只在真有新版时提示，
+     「已是最新」不弹窗，避免每次开机都被打扰。 */
+  var _startChecked = false
+  function _autoCheckOnStart(){
+    if (_startChecked) return
+    _startChecked = true
+    A('/api/update',{action:'status'}).then(function(st){
+      var s0 = st || {}
+      if (!s0.enabled || !s0.check_on_start || !s0.feed_url) return
+      return A('/api/update',{action:'check'}).then(function(r){
+        var q = r || {}
+        if (q.ok === false) return               // 连不上就不吵，用户下次手动点
+        if (!q.has_update) return                // 已是最新：静默
+        var rm = q.remote || {}, lo = q.local || {}
+        window.confirmAction({
+          title: '发现新版本 ' + esc(rm.version || '?'),
+          html: '当前 ' + esc(lo.version || '?') + ' → 新版本 <b>' + esc(rm.version || '?') + '</b>'
+            + '<br><br>' + esc(rm.notes || '（发布说明为空）')
+            + '<br><br><span style="color:#888">只替换 App 本体，工程/素材/模型/密钥都不动。</span>',
+          okText: '下载并安装', altText: '稍后再说',
+          onOk: function(){ window.riffcutUpdate('download') }
+        })
+      })
+    }).catch(function(){ /* 静默：启动检查失败不该弹错误框 */ })
+  }
+  /* 等首屏稳下来再查。用 readyState 判断，避免在 DOM 还没铺完时插对话框。 */
+  if (document.readyState === 'complete') setTimeout(_autoCheckOnStart, 8000)
+  else window.addEventListener('load', function(){ setTimeout(_autoCheckOnStart, 8000) })
+
   window.riffcutUpdate=function(action){
     if(action==='download'){
       say('正在下载新版本…');

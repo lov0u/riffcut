@@ -40,6 +40,42 @@
   display:flex;flex-direction:column;gap:9px;background:#FBFCFE}
 
 /* 预设说明卡：选中一家供应商后告诉用户「接口已填好，密钥得你自己去注册」 */
+/* ── 自绘供应商下拉 ────────────────────────────────
+   原生 select 的弹层以当前项为中心展开，「自定义」在最后一项就会往上顶，
+   把上面的表单整个盖住。换成按钮 + 固定定位面板，永远在按钮下方展开，
+   空间不够时往上收（但那种情况只在窗口很矮时出现，且面板最多 260px 高）。
+   值仍然存在隐藏的 <select id="mfPreset"> 里，既有逻辑不用改。 */
+.m-sel{position:relative;display:block;padding:0;border:0;background:none;
+  box-shadow:none;height:36px}
+/* 隐藏的原生 select 必须真的不占位。
+   .u-select 是 display:flex，里面的 select 有 width:100% ——
+   不 display:none 的话它会和按钮平分宽度，按钮被压成半宽，
+   右边还会露出一份重复的文字（实测就是这个现象）。 */
+.m-sel select{display:none!important}
+.m-sel-btn{width:100%;height:36px;display:flex;align-items:center;gap:8px;
+  padding:0 11px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:#FFFFFF;cursor:pointer;text-align:left;
+  font-size:var(--f5);color:var(--ink);transition:border-color .14s,box-shadow .14s}
+.m-sel-btn:hover{border-color:#CFDAE9}
+.m-sel-btn:focus-visible{outline:0;border-color:#9FB6D8;box-shadow:0 0 0 3px rgba(53,105,214,.12)}
+.m-sel-btn span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-sel-btn .ic{width:13px;height:13px;flex:0 0 auto;color:var(--ink3);transition:transform .16s}
+.m-sel.open .m-sel-btn{border-color:#9FB6D8}
+.m-sel.open .m-sel-btn .ic{transform:rotate(180deg)}
+.m-sel-pop{position:fixed;z-index:420;display:none;
+  max-height:min(260px,calc(100vh - 140px));overflow:auto;
+  background:#fff;border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 14px 38px rgba(20,28,44,.18);padding:5px}
+.m-sel.open .m-sel-pop{display:block}
+.m-sel-pop .grp{font-size:10px;color:var(--ink3);padding:6px 9px 4px;letter-spacing:.02em}
+.m-sel-pop .it{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:6px;
+  font-size:var(--f5);color:var(--ink);cursor:pointer;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.m-sel-pop .it:hover{background:#F5F8FD}
+.m-sel-pop .it.on{background:#EEF4FE;color:#1F5FCC;font-weight:600}
+.m-sel-pop .it .ck{width:12px;height:12px;flex:0 0 auto;opacity:0}
+.m-sel-pop .it.on .ck{opacity:1}
+
 .m-preset{border:1px solid #E8EEF7;border-radius:var(--r-md);padding:11px 13px;
   display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg,#FCFDFF 0%,#F8FAFE 100%)}
 .m-preset-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -275,7 +311,17 @@
         <div class="m-f">
           <label for="mfPreset">供应商 <span class="u-tag gold" style="margin-left:4px">选一家自动填好接口</span>
             <span style="font-weight:400;color:var(--ink3);margin-left:6px">密钥要自己填，软件不带密钥</span></label>
-          <div class="u-select"><select id="mfPreset">
+          <!-- ★ 原生 select 的弹层方向由 macOS 决定：以当前选中项为中心展开，
+               而「自定义」是最后一项 → 弹层一路往上顶，把上面的表单盖住。
+               原生控件改不了这个行为，所以换成自绘面板：固定在按钮下方展开。
+               里面的 <select id="mfPreset"> 仍然保留（display:none）当值的唯一来源，
+               所有既有逻辑（applyPreset / change 监听 / formPayload）一行不用改。 -->
+          <div class="u-select m-sel" id="mfPresetWrap">
+            <button type="button" class="m-sel-btn" id="mfPresetBtn" aria-haspopup="listbox" aria-expanded="false">
+              <span id="mfPresetLabel">自定义（需填接口地址）</span>
+              <svg class="ic"><use href="#i-chev"/></svg>
+            </button>
+            <select id="mfPreset" tabindex="-1" aria-hidden="true">
             <optgroup label="免费额度 · 注册就能用，不用充值">
               <option value="bailu">白鹿 BailuCode（每天领 500 万 Tokens）</option>
               <option value="agnes-cn">Agnes 国内（免费档 · 10 rpm · 能读图）</option>
@@ -291,7 +337,8 @@
               <option value="minimax">MiniMax</option>
               <option value="custom" selected>自定义（需填接口地址）</option>
             </optgroup>
-          </select><svg class="ic"><use href="#i-chev"/></svg></div>
+            </select>
+          </div>
         </div>
 
         <!-- 预设说明 + 去注册：密钥不在软件里，用户得自己注册一个 -->
@@ -462,3 +509,114 @@
 
   <!-- 通用确认框已移到 shell.html 全局区：任意页面都能弹出，不受 page 隐藏影响 -->
 </section>
+<script>
+/* 自绘供应商下拉。
+   为什么不用原生 select：macOS 的 select 弹层以当前选中项为中心展开，
+   而「自定义」是最后一项 —— 点开时弹层一路往上顶，把接口地址、API Key
+   那几个输入框全盖住（用户 2026-11-20 报的就是这个）。
+   原生控件的展开方向改不了，只能自己画：按钮 + position:fixed 面板，
+   永远在按钮正下方展开；下面空间不够时才往上翻，并且限制最大高度。
+   值仍然写回隐藏的 <select id="mfPreset"> 并 dispatch change，
+   所以 applyPreset / formPayload / 保存逻辑一行都不用动。 */
+(function(){
+  var wrap=document.getElementById('mfPresetWrap');
+  var btn=document.getElementById('mfPresetBtn');
+  var lab=document.getElementById('mfPresetLabel');
+  var sel=document.getElementById('mfPreset');
+  if(!wrap||!btn||!sel)return;
+
+  var pop=document.createElement('div');
+  pop.className='m-sel-pop';
+  pop.setAttribute('role','listbox');
+  wrap.appendChild(pop);
+
+  function build(){
+    var html='';
+    Array.prototype.forEach.call(sel.children,function(node){
+      if(node.tagName==='OPTGROUP'){
+        html+='<div class="grp">'+node.label+'</div>';
+        Array.prototype.forEach.call(node.children,function(o){
+          html+=item(o);
+        });
+      }else if(node.tagName==='OPTION'){
+        html+=item(node);
+      }
+    });
+    pop.innerHTML=html;
+  }
+  function item(o){
+    var on=o.value===sel.value;
+    return '<div class="it'+(on?' on':'')+'" role="option" aria-selected="'+on+'" data-v="'+
+      o.value.replace(/"/g,'&quot;')+'">'+
+      '<svg class="ic ck"><use href="#i-check"/></svg>'+
+      '<span>'+o.textContent.replace(/</g,'&lt;')+'</span></div>';
+  }
+  function syncLabel(){
+    var o=sel.options[sel.selectedIndex];
+    if(lab)lab.textContent=o?o.textContent:'';
+  }
+  function place(){
+    var r=btn.getBoundingClientRect();
+    pop.style.width=r.width+'px';
+    pop.style.left=r.left+'px';
+    /* 先按「下方展开」摆，量完高度再看会不会溢出视口底 */
+    pop.style.top=(r.bottom+4)+'px';
+    pop.style.maxHeight='min(260px,calc(100vh - 140px))';
+    var ph=pop.getBoundingClientRect().height;
+    var below=window.innerHeight-r.bottom-8;
+    var above=r.top-8;
+    if(ph>below&&above>below){
+      pop.style.top=Math.max(8,r.top-4-Math.min(ph,above))+'px';
+    }
+  }
+  function open(){
+    build(); syncLabel();
+    wrap.classList.add('open');
+    btn.setAttribute('aria-expanded','true');
+    place();
+  }
+  function close(){
+    wrap.classList.remove('open');
+    btn.setAttribute('aria-expanded','false');
+  }
+  function pick(v){
+    if(sel.value!==v){
+      sel.value=v;
+      syncLabel();
+      sel.dispatchEvent(new Event('change',{bubbles:true}));
+    }else{
+      syncLabel();
+    }
+    close();
+  }
+
+  btn.addEventListener('click',function(e){
+    e.stopPropagation();
+    if(wrap.classList.contains('open'))close(); else open();
+  });
+  pop.addEventListener('click',function(e){
+    var it=e.target.closest('.it');
+    if(it)pick(it.getAttribute('data-v'));
+  });
+  document.addEventListener('click',function(e){
+    if(!wrap.contains(e.target))close();
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&wrap.classList.contains('open'))close();
+  });
+  window.addEventListener('resize',function(){ if(wrap.classList.contains('open'))place() });
+  /* 弹窗自身滚动时面板位置会飘，直接关掉最省事也最不容易错 */
+  var dlg=wrap.closest('.m-dialog');
+  if(dlg)dlg.addEventListener('scroll',function(){ if(wrap.classList.contains('open'))place() });
+
+  /* 外部用 $('#mfPreset').value=... 赋值不会触发 change，
+     按钮上的文字就不会跟着变。暴露一个同步函数给 openForm 调用。 */
+  window.__mfPresetSync=syncLabel;
+  sel.addEventListener('change',syncLabel);
+  var mo=new MutationObserver(syncLabel);
+  Array.prototype.forEach.call(sel.querySelectorAll('option'),function(o){
+    mo.observe(o,{attributes:true,attributeFilter:['selected','value']});
+  });
+  syncLabel();
+})();
+</script>

@@ -112,3 +112,14 @@ desktop.ini
 *.bak-*
 /tmp/
 .workbuddy/
+
+# ── 打包产物：绝不进仓库 ─────────────────────────────────────────────
+# 踩过的坑（2026-11-20）：一次 `git add -A` 把三个安装包 zip 一起提交了，
+# 合计 4.2GB，.git 直接从几十 MB 涨到 4.6GB，磁盘报警。
+# 这些包的正确去处是 GitHub Release（已上传），不是仓库历史。
+*.zip
+*.zip.part-*
+*.dmg
+*.pkg
+dist/
+release/

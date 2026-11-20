@@ -90,6 +90,75 @@ function usage(d = {}) {
   const cacheRate = tot.in ? Math.round((tot.cached / tot.in) * 1000) / 10 : 0
   const avgMs = msN ? Math.round(msSum / msN) : 0
 
+  /* ★ 2026-11-20 修：前端读的字段这里一半没给，界面上就出现
+     「累计 0 次调用」但下面明明写着 746 次总请求这种自相矛盾。
+     逐个对上：
+       · lifetime / lifetime_in / lifetime_out —— 前端「累计 N 次调用」，
+         原来压根没算，恒取 0。这里从**全部明细**累加（不受时间段过滤）。
+       · by_model[].name —— 前端读 r.name，这里以前给的是 r.model，全是 undefined。
+       · by_supplier —— 整个字段没返回过，前端那张表永远显示「还没有成功调用」。
+       · chart —— 没有，Token 趋势条永远空白。
+       · cache_hit —— 没有，概览写「本地缓存命中 0 次」。
+     注意：不再读 `调用累计.json`。那个文件是另一套模块写的、字段名完全不同
+     （requests / total_calls / by_model.calls），跟明细数组对不上，两套一起用
+     只会互相打脸。唯一事实源就是明细数组本身。 */
+  const byModelRows = {}
+  const bySupplierRows = {}
+  let lifeIn = 0, lifeOut = 0
+  for (const r of all) {
+    const i = Number(r.in || 0), o = Number(r.out || 0)
+    lifeIn += i; lifeOut += o
+    const t = tsOf(r.at || r.time || r.ts || r.epoch)
+    const nm = r.model || r.model_id || '未知'
+    const sp = r.supplier || r.vendor || ''
+    const bump = (bag, key, isOk) => {
+      if (!key) return
+      const row = bag[key] || (bag[key] = { requests: 0, in: 0, out: 0, last: 0, ok: 0 })
+      row.requests++; row.in += i; row.out += o
+      if (isOk) row.ok++
+      if (t > row.last) row.last = t
+    }
+    bump(byModelRows, nm, r.ok !== false)
+    bump(bySupplierRows, sp, r.ok !== false)
+  }
+  const toRows = (bag) => Object.entries(bag)
+    .map(([name, v]) => ({ name, model: name, requests: v.requests, calls: v.requests,
+      in: v.in, out: v.out, ok: v.ok,
+      /* uClock 要的是「秒」，明细里是毫秒 —— 不除 1000 会显示成 1970 年 */
+      last: v.last ? Math.round(v.last / 1000) : 0 }))
+    .sort((a, b) => b.requests - a.requests)
+
+  /* Token 趋势：按当前时间段等分 12 桶，桶里累加 in+out。
+     前端 uChart 读 b.label 与 b.tokens。 */
+  const chart = (() => {
+    const N = 12
+    const now = Date.now()
+    const span = period === 'today' ? (now - new Date().setHours(0, 0, 0, 0))
+      : period === '24h' ? 24 * 3600e3
+        : period === '7d' ? 7 * 86400e3 : 30 * 86400e3
+    const start = period === 'today' ? new Date().setHours(0, 0, 0, 0) : now - span
+    const step = span / N
+    const buckets = []
+    for (let k = 0; k < N; k++) {
+      const t0 = start + step * k
+      const dt = new Date(t0)
+      const label = period === 'today' || period === '24h'
+        ? ('0' + dt.getHours()).slice(-2) + ':' + ('0' + dt.getMinutes()).slice(-2)
+        : (dt.getMonth() + 1) + '/' + dt.getDate()
+      buckets.push({ label, tokens: 0, requests: 0 })
+    }
+    for (const r of hit) {
+      const t = tsOf(r.at || r.time || r.ts || r.epoch)
+      if (!t) continue
+      let idx = Math.floor((t - start) / step)
+      if (idx < 0) idx = 0
+      if (idx >= N) idx = N - 1
+      buckets[idx].tokens += Number(r.in || 0) + Number(r.out || 0)
+      buckets[idx].requests++
+    }
+    return buckets
+  })()
+
   return {
     period,
     stats: {
@@ -102,7 +171,15 @@ function usage(d = {}) {
       cache_hit_rate: cacheRate,
       avg_duration_ms: avgMs,
       tokens: tot.in + tot.out,
-      by_model: Object.entries(byModel).map(([k, v]) => ({ model: k, ...v })).sort((a, b) => b.calls - a.calls),
+      /* 累计（全部明细，不按时间段过滤） */
+      lifetime: all.length,
+      lifetime_in: lifeIn,
+      lifetime_out: lifeOut,
+      /* 本地缓存命中次数（明细里 cache_hit 为真的条数） */
+      cache_hit: all.filter((r) => r.cache_hit).length,
+      by_model: toRows(byModelRows),
+      by_supplier: toRows(bySupplierRows),
+      chart,
     },
     recent: all.slice(-(Math.max(1, Math.min(200, Number(d.limit) || 10)))).reverse(),
     path: path.join(P.HOME, '配置', '调用明细.json'),

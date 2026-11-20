@@ -107,8 +107,16 @@ pb CFBundleDisplayName "RiffCut影创"
 pb CFBundleIdentifier "cn.riffcut.studio"
 pb CFBundleExecutable "riffcut"
 pb CFBundleIconFile "app.icns"
-pb CFBundleShortVersionString "0.1.0"
-pb CFBundleVersion "1"
+# ★ 版本号从 app/package.json 读，不写死。
+#   踩过的坑：这里原来是字面量 "0.1.0"，而更新器拿 CFBundleShortVersionString
+#   跟 feed 里的 version 比 —— 只要这里不改，打一百个包版本号都是 0.1.0，
+#   客户端永远认为「已是最新」，整条更新链路等于不存在。
+APP_VER="$(/usr/bin/python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['version'])" "$ROOT/app/package.json" 2>/dev/null || echo 0.0.0)"
+echo "  版本号: $APP_VER（读自 app/package.json）"
+pb CFBundleShortVersionString "$APP_VER"
+# CFBundleVersion 必须是纯数字递增串，用 package.json 的 build 字段，没有就 1
+APP_BUILD="$(/usr/bin/python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('build',1))" "$ROOT/app/package.json" 2>/dev/null || echo 1)"
+pb CFBundleVersion "$APP_BUILD"
 pb NSHumanReadableCopyright "RiffCut 影创"
 
 echo "── 6/8 首次启动的初始数据（模板库/技能/配置，不含客户素材）"

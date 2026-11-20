@@ -202,9 +202,28 @@ const DEFAULT_MODELS = {
     vendor: 'RiffCut · 内置额度', url: 'http://54.255.115.129:3002/v1', key: '',
     model: 'auto',
     price: 0, builtin: true, chat: true, vision: true, image: false, video: false,
-    preset: true,
+    preset: true, presetKey: '',
     roles: ['需求理解', '脚本创作', '质量检查', '视觉分析'], fallback: '',
     note: '软件自带，装完就能用，不用注册。想换成自己的模型到下面「添加 / 配置」。',
+  },
+  /* 白鹿预设卡片：接口地址和模型 ID 都填好了，只差用户自己那把 key。
+     ★ 为什么让它默认就在「我的模型」里占一张卡，而不是等用户去下拉里选：
+     用户 2026-11-20 的原话是「直接预设那个白鹿模型卡片」——
+     藏在下拉里等于要求他先知道这家存在。摆一张「待配置」的卡在面前，
+     点「编辑」就能看到「去注册拿 Key」的按钮，路径最短。
+     presetKey 用来让编辑框自动选中对应预设，把注册链接带出来。 */
+  'preset-bailu': {
+    id: 'preset-bailu', name: '白鹿 BailuCode', kind: 'text',
+    vendor: '白鹿 · 免费额度',
+    url: 'https://bailucode.com/openapi/v1', key: '',
+    model: 'bailu-2.8',
+    /* image 必须 false：这张卡是「对话用」的。标成 image 的话
+       卡片标签会变成「生图模型」并被首页下拉排除掉 —— 实测就是这个后果。
+       白鹿的文生图能力在预设里另有 image 勾选，不靠这张卡。 */
+    price: 0, builtin: true, chat: true, vision: false, image: false, video: false,
+    preset: true, presetKey: 'bailu',
+    roles: ['需求理解', '脚本创作', '质量检查'], fallback: '',
+    note: '每天登录控制台可领 500 万 Tokens，不用充值。点「编辑」里有注册链接，注册完把 Key 粘进来。',
   },
   'slot-text': {
     id: 'slot-text', name: '文本 / 对话模型', kind: 'text',
@@ -342,21 +361,39 @@ function models() {
   }
 
   // ② 补内置槽位（用户删了也能恢复）
+  /* 但「预设供应商卡」例外：用户明确删过的不再补回来，否则每次启动都复活，
+     删除按钮等于骗人。记录在 设置.json 的 deleted_presets 里。 */
+  const gonePresets = (() => {
+    const g = C.settings().deleted_presets
+    return Array.isArray(g) ? g : []
+  })()
   for (const [k, v] of Object.entries(DEFAULT_MODELS)) {
+    if (!(k in ms) && v.presetKey && gonePresets.indexOf(k) >= 0) continue
     if (!(k in ms)) { ms[k] = { ...v }; dirty = true }
     else if (ms[k].builtin && !String(ms[k].model || '').trim()) {
       // 空槽位：描述/标记随版本更新；用户一旦填过模型就完全交给用户
       for (const f of ['note', 'kind', 'roles', 'vision', 'chat', 'image', 'video']) {
         if (ms[k][f] !== v[f]) { ms[k][f] = v[f]; dirty = true }
       }
-    } else if (k === PRESET_ID) {
-      // preset-auto 是随软件带的默认额度：老版本存下来的那条 builtin=false / preset 缺失，
-      // 会被当成「用户自建模型」而显示删除按钮 —— 补上标记位，但绝不覆盖用户改过的
-      // url / model / name（他可能已经换成自己的网关或 Agnes 直连）。
-      for (const f of ['builtin', 'preset']) {
+    } else if (v.preset) {
+      /* 所有随软件带的预设卡（preset-auto / preset-bailu）走同一条路：
+         老版本存下来的那条 builtin=false / preset 缺失，会被当成「用户自建模型」
+         而显示删除按钮 —— 补上标记位，但绝不覆盖用户改过的
+         url / model / name（他可能已经换成自己的网关或直连）。
+         presetKey 必须补：编辑框靠它自动选中对应预设，把注册链接带出来。 */
+      for (const f of ['builtin', 'preset', 'presetKey']) {
         if (ms[k][f] !== v[f]) { ms[k][f] = v[f]; dirty = true }
       }
       if (!String(ms[k].vendor || '').trim() && v.vendor) { ms[k].vendor = v.vendor; dirty = true }
+      /* 能力位（chat/vision/image/video/kind）跟着代码走，不跟着落盘走。
+         踩过的坑：白鹿预设卡第一版把 image 写成 true，落盘后 _inferKind 把整条
+         判成 image 模型，卡片标签显示「生图模型」、首页下拉里也消失了。
+         改代码没用 —— 落盘那条 model 非空，走不进「空槽位」分支，永远不会被纠正。
+         所以能力位必须显式覆盖：用户能改的是 url/model/name/key，
+         不是「这张卡算不算对话模型」。 */
+      for (const f of ['chat', 'vision', 'image', 'video', 'kind']) {
+        if (ms[k][f] !== v[f]) { ms[k][f] = v[f]; dirty = true }
+      }
     }
   }
 
@@ -456,7 +493,21 @@ function saveModel(data) {
 function deleteModel(id) {
   const ms = models()
   if (!ms[id]) throw new Error('找不到这个模型')
-  if (ms[id].builtin) throw new Error(`「${ms[id].name}」是随软件带的槽位，不能删；改它的地址和模型 ID 就行`)
+  /* 内置额度卡（preset-auto）不给删：删了就没有开箱即用的默认模型，
+     而且 models() 每次启动都会把它补回来 —— 让用户以为删除没生效更糟。
+     但「预设供应商卡」（白鹿这种 presetKey 有值的）要允许删：
+     它是给用户省事用的入口，不想用白鹿的人应该能把它去掉。
+     删掉后靠 DELETED_PRESETS 记住，不再自动补回。 */
+  if (ms[id].builtin && !ms[id].presetKey) {
+    throw new Error(`「${ms[id].name}」是随软件带的槽位，不能删；改它的地址和模型 ID 就行`)
+  }
+  if (ms[id].presetKey) {
+    const s0 = C.settings()
+    const gone = Array.isArray(s0.deleted_presets) ? s0.deleted_presets : []
+    if (gone.indexOf(id) < 0) gone.push(id)
+    s0.deleted_presets = gone
+    C.saveSettings(s0)
+  }
   delete ms[id]
   keyDel(id)
   P.save('models', _stripKeys(ms))
