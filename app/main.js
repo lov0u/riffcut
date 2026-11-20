@@ -998,6 +998,19 @@ ipcMain.handle('sys:open', async (_e, p) => {
   } catch (e) { return { ok: false, error: String(e.message || e) } }
 })
 
+/* 把相对路径解析成绝对路径（不打开，只返回 abs）。
+   AI 回复里的成片路径是「客户/xxx/产出/预览/x.mp4」这种相对 HOME 的写法，
+   前端要把它导进剪辑台就得先拿到磁盘绝对路径。复用 sys:open 同一套解析，
+   越界照样拒绝。 */
+ipcMain.handle('sys:resolvePath', async (_e, p) => {
+  try {
+    const T = require('./lib/tools')
+    const r = T.resolveUserPath(p, null)
+    if (!r.ok) return { ok: false, error: r.error }
+    return { ok: true, abs: r.abs }
+  } catch (e) { return { ok: false, error: String(e.message || e) } }
+})
+
 /* 选文件夹（原生对话框）。Electron 里 window.webkit 不存在，旧 WKWebView 通道
    的 folder.postMessage 永远不触发——以前「添加工作区」只能走 webkitdirectory，
    拿到的是相对路径、加不进去。这里给一条真能拿绝对路径的通道。 */
@@ -1011,6 +1024,26 @@ ipcMain.handle('sys:pickFolder', async (_e, opts = {}) => {
     if (r.canceled || !r.filePaths || !r.filePaths.length) return { ok: false, canceled: true }
     return { ok: true, path: r.filePaths[0] }
   } catch (e) { return { ok: false, error: String(e.message || e) } }
+})
+
+/* 选素材文件（原生对话框，可多选，返回绝对路径）。
+   ★ 剪辑台「导入」以前走 window.webkit.messageHandlers.files —— WKWebView 的通道，
+     Electron 里 window.webkit 根本不存在，点了完全没反应。跟 pickFolder 一样，
+     这里给一条真实的 Electron 通道。 */
+ipcMain.handle('sys:pickFiles', async (_e, opts = {}) => {
+  try {
+    const w = BrowserWindow.fromWebContents(_e.sender) || mainWin
+    const r = await dialog.showOpenDialog(w, {
+      title: opts.title || '选择要导入的素材',
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: '视频 / 音频 / 图片', extensions: ['mp4', 'mov', 'm4v', 'webm', 'avi', 'mkv', 'mp3', 'wav', 'm4a', 'aac', 'flac', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'] },
+        { name: '所有文件', extensions: ['*'] },
+      ],
+    })
+    if (r.canceled || !r.filePaths || !r.filePaths.length) return { ok: false, canceled: true, files: [] }
+    return { ok: true, files: r.filePaths }
+  } catch (e) { return { ok: false, error: String(e.message || e), files: [] } }
 })
 
 /* 拖拽进来的 File 取绝对路径。Electron 32+ 移除了 File.path，

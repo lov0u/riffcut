@@ -586,6 +586,10 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-msg:not(.me) .bub b{font-weight:650;color:#232A36}
 .h-msg:not(.me) .bub code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.94em;
   background:#E9EDF4;border-radius:4px;padding:1px 5px}
+ /* 成片路径可点：点了直接导进专业剪辑台打开，省得用户复制路径去 Finder 翻。 */
+ .h-msg:not(.me) .bub code.h-workpath{cursor:pointer;color:#0E7D70;background:#E2F3EF;
+   border:1px solid #BFE3DA;text-decoration:underline;text-underline-offset:2px;word-break:break-all}
+ .h-msg:not(.me) .bub code.h-workpath:hover{background:#CDEBE3;border-color:#8FCBBE}
 /* 代码块：一层 .h-code 包裹 = 顶部工具条（语言名 + 复制/展开）+ 限高的 pre。
    长代码不再撑满一屏，超出部分在块内滚动；点「展开」取消限高、可再收起。 */
 .h-msg .bub .h-code{margin:7px 0 9px;max-width:100%;border-radius:10px;overflow:hidden;
@@ -2320,7 +2324,17 @@ body.rws-dragging *{cursor:col-resize !important}
       .replace(/\*\*([^*\n]+?)\*\*/g,'<b>$1</b>')
       .replace(/__([^_\n]+?)__/g,'<b>$1</b>')
       .replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g,'$1<i>$2</i>')
-      .replace(/`([^`\n]+?)`/g,'<code>$1</code>')
+      /* ★ 成片路径可点：AI 回的「客户/…/产出/预览/x.mp4」是行内代码，
+         以前就是一坨灰字，用户想验收得自己复制路径去 Finder 找。
+         现在媒体路径渲染成带 data-open-work 的可点 code，点一下解析成
+         绝对路径、导进剪辑台打开。s 进来前已 escMd 过，c 是 HTML-safe 的。 */
+      .replace(/`([^`\n]+?)`/g,function(_,c){
+        var p=String(c).trim();
+        if(/\.(mp4|mov|m4v|webm|mkv|avi|mp3|wav|m4a)$/i.test(p) && /[\/\\]/.test(p)){
+          return '<code class="h-workpath" data-open-work="'+p+'" title="点一下在专业剪辑台打开">'+c+'</code>';
+        }
+        return '<code>'+c+'</code>';
+      })
       .replace(/\[([^\]\n]+?)\]\((https?:\/\/[^)\s]+?)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
   }
   function mdRender(src){
@@ -2757,6 +2771,26 @@ body.rws-dragging *{cursor:col-resize !important}
     marks.innerHTML='';marks.appendChild(frag);
     railMarkActive();
   }
+  /* 成片路径可点：点了解析成绝对路径 → 切剪辑台 → 导进当前工程打开。
+     用 textContent 拿原文（浏览器已把 HTML 实体解码），不走 data 属性，
+     避免路径里万一有 &amp; 被重复转义。 */
+  document.addEventListener('click',function(e){
+    var w=e.target&&e.target.closest?e.target.closest('[data-open-work]'):null;
+    if(!w)return;
+    var p=w.textContent.trim();
+    if(!p)return;
+    var name=(p.split('/').pop()||'').split('\\').pop();
+    var open=function(abs){
+      if(window.riffcutOpenWork)window.riffcutOpenWork(abs,name);
+      else if(window.riffcut&&window.riffcut.openPath)window.riffcut.openPath(abs);
+    };
+    if(window.riffcut&&window.riffcut.resolvePath){
+      window.riffcut.resolvePath(p).then(function(r){
+        if(r&&r.ok&&r.abs)open(r.abs);
+        else window.say&&window.say('找不到成片：'+((r&&r.error)||p),true);
+      }).catch(function(){window.say&&window.say('路径解析失败',true)});
+    }else if(window.riffcut&&window.riffcut.openPath){window.riffcut.openPath(p)}
+  });
   /* 代码块工具条：复制 + 展开/收起。委托到 document，
      addMsg/历史载入/流式/文档预览四条渲染路径都覆盖到，不用逐个绑。
      复制读 code.textContent —— 这是浏览器把 &lt; &amp; 解码后的原始代码，
@@ -4829,7 +4863,12 @@ body.rws-dragging *{cursor:col-resize !important}
       return /^(edit_timeline|render_clip|make_slideshow|add_music|generate|storyboard|use_template|add_template)/.test(w);
     });
     if(_touchedEdit){
-      try{ window.dispatchEvent(new CustomEvent('riffcut:projects-changed')) }catch(e){}
+      /* 把「这一轮刚建/改的工程名」随事件带过去。剪辑台原来收到事件只是重拉列表，
+         但只要当前 ED.proj 还在列表里就保持不动 —— 用户停在旧工程上时，
+         AI 新做的工程虽然在列表里却不会被选中，于是以为「做完找不到」。
+         带上 name，剪辑台就能直接切到那个新工程。 */
+      var _eds=((d&&d.edit_projects)||[]).slice();
+      try{ window.dispatchEvent(new CustomEvent('riffcut:projects-changed',{detail:{projects:_eds}})) }catch(e){}
       try{ if(window.refreshTimeline)window.refreshTimeline() }catch(e){}
     }
     try{

@@ -1628,13 +1628,21 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
      回传 window.onFilesPicked(绝对路径数组)，这里再逐个导入。 */
   $('#edImpBtn') && $('#edImpBtn').addEventListener('click',function(){
     if(!ED.proj){say('先选一个工程，再导入素材');return}
-    if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.files){
-      window.__edImporting=ED.proj;
-      say('选好文件就自动导入…');
-      window.webkit.messageHandlers.files.postMessage('pick');
-    }else{
-      say('浏览器预览模式拿不到磁盘路径，请在本机 App 里导入');
+    /* Electron 里没有 window.webkit（那是 WKWebView 的通道），之前点导入
+       走 files.postMessage 永远不触发。现在走 preload 暴露的真桥 pickFiles
+       → 主进程弹 NSOpenPanel → 拿到绝对路径 → onFilesPicked 逐个导入。 */
+    if(!(window.riffcut&&window.riffcut.pickFiles)){
+      say('浏览器预览模式拿不到磁盘路径，请在本机 App 里导入');return
     }
+    window.__edImporting=ED.proj;
+    window.riffcut.pickFiles().then(function(r){
+      if(r&&r.canceled){window.__edImporting=null;say('已取消导入');return}
+      if(!r||!r.ok||!r.files||!r.files.length){
+        window.__edImporting=null;say('没选到文件'+((r&&r.error)?'：'+r.error:''));return
+      }
+      say('选好 '+r.files.length+' 个文件，正在导入…');
+      window.onFilesPicked({files:r.files});
+    }).catch(function(e){window.__edImporting=null;say('选文件失败：'+((e&&e.message)||''))});
   });
 
   /* 原生 FileBridge 的回调：拿到一批绝对路径，逐个 import 进当前工程。
@@ -2022,8 +2030,16 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   });
   window.addEventListener('resize',function(){if(ED.data)edLanes()});
 
-  /* 别的地方（AI 对话、模板库、一键成片）动完工程会发这个事件，收到了就重拉 */
-  window.addEventListener('riffcut:projects-changed',function(){ edLoadList() });
+  /* 别的地方（AI 对话、模板库、一键成片）动完工程会发这个事件，收到了就重拉。
+     ★ 事件带了 projects（这一轮 AI 刚建/改的工程名）时，直接切到最新那个 ——
+       不然用户停在旧工程上时 edLoadList 会保持 ED.proj 不动，AI 新做的工程
+       虽然在列表里却选不中，表现为「做完在工程列表里找不到」。 */
+  window.addEventListener('riffcut:projects-changed',function(ev){
+    var names=((ev&&ev.detail&&ev.detail.projects)||[]).slice();
+    edLoadList().then(function(){
+      if(names.length){ var nm=names[names.length-1]; if(nm&&nm!==ED.proj)edOpen(nm) }
+    });
+  });
 
   document.addEventListener('riffcut-ready',function(){edLoadList()});
   document.addEventListener('planchanged',function(){edLoadList()});

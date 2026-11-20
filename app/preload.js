@@ -39,6 +39,8 @@ contextBridge.exposeInMainWorld('riffcut', {
 
   // 系统
   openPath: (p) => ipcRenderer.invoke('sys:open', p),
+  // 相对路径 → 绝对路径（不打开）。成片路径点开剪辑台前先解析成磁盘路径。
+  resolvePath: (p) => ipcRenderer.invoke('sys:resolvePath', p),
   // 反馈：唤起系统邮件客户端，预填版本与系统信息
   feedbackMail: (opts) => ipcRenderer.invoke('feedback:mail', opts || {}),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', String(url || '')),
@@ -47,6 +49,9 @@ contextBridge.exposeInMainWorld('riffcut', {
   copyText: (text) => ipcRenderer.invoke('app:copyText', String(text == null ? '' : text)),
   // 选文件夹（原生对话框，返回绝对路径）——添加工作区/拖入素材用
   pickFolder: (opts) => ipcRenderer.invoke('sys:pickFolder', opts || {}),
+  // 选素材文件（原生对话框，可多选）——剪辑台「导入」用。选完拿到绝对路径
+  // 再走 onFilesPicked → /api/edit import，绝不经过不存在的 window.webkit。
+  pickFiles: (opts) => ipcRenderer.invoke('sys:pickFiles', opts || {}),
   // 拖拽的 File 取绝对路径（Electron 32+ 用 webUtils，File.path 已移除）
   pathForFile: (file) => ipcRenderer.invoke('sys:pathForFile', file),
   // 一键重启（装插件/改 bundle 后生效必须重启）
