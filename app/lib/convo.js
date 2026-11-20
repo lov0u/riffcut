@@ -140,6 +140,20 @@ function briefOf(conv) {
 }
 
 // ── 增删改查 ────────────────────────────────────────────
+/** 老对话没写 workspace 字段（保存时前端从不传），但写了 folder。
+ *  用 folder 反推工作区名，让升级前的对话也归到正确的工作区下，而不是全挤在「影创」。 */
+function workspaceFromFolder(folder) {
+  if (!folder) return ''
+  try {
+    const C = require('./core')
+    const hit = (C.workspaces() || []).find((w) => {
+      const p = String(w.path || '').replace(/\/$/, '')
+      return p && (folder === p || folder.indexOf(p + path.sep) === 0)
+    })
+    return hit ? hit.name : ''
+  } catch (e) { return '' }
+}
+
 function list(opts = {}) {
   const all = read()
   let items = all
@@ -153,6 +167,9 @@ function list(opts = {}) {
     id: c.id,
     title: c.title || autoTitle(c),
     customer: c.customer || '',
+    /* ★ 侧栏按 workspace 分组（shell.html 的 groupOf）：不返回这个字段，
+       前端永远只能看到 customer，工作区选择就白选了。 */
+    workspace: c.workspace || workspaceFromFolder(c.folder),
     model: c.model || '',
     status: c.status || '',
     archived: !!c.archived,

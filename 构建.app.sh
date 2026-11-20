@@ -32,7 +32,10 @@ import sys, os
 from PIL import Image
 src, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
-im = Image.open(src).convert("RGB")
+# ★ 必须保 alpha：新图标是「圆角 squircle + 圆角外透明」。
+#   以前用 convert("RGB")，因为旧-icon 是满幅深底不透明图、没有 alpha 可丢。
+#   套到带圆角透明的新图上，圆角外会被拍成纯黑 —— Dock 里就是一个黑方块。
+im = Image.open(src).convert("RGBA")
 if im.size != (1024, 1024):
     im = im.resize((1024, 1024), Image.LANCZOS)
 for name, sz in {"icon_16x16.png":16,"icon_16x16@2x.png":32,"icon_32x32.png":32,

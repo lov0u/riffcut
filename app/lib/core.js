@@ -61,6 +61,17 @@ function workspaceRoot() {
   return hit.path
 }
 
+/** 当前工作区的显示名（没选返回空串）。
+ *  给会话分组用：侧栏按 workspace 名分组，但保存对话的前端从来不传这个字段，
+ *  于是所有对话都掉回 customer（默认「影创」）—— 选了工作区却看不出效果。 */
+function workspaceName() {
+  const raw = P.load('settings', {}) || {}
+  const wid = String(raw.workspace || '').trim()
+  if (!wid) return ''
+  const hit = workspaces().find(x => x.id === wid)
+  return hit ? hit.name : ''
+}
+
 function workspaces() {
   const d = P.load('settings', {}) || {}
   const lst = d.workspaces
@@ -288,7 +299,7 @@ function scopeRoots(customer) {
 module.exports = {
   DEFAULT_SETTINGS, LEVELS, LEVEL_ORDER, SCOPE_LEVELS, SCOPE_ORDER,
   settings, saveSettings, currentCustomer,
-  workspaces, workspaceAdd, workspacePick, workspaceForget, workspaceRoot,
+  workspaces, workspaceName, workspaceAdd, workspacePick, workspaceForget, workspaceRoot,
   custPaths, path,
   history, cost, recordUsage, usageRecent, usageTotals, notify,
   levelOf, scopeOf, setLevel, setScope, scopeRoots,

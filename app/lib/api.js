@@ -827,7 +827,18 @@ function conversations(d) {
     return r_ok(SS.list({ limit: num(d.limit, 40) }))
   }
   const CV = lazy('./convo')
-  if (act === 'save') return r_ok(CV.save(d))
+  if (act === 'save') {
+    /* ★ 工作区名由后端补，别信前端传的：
+       前端各入口（首页 convNew / AI导演页 / OpenAPI）有的传 folder、有的什么都不传，
+       从不传 workspace。侧栏却按它分组，结果选了工作区对话仍堆在「影创」下。 */
+    if (!str(d.workspace)) {
+      try {
+        const wn = C.workspaceName()
+        if (wn) d = Object.assign({}, d, { workspace: wn })
+      } catch (e) { /* 读不到当前工作区就按原样存，不该挡住对话 */ }
+    }
+    return r_ok(CV.save(d))
+  }
   if (act === 'get') {
     const r = CV.get(str(d.id))
     if (!r.ok) throw new Error(r.error)
