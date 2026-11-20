@@ -45,19 +45,16 @@ function readModels() {
       if (!key) continue
       out.push({ id: mid, name: m.name || m.model, model: m.model, url: m.url, key, kind: m.kind })
     }
+    /* ★ 顺序决定内核默认走哪个 provider（patchYaml 里 provs[0] 就是 agent-default-model）。
+       以前完全跟着 json 的键顺序走，用户在界面上换了默认模型也不生效 —— 他改的是
+       设置里的 chat_model_id，而这里根本没看那个字段。现在把用户选中的提到第一位。 */
+    const cur = M.chatModelId(ms)
+    if (cur) {
+      const i = out.findIndex((x) => x.id === cur)
+      if (i > 0) out.unshift(out.splice(i, 1)[0])
+    }
     return out
   } catch { return [] }
-}
-
-function agnesKey() {
-  if (process.env.AGNES_API_KEY) return process.env.AGNES_API_KEY
-  const f = join(process.env.HOME || '', '.dsh', '.credentials.yaml')
-  try {
-    const t = readFileSync(f, 'utf8')
-    const m = t.match(/AGNES_API_KEY:\s*(wk-[A-Za-z0-9_-]+)/)
-    if (m) return m[1]
-  } catch {}
-  return ''
 }
 
 /** 生成 cordis.patch.yml 的正文。 */
@@ -87,18 +84,18 @@ function patchYaml({ models, env, homeDir }) {
       lines.push('            input: [text, image]')
     })
   } else {
-    const k = agnesKey()
-    if (k) env.AGNES_API_KEY = k
-    provs.push({ pid: 'velora-m0', envName: 'AGNES_API_KEY', m: { model: 'agnes-2.5-flash', name: 'Agnes' } })
-    lines.push('      velora-m0:')
-    lines.push('        displayName: "Agnes"')
-    lines.push('        apiKeyEnv: AGNES_API_KEY')
-    lines.push('        api: openai-completions')
-    lines.push('        baseURL: "https://apihub.agnes-ai.com/v1"')
-    lines.push('        models:')
-    lines.push('          - id: "agnes-2.5-flash"')
-    lines.push('            name: "agnes-2.5-flash"')
-    lines.push('            input: [text, image]')
+    /* ★ 2026-11-20 改：这里以前会偷偷读 ~/.dsh/.credentials.yaml 里的 AGNES_API_KEY 顶上，
+       于是出现最难受的一种状态 —— 模型管理里三个模型全显示「待配置」，对话却照样能通，
+       而且用的是用户在界面上根本看不见的一把 key。两条配置源各说各话，用户永远搞不清
+       自己到底在花谁的钱。现在只有一个事实源：模型表（lib/models.js）。
+       模型表里没有可用模型，就老实报错，让用户去模型管理配。 */
+    const M = require('./models')
+    const cur = M.chatModelId() || M.PRESET_ID
+    const mm = M.models()[cur]
+    throw new Error(
+      '模型表里没有可用的对话模型（' + (mm ? mm.name || cur : cur) + ' 缺接口地址或密钥）。' +
+      '到「模型管理」里填一个能对话的模型再启动。'
+    )
   }
 
   const first = provs[0]

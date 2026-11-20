@@ -97,10 +97,20 @@ async function systemState() {
 function asrState() {
   try {
     const s = require('./asr').status()
-    return {
-      installed: !!s.ready, state: s.ready ? 'ready' : 'none', used_mb: s.used_mb || 228,
-      step: s.ready ? '权重就绪' : '还没下载权重（约 239 MB）', path: s.model || '',
+    if (s.ready) {
+      return { installed: true, state: 'ready', used_mb: s.used_mb || 228, step: '权重就绪', path: s.model || '' }
     }
+    /* 下载中/失败要看 localmodels 的 job —— 那边是唯一事实源，
+       这里自己再判一遍会出现「这边说没下、那边正在下」的矛盾。 */
+    const LM = require('./localmodels')
+    const j = LM.jobOf('asr')
+    if (j && j.state === 'installing') {
+      return { installed: false, state: 'installing', step: j.step, progress: LM.progressOf('asr'), used_mb: 0, path: '' }
+    }
+    if (j && j.state === 'error') {
+      return { installed: false, state: 'error', step: '下载失败', error: j.error, used_mb: 0, path: '' }
+    }
+    return { installed: false, state: 'none', used_mb: 0, step: '还没下载权重（约 155 MB）', path: s.model || '' }
   } catch (e) { return { installed: false, state: 'none', used_mb: 0, step: e.message, path: '' } }
 }
 
@@ -112,6 +122,14 @@ function mingStateOf() {
     const st = require('./audio').mingState()
     if (st.ok) {
       return { installed: true, state: 'ready', used_mb: st.mb || 0, step: st.step, path: st.model || '' }
+    }
+    const LM = require('./localmodels')
+    const j = LM.jobOf('ming_tts')
+    if (j && j.state === 'installing') {
+      return { installed: false, state: 'installing', step: j.step, progress: LM.progressOf('ming_tts'), used_mb: 0, path: '' }
+    }
+    if (j && j.state === 'error') {
+      return { installed: false, state: 'error', step: '下载失败', error: j.error, used_mb: 0, path: '' }
     }
     return { installed: false, state: 'none', used_mb: 0, step: st.step || '引擎不在', path: '' }
   } catch (e) {

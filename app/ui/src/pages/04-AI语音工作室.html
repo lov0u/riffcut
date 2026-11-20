@@ -31,6 +31,9 @@
 .vm-cap.key{background:#E8F0FE;color:#3567C0}
 .vm-mbar{margin-top:8px}
 .vm-mbar .tx{font-size:var(--f5);color:#5A6272;margin-bottom:4px;line-height:1.5}
+.vm-cancel{float:right;font-size:10.5px;color:#8A93A3;background:none;border:0;
+  padding:0 2px;cursor:pointer;line-height:1.4}
+.vm-cancel:hover{color:#C4553D}
 .vm-mact{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;padding-top:8px;border-top:1px dashed #EDEFF4}
 .vm-mact .u-btn{height:23px;padding:0 8px;font-size:10.5px}
 .vm-foot{flex:0 0 auto;padding:9px 12px;border-top:1px solid var(--line);font-size:var(--f5);
@@ -573,7 +576,8 @@
       var st=STATE[m.state]||STATE.none, caps=(m.caps||[]).map(function(k){
         return '<span class="vm-cap'+(k==='clone'?' key':'')+'">'+esc((m.caps_labels||{})[k]||k)+'</span>'}).join('');
       var bar='';
-      if(m.state==='installing')bar='<div class="vm-mbar"><div class="tx">'+esc(m.step||'安装中…')+'</div>'+
+      if(m.state==='installing')bar='<div class="vm-mbar"><div class="tx">'+esc(m.step||'安装中…')+
+        '<button class="vm-cancel" data-act="cancel">取消</button></div>'+
         '<div class="u-progress"><i style="width:'+(m.progress||5)+'%"></i></div></div>';
       else if(m.state==='error')bar='<div class="vm-mbar"><div class="tx" style="color:#B45B5B">'+esc(m.error||'安装失败')+'</div></div>';
       else if(m.state==='need_weights')bar='<div class="vm-mbar"><div class="tx">'+esc(m.step||'待放权重')+'</div></div>';
@@ -918,13 +922,19 @@
   }
   function doInstall(m){
     confirm({title:'安装语音模型',okText:'开始安装',
-      html:'即将安装 <b>'+esc(m.name)+'</b>（'+esc(m.size)+'）。<br>运行环境走<b>国内 PyPI 镜像</b>、权重走<b>魔搭 / HF-Mirror 国内源</b>，首次需联网下载，耗时取决于网速。确定继续吗？',
+      html:'即将安装 <b>'+esc(m.name)+'</b>（'+esc(m.size)+'）。<br>权重走<b>魔搭 / GitHub 国内可访问源</b>，支持断点续传 —— 下到一半断网、关掉软件，下次点安装会接着下。确定继续吗？',
       onOk:function(){
         say('开始安装，正在走国内镜像下载…');
         A('/api/voicemodels',{action:'install',id:m.id}).then(function(){
           return A('/api/voicemodels',{action:'list'});
         }).then(function(c){CAT=c;renderModels(c);startPoll(m.id)}).catch(function(e){hint(e.message,'bad')});
       }});
+  }
+  function doCancel(m){
+    A('/api/voicemodels',{action:'cancel',id:m.id}).then(function(){
+      say('已取消下载，已下载的部分保留');
+      return A('/api/voicemodels',{action:'list'});
+    }).then(function(c){CAT=c;renderModels(c);stopPoll()}).catch(function(e){hint(e.message,'bad')});
   }
   function doUninstall(m){
     confirm({title:'卸载语音模型',okText:'确认卸载',
@@ -1142,6 +1152,7 @@
       if(a==='active'&&m){setActive(mid);return}
       if(a==='edit'&&m){openForm(m);return}
       if(a==='install'&&m){doInstall(m);return}
+      if(a==='cancel'&&m){doCancel(m);return}
       if(a==='uninstall'&&m){doUninstall(m);return}
       if(a==='del'&&m){doDelete(m);return}
       if(a==='record'){

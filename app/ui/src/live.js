@@ -307,11 +307,14 @@
         '<div class="mc-tags">' + tags + '</div></div>' +
         '<div class="mc-meta">' + esc2(m.vendor || '自定义') +
         ' · 模型 ID：<span>' + esc2(m.model || '未填') + '</span>' +
-        (!m.preset && m.key_set ? '<div class="mc-key">密钥 ' + esc2(m.key_hint || '已保存') + '</div>' : '') +
+        (m.key_set
+          ? '<div class="mc-key">' + (m.preset ? '内置额度 · 开箱即用，可换成自己的' : '密钥 ' + esc2(m.key_hint || '已保存')) + '</div>'
+          : (m.preset ? '<div class="mc-key">内置额度</div>' : '')) +
         '</div>' +
         '<div class="mc-acts">' +
           (m.preset
-            ? (m.url ? '<button data-act="test" data-id="' + esc2(id) + '">测试</button>' : '')
+            ? '<button data-act="edit" data-id="' + esc2(id) + '">编辑</button>' +
+              (m.url ? '<button data-act="test" data-id="' + esc2(id) + '">测试</button>' : '')
             : '<button data-act="edit" data-id="' + esc2(id) + '">编辑</button>' +
               (m.url ? '<button data-act="test" data-id="' + esc2(id) + '">测试</button>' : '') +
               (!m.builtin ? '<button class="danger" data-act="del" data-id="' + esc2(id) + '">删除</button>' : '')) +

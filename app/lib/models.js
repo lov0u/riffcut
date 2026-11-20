@@ -31,15 +31,28 @@ const E = require('./exec')
    现在固定成一个常量服务名，跟路径无关；同时保留旧名的读取做迁移。 */
 const KEYCHAIN_SERVICE = 'riffcut.apikeys'
 
-/** 老版本用路径哈希当服务名，这些名字下可能存着真 Key —— 要迁过来 */
+/** 老版本用路径哈希当服务名，这些名字下可能存着真 Key —— 要迁过来
+ *
+ *  ★ 2026-11-20 补：旧品牌叫 VELORA，那时的服务名是 `velora.<hash>` 与 `velora.apikeys`。
+ *    改品牌名时把这里的候选前缀也一起改成了 riffcut，于是「找旧条目」变成了「找自己」——
+ *    用户明明填过 key（躺在 velora.* 里），模型管理却一直显示「待配置」，
+ *    点测试就弹「没有密钥」。前缀和固定名都要各留一份。 */
 function legacyServices() {
   const out = []
   try {
     const root = String(P.ROOT || '')
-    out.push('riffcut.' + crypto.createHash('sha1').update(root).digest('hex').slice(0, 12))
+    const h = crypto.createHash('sha1').update(root).digest('hex').slice(0, 12)
+    out.push('riffcut.' + h)
+    out.push('velora.' + h)
     // 常见的另一种根：仓库根目录（开发时 ROOT 是它，打包后不是）
     const repo = root.replace(/\/RiffCut影创\.app\/Contents\/Resources$/, '')
-    if (repo !== root) out.push('riffcut.' + crypto.createHash('sha1').update(repo).digest('hex').slice(0, 12))
+    if (repo !== root) {
+      const rh = crypto.createHash('sha1').update(repo).digest('hex').slice(0, 12)
+      out.push('riffcut.' + rh)
+      out.push('velora.' + rh)
+    }
+    // 旧版还有个跟路径无关的固定服务名
+    out.push('velora.apikeys')
   } catch (e) {}
   return [...new Set(out)].filter(Boolean)
 }
@@ -167,7 +180,32 @@ function setInvite(key, code) {
   return { key: p.key, invite: v, register: registerUrl(p.key) }
 }
 
+/**
+ * 随软件预置的默认模型 —— 装完就能对话，不用先注册任何账号。
+ *
+ * ★ 这个 key 是有意写进源码的（作者授权，2026-11-20 明确要求）：
+ *   它是作者自建转发网关的公共额度令牌，走它自己的账单，作用是让新用户
+ *   下载完打开就能说第一句话。它只对 `54.255.115.129:3002` 这个网关有效，
+ *   不是任何一家的官方 key，泄漏了也只能跑这个网关的免费额度。
+ *
+ * ★ 用户可以覆盖：模型管理里编辑「auto（多模态）」填自己的 key，
+ *   填了就存进钥匙串，优先级高于这里的默认值（见 models() 第 ④ 步）。
+ *
+ * ★ 为什么默认走网关而不是直连 Agnes：直连要用户自己去注册拿 key，
+ *   那一步会拦住九成第一次打开的人。网关这条路零配置。
+ */
+const PRESET_KEY = 'freellmapi-cf54a18b040f35676cc2502dddf72a9a9ef95ae3023d2180'
+
 const DEFAULT_MODELS = {
+  'preset-auto': {
+    id: 'preset-auto', name: 'auto（多模态）', kind: 'vision',
+    vendor: 'RiffCut · 内置额度', url: 'http://54.255.115.129:3002/v1', key: '',
+    model: 'auto',
+    price: 0, builtin: true, chat: true, vision: true, image: false, video: false,
+    preset: true,
+    roles: ['需求理解', '脚本创作', '质量检查', '视觉分析'], fallback: '',
+    note: '软件自带，装完就能用，不用注册。想换成自己的模型到下面「添加 / 配置」。',
+  },
   'slot-text': {
     id: 'slot-text', name: '文本 / 对话模型', kind: 'text',
     vendor: 'OpenAI 兼容', url: '', key: '', model: '',
@@ -311,6 +349,14 @@ function models() {
       for (const f of ['note', 'kind', 'roles', 'vision', 'chat', 'image', 'video']) {
         if (ms[k][f] !== v[f]) { ms[k][f] = v[f]; dirty = true }
       }
+    } else if (k === PRESET_ID) {
+      // preset-auto 是随软件带的默认额度：老版本存下来的那条 builtin=false / preset 缺失，
+      // 会被当成「用户自建模型」而显示删除按钮 —— 补上标记位，但绝不覆盖用户改过的
+      // url / model / name（他可能已经换成自己的网关或 Agnes 直连）。
+      for (const f of ['builtin', 'preset']) {
+        if (ms[k][f] !== v[f]) { ms[k][f] = v[f]; dirty = true }
+      }
+      if (!String(ms[k].vendor || '').trim() && v.vendor) { ms[k].vendor = v.vendor; dirty = true }
     }
   }
 
@@ -332,6 +378,14 @@ function models() {
       if (got) v.key = got
     }
   }
+
+  // ⑤ 内置额度兜底：preset-auto 用户没填 key 就用随软件带的那个。
+  //    顺序不能反 —— 必须先让钥匙串里的用户 key 复活，再兜底，
+  //    否则用户自己填的会被默认值顶掉，填了等于没填。
+  if (ms[PRESET_ID] && !String(ms[PRESET_ID].key || '').trim()) {
+    ms[PRESET_ID].key = PRESET_KEY
+  }
+
   return ms
 }
 

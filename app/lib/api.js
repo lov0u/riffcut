@@ -620,6 +620,7 @@ async function localmodels(d = {}) {
      uiserver 原样转发 r，界面判 r.ok 是 undefined 就把整页当失败。 */
   if (act === 'status' || act === 'list' || act === 'check') return r_ok(await LM.status())
   if (act === 'install') return r_ok(await LM.install(str(d.kind)))
+  if (act === 'cancel') return r_ok(LM.cancelInstall(str(d.kind)))
   if (act === 'uninstall') return r_ok(await LM.uninstall(str(d.kind)))
   if (act === 'purge') return r_ok(await LM.purge(str(d.confirm)))
   if (act === 'reveal') return r_ok(LM.reveal())
