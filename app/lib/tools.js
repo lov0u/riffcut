@@ -146,6 +146,36 @@ function resolveUserPath(p, customer, forWrite = false) {
   let abs
   if (path.isAbsolute(raw)) abs = raw
   else abs = path.join(P.HOME, raw.replace(/^[/\\]+/, ''))
+  /* ★ 2026-11-20 修：AI 从 assets 拿到的是文件名，回传给 edit_timeline add 时
+     写法五花八门——裸文件名、「图片/xxx.png」相对前缀，甚至幻觉出
+     「~/Library/.../RiffCut影创/素材库/图片/xxx.png」这种根本不存在的绝对路径。
+     真实文件在客户产出/素材目录。只要文件在给定位置不存在，就按 basename 找真实位置：
+     ①先查素材库索引的 full 路径（generate 出图会自动 ingest）；
+     ②再遍历可读根目录，连同「产出/图片」「产出/视频」「素材」等常见子目录一起找。
+     写操作（forWrite）不走兜底——写必须精确落到指定路径，不能模糊命中别处。
+     越界的绝对路径 basename  nowhere 可找 → 保持原值 → 下面白名单校验照样拒绝。 */
+  if (!existsSync(abs) && !forWrite) {
+    const base = path.basename(raw)
+    try {
+      const A = require('./assets')
+      const items = ((A.library(customer) || {}).items) || []
+      const hit = items.find(x => x.name === base || (x.full && path.basename(x.full) === base))
+      if (hit && hit.full && existsSync(hit.full)) abs = hit.full
+    } catch (e) {}
+    if (!existsSync(abs)) {
+      const subs = ['', '产出/图片', '产出/视频', '产出/音频', '素材', '图片', '素材库/图片', '素材库/视频']
+      for (const r of roots(customer)) {
+        let found = false
+        for (const sub of subs) {
+          for (const cand of [path.join(path.resolve(r.path), sub, base), path.join(path.resolve(r.path), sub, raw)]) {
+            if (existsSync(cand) && statSync(cand).isFile()) { abs = cand; found = true; break }
+          }
+          if (found) break
+        }
+        if (found) break
+      }
+    }
+  }
   abs = path.resolve(abs)
   const rs = roots(customer)
   const inside = rs.find(r => {
@@ -405,7 +435,9 @@ tool('assets', '素材与索引：library 看绑定、scan 重扫目录、ingest
     const lib = A.library(customer)
     const q = String(a.q || '').toLowerCase()
     const hit = ((lib && lib.items) || []).filter(x => String(x.name || '').toLowerCase().includes(q))
-    return clip(`命中 ${hit.length} 条：\n` + hit.slice(0, 40).map(x => `- ${x.name}  ${x.path}`).join('\n'))
+    // ★ 条目字段是 full（绝对路径），不是 path —— 原来写 x.path 导致 find 结果全是 undefined，
+    //   AI 拿到名字却拿不到路径，传给 add 又落成裸文件名找不到文件。直接给 full。
+    return clip(`命中 ${hit.length} 条：\n` + hit.slice(0, 40).map(x => `- ${x.name}  ${x.full || x.path || ''}`).join('\n'))
   }
   if (act === 'dedupe') {
     const lib = A.library(customer)
@@ -537,7 +569,7 @@ tool('edit_timeline', '剪辑台的时间线。AI 剪片一律先建成可改的
   {
     action: 'new | get | save | add | addtext | addtemplate | del | move | trim | split | track | assets | list | delete | render',
     project: '工程名', clip: '片段 id', track: '轨道 v1/g1/t1/a1', at: '开始秒', dur: '时长秒',
-    path: '素材路径（add 用）', text: '文字（addtext 用）', template: '模板名（addtemplate 用）',
+    path: '素材路径（add 用）：直接写 assets list/find 返回的文件名就行（如 xxx.png），别自己拼「素材库/图片」这种目录，系统会自动找真实位置', text: '文字（addtext 用）', template: '模板名（addtemplate 用）',
     width: '画布宽', height: '画布高', fps: '帧率', data: '整份时间线 JSON（save 用）',
   },
   { level: '建议', mutates: 'render' })(async (a, customer) => {
@@ -562,6 +594,37 @@ tool('edit_timeline', '剪辑台的时间线。AI 剪片一律先建成可改的
     let data = a.data
     if (typeof data === 'string') { try { data = JSON.parse(data) } catch (e) { return '❌ data 不是合法 JSON：' + e.message } }
     if (!data) return '❌ 给 data'
+    /* ★ 2026-11-20 修：AI 按直觉把 tracks 写成对象 {"v1":[...], "g1":[...]}，
+       而时间线内部是数组 [{id:'v1',clips:[...]}]。直接 save 会在 tail() 里
+       `for (const t of data.tracks)` 报 object is not iterable。这里做一层兼容：
+       对象形式按轨道 id 转成数组，片段字段也归一（asset/at/dur → src/start/out）。 */
+    if (data.tracks && !Array.isArray(data.tracks) && typeof data.tracks === 'object') {
+      const KIND = { v1: 'video', g1: 'graphics', t1: 'text', a1: 'audio' }
+      const NAME = { v1: '主视频', g1: '图形', t1: '字幕', a1: '音频' }
+      const arr = []
+      for (const id of Object.keys(data.tracks)) {
+        const rawClips = data.tracks[id]
+        if (!Array.isArray(rawClips)) continue
+        const clips = rawClips.map(c => {
+          const o = { ...c }
+          if (o.asset && !o.src) o.src = o.asset
+          if (o.at !== undefined && o.start === undefined) o.start = o.at
+          if (o.dur !== undefined) {
+            if (o.type === 'text' || o.type === 'template' || id === 't1' || id === 'g1') {
+              if (o.duration === undefined) o.duration = o.dur
+            } else if (o.out === undefined && o.in === undefined) {
+              o.out = (Number(o.start) || 0) + Number(o.dur)
+              o.in = Number(o.start) || 0
+            }
+            delete o.dur
+          }
+          if (id === 't1' && !o.type) o.type = 'text'
+          return o
+        })
+        arr.push({ id, kind: (data.tracks[id].kind || KIND[id] || 'video'), name: NAME[id] || id, clips })
+      }
+      data.tracks = arr
+    }
     T.save(name, data)
     return `✓ 存了「${name}」，时长 ${T.load(name).duration}s`
   }
@@ -627,7 +690,13 @@ tool('edit_timeline', '剪辑台的时间线。AI 剪片一律先建成可改的
     const opt = { at: Number(a.at) || 0 }
     if (Number(a.dur) > 0) opt.dur = Number(a.dur)
     const r = await R.addTemplate(name, String(a.template || ''), opt)
-    return r.ok ? `✓ 加了模板「${a.template}」` : '❌ ' + r.error
+    /* ★ 2026-11-20：必须同时看 mounted。
+       以前只看 r.ok（恒 true），component 类模板只拷了文件没挂到 g1 时也回「✓ 加了模板」，
+       agent 以为成功连调 4 次、白烧几万 token，时间线上却什么都没有。
+       现在文件拷进去了但没挂轨 → 明确报错，让 agent 立刻知道并换做法。 */
+    if (!r.ok) return '❌ ' + (r.error || '加模板失败')
+    if (r.mounted === false) return `❌ 模板「${a.template}」文件已就位，但没能挂到时间线（类型不支持单独成片）。换一个 block/片尾类模板再试`
+    return `✓ 加了模板「${a.template}」到 ${a.track || 'g1'}，时长 ${r.clip ? '已排' : '?'} @${opt.at}s`
   }
   if (act === 'del') {
     const d = T.load(name)
@@ -651,6 +720,87 @@ tool('edit_timeline', '剪辑台的时间线。AI 剪片一律先建成可改的
     const R = require('./render')
     const r = await R.renderProject(name, { final: !!a.final })
     return r.ok ? `✓ 出片：${r.path}（${r.duration.toFixed(2)}s，${humanSize(r.size)}，${r.ms}ms）` : '❌ 渲染失败：' + r.error
+  }
+  /* ★ 2026-11-20：下面四个动作工具描述里一直承诺，代码却没实现 ——
+     AI 按描述调 trim/split 时收到「没有这个动作」，工程就卡在半成品。
+     用户点破这是集成层问题，这里把它们补齐（不新增依赖，直接操作时间线 JSON）。 */
+  if (act === 'track') {
+    const d = T.load(name) || T.blank(name)
+    const id = String(a.track || a.id || '').trim()
+    if (!id) return '❌ 加轨道要给 track（如 v2 / g2 / a2）'
+    if (T.trackOf(d, id)) return `✓ 轨道 ${id} 已经存在`
+    const tr = T.ensureTrack(d, id)
+    if (a.kind) tr.kind = String(a.kind)
+    if (a.name) tr.name = String(a.name)
+    T.save(name, d)
+    return `✓ 加了轨道 ${id}（${tr.kind}）`
+  }
+  if (act === 'move') {
+    const d = T.load(name)
+    if (!d) return `❌ 没有这个工程：${name}`
+    let hit = null, from = null
+    for (const tr of (Array.isArray(d.tracks) ? d.tracks : [])) {
+      const c = (tr.clips || []).find(x => x && x.id === a.clip)
+      if (c) { hit = c; from = tr; break }
+    }
+    if (!hit) return `❌ 没找到片段 ${a.clip}`
+    if (a.at !== undefined && a.at !== '') hit.start = Math.max(0, Number(a.at) || 0)
+    if (a.track && a.track !== from.id) {
+      const to = T.ensureTrack(d, String(a.track))
+      from.clips = from.clips.filter(x => x.id !== a.clip)
+      to.clips.push(hit)
+    }
+    T.save(name, d)
+    return `✓ 移动了 ${a.clip} 到 ${a.track || from.id} @${hit.start}s`
+  }
+  if (act === 'trim') {
+    const d = T.load(name)
+    if (!d) return `❌ 没有这个工程：${name}`
+    let hit = null
+    for (const tr of (Array.isArray(d.tracks) ? d.tracks : [])) {
+      const c = (tr.clips || []).find(x => x && x.id === a.clip)
+      if (c) { hit = c; break }
+    }
+    if (!hit) return `❌ 没找到片段 ${a.clip}`
+    const dur = Math.max(0.1, Number(a.dur) || 3)
+    if (a.at !== undefined && a.at !== '') hit.start = Math.max(0, Number(a.at) || 0)
+    if (hit.type === 'image' || hit.type === 'text' || hit.duration !== undefined) {
+      hit.duration = dur; delete hit.out
+    } else {
+      hit.out = Math.round(((Number(hit.in) || 0) + dur) * 1000) / 1000
+    }
+    T.save(name, d)
+    return `✓ 把 ${a.clip} 裁成 ${dur}s @${hit.start}s`
+  }
+  if (act === 'split') {
+    const d = T.load(name)
+    if (!d) return `❌ 没有这个工程：${name}`
+    let hit = null, trFound = null, idx = -1
+    for (const tr of (Array.isArray(d.tracks) ? d.tracks : [])) {
+      const i = (tr.clips || []).findIndex(x => x && x.id === a.clip)
+      if (i >= 0) { hit = tr.clips[i]; trFound = tr; idx = i; break }
+    }
+    if (!hit) return `❌ 没找到片段 ${a.clip}`
+    const at = Number(a.at)
+    if (!at || at <= 0) return '❌ split 要给切点秒数 at（>0）'
+    const dur = (hit.type === 'image' || hit.type === 'text')
+      ? (Number(hit.duration) || 0)
+      : ((Number(hit.out) || 0) - (Number(hit.in) || 0))
+    if (at >= dur) return `❌ 切点 ${at}s 超出片段时长 ${dur}s`
+    const right = JSON.parse(JSON.stringify(hit))
+    right.id = 'c' + Date.now() + '-' + Math.floor(Math.random() * 999)
+    if (hit.type === 'image' || hit.type === 'text') {
+      right.duration = Math.round((dur - at) * 1000) / 1000
+      hit.duration = Math.round(at * 1000) / 1000
+      right.start = Math.round((hit.start + at) * 1000) / 1000
+    } else {
+      right.in = Math.round(((Number(hit.in) || 0) + at) * 1000) / 1000
+      hit.out = Math.round(((Number(hit.in) || 0) + at) * 1000) / 1000
+      right.start = Math.round((hit.start + at) * 1000) / 1000
+    }
+    trFound.clips.splice(idx + 1, 0, right)
+    T.save(name, d)
+    return `✓ 把 ${a.clip} 从 ${at}s 切成两段（${hit.id} / ${right.id}）`
   }
   return `没有这个动作：${act}`
 })
@@ -680,6 +830,7 @@ tool('plan_check', '出片前先把账算清楚：照这份方案渲出来是多
   { project: '工程名（读工程里的 plan）', data: '方案 JSON（直接传方案，可省 project）', target: '目标秒数（覆盖方案里的 target_duration）' },
   { level: '只读' })(async (a, customer) => {
   const P = require('./plan')
+  const T = require('./timeline')  // ★ 2026-11-20：函数体漏了这句，从工程名读 plan 时报 "T is not defined"
   let plan = null
   if (a.data) { try { plan = JSON.parse(String(a.data)) } catch (e) { return '❌ 方案 JSON 解析失败：' + e.message } }
   else {

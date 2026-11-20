@@ -3784,6 +3784,29 @@ body.rws-dragging *{cursor:col-resize !important}
            长对话最后几十条要等好几秒才显示齐，比不淡入更难受。 */
         dm.style.animationDelay=Math.min(_i,8)*34+'ms';
         box.appendChild(dm);
+        /* ★ 切回旧对话要「每步都在」：后端跑完把步骤存进了 m.steps（见 lib/convo.js），
+           但以前这里只画气泡、不读 steps，切走再切回来工作流卡就凭空消失。
+           现在紧跟在这条 AI 消息后面重建一张折叠好的工作流卡。
+           normalize：老存档只有 {tool,ok,args,out}，缺的字段用 tool 名 / out 摘要兜底。 */
+        if(who!=='我' && Array.isArray(m.steps) && m.steps.length){
+          var savedSteps=m.steps.map(function(x){
+            x=x||{};
+            return {
+              tool:x.tool,
+              what:x.what||H_TOOL_CN[x.tool]||x.tool,
+              hint:x.hint||'',
+              done:x.done||String(x.out||'').slice(0,60),
+              ok:x.ok!==false,
+              ms:x.ms||0,
+              args:x.args,
+              out:x.out||''
+            };
+          });
+          var sw=flowNode();
+          flowRender(sw,savedSteps,true);   /* done=true：渲染成「干完了」并自动折叠 */
+          sw.classList.remove('open');      /* 再确保一次折叠，跟跑完时的状态一致 */
+          box.appendChild(sw);
+        }
       });
       // 有历史就切聊天态，否则空着一条对话还占着欢迎区很怪
       var card=document.querySelector('.h-ai');
@@ -5638,6 +5661,8 @@ body.rws-dragging *{cursor:col-resize !important}
         window.api('/api/conversations',{action:'save',id:turnConv,append:[{
           who:'RiffCut',text:txt||'（模型没有返回内容）',
           usage:(d&&d.usage)||null,model:(d&&d.model)||'',
+          /* ★ 切走时也要把这一步步存进去，否则用户切回来只有回答、没有工作流卡 */
+          steps:_st,
           time:new Date().toLocaleString('zh-CN',{hour12:false})
         }]}).catch(function(){});
       }catch(e){}
@@ -5645,7 +5670,10 @@ body.rws-dragging *{cursor:col-resize !important}
     }
     try{
       addMsg('RiffCut',txt||'（模型没有返回内容）',false,
-             {usage:(d&&d.usage)||null,model:(d&&d.model)||'',ms:(d&&d.ms)||0});
+             {usage:(d&&d.usage)||null,model:(d&&d.model)||'',ms:(d&&d.ms)||0,
+              /* ★ convAppend 会把它存进 m.steps（见 2298 行），这样切走再切回才画得出工作流卡；
+                 以前漏传，正常聊完的这一步步只活在内存里，存档里根本没有。 */
+              steps:_st});
     }catch(e){
       try{
         var fb=document.createElement('div');fb.className='h-msg';
@@ -5733,11 +5761,12 @@ body.rws-dragging *{cursor:col-resize !important}
             else if(/没有返回内容/.test(why))
               why='模型这一轮跑完了但没给出最终回答。下面如果有分镜方案/工程卡片，说明活儿已经干了，可以直接用。';
             var sbsE=r.storyboard_projects||[];
+            var edsE=r.edit_projects||[];
             var de={text:'⚠️ 这一轮收尾不完整：\n\n'+why
-                       + (sbsE.length?'\n\n已经产出的方案在下面，可以继续用。':'')
+                       + (sbsE.length||edsE.length?'\n\n已经产出的方案/工程在下面，可以继续用。':'')
                        + '\n\n**原始信息**：'+String(r.error).slice(0,200),
                     steps:r.steps||[],done:true,model:r.model||'',ms:r.ms||0,
-                    storyboard_projects:sbsE,
+                    storyboard_projects:sbsE,edit_projects:edsE,
                     usage:(r.usage&&(r.usage.in||r.usage.out))?r.usage:null};
             finishTurn(de,flowW,ctrl);
             return;
@@ -5747,9 +5776,14 @@ body.rws-dragging *{cursor:col-resize !important}
              首页每条回答底下永远看不到「模型 · token · 耗时」。
              后端现在已经把内核的 inputTokens/outputTokens 累加好了。 */
           var u=r.usage&&(r.usage.in||r.usage.out)?r.usage:null;
-          var d={text:r.text||'',steps:r.steps||[],done:true,
+          var eds=r.edit_projects||[];
+          /* ★ 模型收尾没给文字但已经建好工程时，别再干巴巴显示「（模型没有返回内容）」。
+             工程卡会在下面弹出来，这里给一句人话，用户知道活儿成了。 */
+          var finalTxt=r.text||'';
+          if(!finalTxt&&eds.length)finalTxt='工程已经排好了，在下面的卡片里。要改就直接点开剪辑台。';
+          var d={text:finalTxt,steps:r.steps||[],done:true,
                  model:r.model||'',ms:r.ms||0,
-                 storyboard_projects:r.storyboard_projects||[],usage:u};
+                 storyboard_projects:r.storyboard_projects||[],edit_projects:eds,usage:u};
           finishTurn(d,flowW,ctrl);
           return;
         }

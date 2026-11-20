@@ -178,7 +178,7 @@ async function chat(body) {
   if (!text) return { ok: false, error: '没说话' }
 
   const stepId = String(body.step_id || ('s' + (++_seq)))
-  const rec = { seq: 0, steps: [], done: false, text: '', started: Date.now(), storyboardProjects: [], error: '', pending: true, usage: { in: 0, out: 0, cached: 0 } }
+  const rec = { seq: 0, steps: [], done: false, text: '', started: Date.now(), storyboardProjects: [], editProjects: [], error: '', pending: true, usage: { in: 0, out: 0, cached: 0 } }
   BUS.set(stepId, rec)
 
   /* 会话 id 必须每次启动唯一。
@@ -204,7 +204,16 @@ async function chat(body) {
        以前 call / result 各生成一条 → 界面上每个工具占两行：
        一行是原始 JSON 参数、一行是"完成"，满屏重复，用户看不出在干啥。 */
     if (String(ev.type) === 'tool/result') {
-      const cid = String((ev.data && ev.data.callId) || '')
+      /* ★ 字段路径修正（2026-11-20）：
+         内核真实事件是 {type:'tool/result', data:{turn,step,message:{
+           role:'tool', toolCallId:'chatcmpl-tool-xxx',
+           content:[{type:'text',text:'...'}], isError:false
+         }, sourceEventSeqs:[...]} }
+         以前读的是 ev.data.text / ev.data.callId / ev.data.isError —— 全错了一层，
+         于是每一步的返回 out 永远空、callId 配不上、错误状态也读不到。
+         这是「工作流每一项可查」里返回栏全空的直接原因。保留老格式兜底。 */
+      const msg = (ev.data && ev.data.message) || {}
+      const cid = String((msg.source && msg.source.callId) || msg.toolCallId || (ev.data && ev.data.callId) || '')
       let hit = null
       for (let i = rec.steps.length - 1; i >= 0; i--) {
         const st = rec.steps[i]
@@ -214,14 +223,20 @@ async function chat(body) {
       }
       if (hit) {
         hit.running = false
-        hit.ok = !(ev.data && ev.data.isError)
-        const out = String((ev.data && ev.data.text) || '').trim()
+        hit.ok = !(msg.isError || (ev.data && ev.data.isError))
+        // content 是多块数组，取全部 text 拼起来（一次工具可能返回多段）
+        let raw = ''
+        const cont = msg.content
+        if (Array.isArray(cont)) raw = cont.filter((c) => c && c.type === 'text').map((c) => String(c.text || '')).join('\n')
+        else if (typeof cont === 'string') raw = cont
+        const out = String(raw || (ev.data && ev.data.text) || '').trim()
         // 结果只留一句摘要，正文太长没意义（用户要的是"做完没"）
         hit.done = out ? out.replace(/\s+/g, ' ').slice(0, 90) : ''
         if (!hit.ok && !hit.done) hit.done = '没成功'
         /* 每步耗时 + 完整返回（展开卡片用）。in/out 可能很大，前端懒渲染时才格式化。 */
         if (hit._at) { hit.ms = Date.now() - hit._at; delete hit._at }
         hit.out = out
+        hit.seq = (ev.data && ev.data.step) || hit.seq
         rec.seq++
       }
     }
@@ -240,6 +255,19 @@ async function chat(body) {
       if (typeof args === 'string') { try { Object.assign(args, JSON.parse(args)) } catch (e) {} }
       if (args.action !== 'approve' && args.project) {
         if (rec.storyboardProjects.indexOf(String(args.project)) < 0) rec.storyboardProjects.push(String(args.project))
+      }
+    }
+    /* ★ 捕获 edit_timeline 动过的工程名（2026-11-20）。
+       前端 finishTurn 一直在读 d.edit_projects 想弹工程卡，但后端从没回过这个字段 ——
+       于是「AI 建好工程却一个字不说」时，用户既看不到回答，也看不到工程卡，
+       只看到「（模型没有返回内容）」。这里按 storyboard 同样的模式把工程名记下来，
+       new 动作优先（那是真正新建的工程），其它动作带的 project 也收着。 */
+    if (nm === 'edit_timeline' && (evType === 'tool/call' || evType === 'tool-call' || evType === 'tool/start')) {
+      let args = (ev && ev.data && (ev.data.arguments || ev.data.args)) || {}
+      if (typeof args === 'string') { try { args = JSON.parse(args) } catch (e) { args = {} } }
+      if (args && args.project) {
+        const p = String(args.project)
+        if (rec.editProjects.indexOf(p) < 0) rec.editProjects.push(p)
       }
     }
     if (ev && ev.type === 'assistant/message') {
@@ -322,6 +350,7 @@ async function chat(body) {
         pending: true, text: '', steps: [], ms: Date.now() - t0,
         model: (_prof && _prof.model) || '', step_id: stepId,
         storyboard_projects: [],
+        edit_projects: rec.editProjects,
         workers: (() => { try { return require('./workers').snapshot() } catch (e) { return { running: 0, items: [] } } })(),
         usage: { ...rec.usage },
       },
@@ -338,6 +367,7 @@ async function chat(body) {
         text: rec.text, steps: rec.steps, ms: Date.now() - t0,
         model: (_prof && _prof.model) || '', step_id: stepId,
         storyboard_projects: rec.storyboardProjects,
+        edit_projects: rec.editProjects,
         usage: { ...rec.usage },
       },
     }
@@ -360,6 +390,7 @@ function steps(id) {
     seq: r.seq, steps: r.steps, done: r.done, pending: !!r.pending,
     text: r.text, error: r.error || '',
     storyboard_projects: r.storyboardProjects || [],
+    edit_projects: r.editProjects || [],
     workers: wk,
     usage: r.usage || { in: 0, out: 0, cached: 0 },
     model: (_prof && _prof.model) || '',

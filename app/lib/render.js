@@ -272,13 +272,15 @@ async function addTemplate(project, name, opts = {}) {
     } catch { /* 单个附属文件失败不该让「装模板」整体失败 */ }
   }
 
-  // 挂进主时间线：只挂 block；component 是嵌进别人里的片段，单独挂没意义
-  /* 挂进主时间线：只挂 block；component 是嵌进别人里的片段，单独挂没意义。
-     ★ 这里必须真的往时间线里写一条 type:'template' 的片段。
+  /* 挂进主时间线：必须真的往时间线里写一条 type:'template' 的片段。
        只把文件拷进 compositions/ 是不够的 —— 渲染层靠 data-composition-src 找子合成，
        没有那个 div，模板文件在工程目录里躺着，渲出来什么都没有。 */
   const meta = require('./templates').itemMeta(name)
-  const isBlock = !!(meta && meta.type === 'hyperframes:block')
+  /* ★ 2026-11-20：放开 component 类模板也能挂轨。
+     原来只认 hyperframes:block，导致 logo-brand-close（component，本体是完整独立
+     HTML，能单独渲染）拷进 compositions 却挂不上 g1，还返回 ok:true —— agent 被骗
+     连调 4 次白烧 token。component 和 block 都作为 type:'template' clip 挂进时间线。 */
+  const isBlock = !!(meta && (meta.type === 'hyperframes:block' || meta.type === 'hyperframes:component'))
 
   /* 画幅补丁要按「工程画布」算缩放比 —— 先读一眼工程尺寸（工程还不存在就按模板原画幅）。
      放在这里而不是挂片段之后：模板文件在拷贝时就要一次性把补丁写对。 */
