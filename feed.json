@@ -3,8 +3,8 @@
   "build": 17,
   "channel": "stable",
   "url": "https://github.com/lov0u/riffcut/releases/download/v0.1.0/RiffCut-lite-0.1.0.zip",
-  "sha256": "fc1120d10e6cc8036a1bfaa223f9019ddcf2e3f66c7143c28a5ea47a6c5967d5",
-  "size": 2226726107,
+  "sha256": "99c918bf5333510e3795f349b74a5ae5f9e80c28278f2931e4d4ea3888634d50",
+  "size": 447104510,
   "min_version": "0.0.1",
   "released_at": "2026-11-20",
   "notes": [
@@ -24,6 +24,6 @@
     "剪辑台左侧轨道栏：默认窄栏只留＋/锁/删除图标、内容不被挤；每条轨集成加片段（文字轨直接插可编辑字幕，音视频/图形轨从素材池选或弹文件框导入）；拖轨道栏右缘手柄可自由调宽窄，拖宽显示轨道名、拖窄只留图标；修双击文字焦点进不了输入框",
     "轨道栏宽度默认 108px，拖动后记忆到本机，下次打开保持上次的宽度",
     "修剪辑台模板预览里配套图片（assets/*.png 等）被当 HTML 读取而裂开的问题：/edt/ 路由现在按真实 MIME 返回二进制资源，所有带图模板预览不再碎图；影创 3 秒 logo 片尾（手写代码版）已完成",
-    "修工具返回值序列化：返回对象的工具（如 template_recipe）原来被 String() 拍成 [object Object]，AI 读不到配方说明；现在对象先 JSON.stringify 再截断。README 加上官网 riffcut.cn"
+    "修工具返回值序列化：返回对象的工具（如 template_recipe）原来被 String() 拍成 [object Object]，AI 读不到配方说明；现在对象先 JSON.stringify 再截断。README 加上官网 riffcut.cn\n\n注：分发包改用 lite 版（447MB，不含语音权重），因完整版 2.2G 超过 GitHub 单文件 2GB 上限；语音权重可在软件内自行下载（见 NOTICE.md 3.3）。"
   ]
 }
