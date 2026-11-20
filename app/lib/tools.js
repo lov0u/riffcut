@@ -206,7 +206,15 @@ function humanSize(n) {
 }
 
 function clip(s, cap = OUT_CAP) {
-  const t = String(s == null ? '' : s)
+  // ★ 有些工具返回的是对象（template_recipe / template_family 等），原来的
+  //   String(s) 会把它们全拍成「[object Object]」，AI 拿到一堆空壳，只能去
+  //   瞎猜字段、反复读不存在的文件。对象先 JSON.stringify 成可读文本再截断。
+  //   字符串原样保留（绝大多数工具本来就返回拼好的中文文本）。
+  let t
+  if (typeof s === 'string') t = s
+  else if (s != null && typeof s === 'object') {
+    try { t = JSON.stringify(s, null, 2) } catch { t = String(s) }
+  } else t = String(s == null ? '' : s)
   return t.length <= cap ? t : t.slice(0, cap) + `\n…（已截断，原长 ${t.length} 字）`
 }
 

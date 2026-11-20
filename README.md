@@ -2,6 +2,7 @@
 
 > Electron + Node.js 本地视频剪辑工作台，内置 AI 导演内核，支持从分镜策划、素材生成、剪辑合成、字幕配音到多平台发布的全流程。可离线运行，客户数据本地存储，不上传云端。
 
+[![官方网站](https://img.shields.io/badge/🌐_官网-riffcut.cn-2F6BFF?style=for-the-badge)](https://riffcut.cn)
 [![下载 macOS 版](https://img.shields.io/badge/⬇_下载-macOS_安装包-2F6BFF?style=for-the-badge)](../../releases/latest)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Electron](https://img.shields.io/badge/Electron-45.3.4-blue.svg)](https://www.electronjs.org/)
@@ -14,6 +15,8 @@
 ## 一、这是什么
 
 **RiffCut 影创** 是一款面向短视频创作者、自媒体从业者和内容团队的**本地剪辑智能体软件**。
+
+> **🌐 官网：[https://riffcut.cn](https://riffcut.cn)** —— 产品介绍、使用教程与最新版下载都在这里。
 
 它不是在线剪辑网站，也不需要把素材上传到云端——所有的剪辑、渲染、发布都在你自己的 Mac 上完成。
 
@@ -386,6 +389,7 @@ DSH 内核通过 `kernel.js` 与 Electron 主进程建立 stdio JSON-RPC 通信�
 
 | 用途 | 联系方式 |
 |---|---|
+| 官方网站 | [https://riffcut.cn](https://riffcut.cn) |
 | 一般问题、建议 | 软件内右上角「反馈」按钮，或发邮件 |
 | Bug 报告 | GitHub Issue（附复现步骤、系统版本、日志） |
 | 商业授权咨询 | 邮件标题注明「商业授权咨询」 |
