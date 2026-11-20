@@ -444,6 +444,40 @@ body.rws-dragging *{cursor:col-resize !important}
   .h-msg,.h-greet{animation:none !important}
 }
 .h-msgs::-webkit-scrollbar{display:none}
+
+/* ── 会话刻度条（对齐 DSH TurnNavigator）─────────────────────────
+   贴在聊天卡片右缘的一列小横杠：每条用户提问一根，当前那条黑色加粗，
+   悬停弹灰底预览（提问一行 + 回答摘要三行），点击滚到对应消息。
+   纯装饰导航，pointer-events 只在 nav 上放开，不挡正文。 */
+.h-rail{position:absolute;z-index:7;right:10px;top:50%;transform:translateY(-50%);
+  width:30px;max-height:min(60vh,420px);display:flex;pointer-events:auto}
+.h-rail[hidden]{display:none}
+.h-rail-scroller{max-height:inherit;overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:none;position:relative;width:100%}
+.h-rail-scroller::-webkit-scrollbar{display:none}
+.h-rail-marks{position:relative;width:100%}
+.hr-mark{display:block;width:100%;height:11px;padding:0;border:0;background:none;
+  cursor:pointer;position:relative;border-radius:6px}
+.hr-mark:before{content:"";position:absolute;top:50%;right:2px;width:18px;height:2px;
+  border-radius:2px;background:#D6DEE8;transform:translateY(-50%) scaleX(.62);
+  transform-origin:100%;transition:transform .14s,background-color .14s}
+.hr-mark:hover:before,.hr-mark.on:before{background:#1B8B7E;transform:translateY(-50%) scaleX(1)}
+.hr-mark.busy:before{animation:hrBusy 1s ease-in-out infinite}
+@keyframes hrBusy{0%,100%{opacity:1}50%{opacity:.35}}
+.hr-mark:focus-visible{outline:none}
+.hr-mark:focus-visible:before{background:#1B8B7E;transform:translateY(-50%) scaleX(1)}
+.h-rail-preview{position:absolute;right:calc(100% + 8px);top:0;z-index:8;
+  width:min(280px,52vw);max-height:104px;overflow:hidden;pointer-events:none;
+  padding:9px 12px;border-radius:10px;background:#fff;border:1px solid #E2E8F0;
+  box-shadow:0 6px 20px -6px rgba(28,38,58,.22)}
+.h-rail-preview[hidden]{display:none}
+.hr-p-q{font-size:12.5px;font-weight:600;line-height:1.45;color:#2A3342;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden}
+.hr-p-a{margin-top:3px;font-size:11px;line-height:1.5;color:#8A93A3;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+@media(max-width:900px){.h-rail{display:none}}
+@media(prefers-reduced-motion:reduce){.hr-mark:before,.hr-mark.busy:before{animation:none;transition:none}}
+
 .h-msg{display:flex;flex-direction:column;gap:3px;max-width:92%;
   /* 消息进场：半透明 + 上移一点，落定变实。0.34s 刚好够「看得见它出来了」，
      又不至于等它才敢打字。用 both 是为了在动画开始前就保持起始态，
@@ -561,9 +595,13 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-msg .bub pre::-webkit-scrollbar{height:7px}
 .h-msg .bub pre::-webkit-scrollbar-thumb{background:#4A566B;border-radius:7px}
 .h-msg .bub pre::-webkit-scrollbar-track{background:transparent}
-.h-msg .bub pre code{background:none;border-radius:0;padding:0;color:inherit;font-size:inherit;white-space:pre}
+/*  specificity：上面行内 code 规则是 .h-msg:not(.me) .bub code（0,3,1），
+   比 .h-msg .bub pre code（0,2,2）更高，会把浅灰底盖到代码块上 ——
+   这里补 :not(.me) 提到（0,3,2）并显式写死背景/颜色，代码块才是真深色。 */
+.h-msg:not(.me) .bub pre code,.h-msg.me .bub pre code{
+  background:none;border-radius:0;padding:0;color:#DCE4F0;font-size:12.5px;white-space:pre}
 .h-msg .bub pre[data-lang]::before{content:attr(data-lang);display:block;margin:-3px 0 7px;
-  font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7E8BA3}
+  font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8FA0BB}
 .h-msg:not(.me) .bub h3,.h-msg:not(.me) .bub h4,.h-msg:not(.me) .bub h5{
   margin:10px 0 5px;font-size:15px;font-weight:650;color:#232A36}
 .h-msg:not(.me) .bub blockquote{margin:4px 0 6px;padding-left:8px;border-left:2px solid #D5DCE8;color:#5A6473}
@@ -1706,6 +1744,12 @@ body.rws-dragging *{cursor:col-resize !important}
 
       </div>
       <div class="h-msgs" id="hMsgs"></div>
+      <!-- 右侧会话刻度条（对齐 DSH TurnNavigator）：每条用户提问一根小横杠，
+           悬停显示提问/回答摘要，点击跳到那条消息。由 RiffCut 的 railBuild() 填充。 -->
+      <nav class="h-rail" id="hRail" hidden aria-label="对话提问导航">
+        <div class="h-rail-scroller"><div class="h-rail-marks" id="hRailMarks"></div></div>
+        <div class="h-rail-preview" id="hRailPreview" hidden role="tooltip"></div>
+      </nav>
       <div class="h-pickline">
         <svg class="ic"><use href="#i-folder"/></svg>
         <span class="h-pickhint" id="hFolderPath">未选择素材文件夹</span>
@@ -2627,10 +2671,86 @@ body.rws-dragging *{cursor:col-resize !important}
     if(who!=='我'&&extra&&extra.usage)
       metaPaint(d,extra.usage,extra.model,extra.ms,extra.when||new Date().toISOString());
     box.appendChild(d);box.scrollTop=box.scrollHeight;
+    try{railSync()}catch(e){}
     if(!skipSave)convEnsure(function(){convAppend(who,text,extra)});
     return d;
   }
   window.addHomeMsg=addMsg;
+
+  /* ── 右侧会话刻度条（对齐 DSH TurnNavigator）──────────────────────
+     每条用户提问一根小横杠：悬停显示「提问 + 紧随的回答摘要」，点击滚到那条。
+     不新造数据源 —— 直接读 #hMsgs 里现成的 .h-msg.me 气泡，所以历史载入、
+     新消息、切对话全都自动跟上，只需在各变更点调 railSync()。 */
+  function railItems(){
+    var box=$('#hMsgs');if(!box)return [];
+    var nodes=[].slice.call(box.children).filter(function(n){return n.classList&&n.classList.contains('h-msg')});
+    var out=[];
+    for(var i=0;i<nodes.length;i++){
+      if(!nodes[i].classList.contains('me'))continue;               /* 只给用户提问立杠 */
+      var qb=nodes[i].querySelector('.bub'),q=qb?qb.textContent||'':'';
+      var a='';
+      for(var j=i+1;j<nodes.length&&!nodes[j].classList.contains('me');j++){
+        var ab=nodes[j].querySelector('.bub');if(ab){a=ab.textContent||'';break}
+      }
+      out.push({el:nodes[i],q:q,a:a});
+    }
+    return out;
+  }
+  function railPreview(it,btn){
+    var p=$('#hRailPreview');if(!p)return;
+    p.innerHTML='<div class="hr-p-q">'+hEsc(it.q||'（空）')+'</div>'
+      +(it.a?'<div class="hr-p-a">'+hEsc(it.a)+'</div>':'');
+    p.hidden=false;
+    var rail=$('#hRail'),rb=rail.getBoundingClientRect(),bb=btn.getBoundingClientRect();
+    var top=bb.top-rb.top+bb.height/2-26;
+    top=Math.max(0,Math.min(top,rb.height-60));
+    p.style.top=top+'px';
+  }
+  function railHidePreview(){var p=$('#hRailPreview');if(p)p.hidden=true}
+  function railMarkActive(){
+    var rail=$('#hRail'),marks=$('#hRailMarks');if(!rail||rail.hidden||!marks)return;
+    var items=railItems(),btns=marks.querySelectorAll('.hr-mark');
+    if(!btns.length)return;
+    var box=$('#hMsgs');if(!box)return;
+    var br=box.getBoundingClientRect(),mid=br.top+br.height/2,active=0;
+    items.forEach(function(it,i){if(it.el.getBoundingClientRect().top<=mid)active=i});
+    for(var i=0;i<btns.length;i++)btns[i].classList.toggle('on',i===active);
+    var sc=rail.querySelector('.h-rail-scroller'),b=btns[active];
+    if(sc&&b){var bt=b.offsetTop,bb=bt+b.offsetHeight,st=sc.scrollTop,sh=sc.clientHeight;
+      if(bt<st+24)sc.scrollTop=bt-24;else if(bb>st+sh-24)sc.scrollTop=bb-sh+24}
+  }
+  function railSync(){
+    var rail=$('#hRail'),marks=$('#hRailMarks');if(!rail||!marks)return;
+    var items=railItems();
+    if(items.length<2){rail.hidden=true;return}                     /* 少于 2 条提问不显示（同 DSH） */
+    rail.hidden=false;
+    var frag=document.createDocumentFragment();
+    items.forEach(function(it,idx){
+      var b=document.createElement('button');
+      b.type='button';b.className='hr-mark';b.dataset.i=idx;
+      b.setAttribute('aria-label','跳到第 '+(idx+1)+' 条提问：'+it.q.slice(0,30));
+      b.addEventListener('pointerenter',function(){railPreview(it,b)});
+      b.addEventListener('focus',function(){railPreview(it,b)});
+      b.addEventListener('pointerleave',railHidePreview);
+      b.addEventListener('blur',railHidePreview);
+      b.addEventListener('click',function(){
+        if(it.el&&it.el.scrollIntoView)it.el.scrollIntoView({block:'center',behavior:'smooth'});
+      });
+      frag.appendChild(b);
+    });
+    marks.innerHTML='';marks.appendChild(frag);
+    railMarkActive();
+  }
+  window.__railSync=railSync;
+  (function bindRailScroll(){
+    var box=$('#hMsgs');if(!box)return;
+    var raf=null;
+    box.addEventListener('scroll',function(){
+      if(raf)return;
+      raf=requestAnimationFrame(function(){raf=null;railMarkActive()});
+    },{passive:true});
+  })();
+
   /* 给验证脚本用：时间格式是纯函数，导出后能直接喂各种脏数据 */
   window.__fmtWhen=fmtWhen;window.__parseWhen=parseWhen;
 
@@ -2739,6 +2859,7 @@ body.rws-dragging *{cursor:col-resize !important}
       var card=document.querySelector('.h-ai');
       if(card)card.classList.toggle('chatting',!!(c.messages||[]).length);
       box.scrollTop=box.scrollHeight;
+      try{window.__railSync&&window.__railSync()}catch(e){}
       if(window.__convSetCurrent)window.__convSetCurrent(c.id);
       try{ localStorage.setItem('riffcut.lastConv',c.id) }catch(e){}
       document.title=(c.title||'对话')+' · RiffCut';
@@ -2882,6 +3003,7 @@ body.rws-dragging *{cursor:col-resize !important}
     /* 开新对话：把建会话的锁和排队一起清掉，否则上一轮没结束的回调会串到新对话 */
     _convPend=null; _convWait=[];
     var box=$('#hMsgs');if(box)box.innerHTML='';
+    try{window.__railSync&&window.__railSync()}catch(e){}
     var card=document.querySelector('.h-ai');if(card)card.classList.remove('chatting');
     CONV.id='';pendingPlan=null;
     if(window.__convSetCurrent)window.__convSetCurrent('');
@@ -2901,6 +3023,7 @@ body.rws-dragging *{cursor:col-resize !important}
   if(clearBtn)clearBtn.addEventListener('click',function(){
     abortChat();                       /* 清空前先中断，免得旧回复又冒出来 */
     var box=$('#hMsgs');if(box)box.innerHTML='';
+    try{window.__railSync&&window.__railSync()}catch(e){}
     var card=document.querySelector('.h-ai');if(card)card.classList.remove('chatting');
     /* 清空 = 开一个新对话；旧对话仍留在存档里，去「AI 导演」按客户查看 */
     CONV.id='';
