@@ -274,7 +274,11 @@ async function chat(body) {
           + '\n\n【用户刚才说】\n' + text
       }
     }
-    await k.prompt(sid, full)
+    /* ★ 用 promptSafely 而不是 prompt：会话 id 在 home/sessions 里已经存在时
+       （用户重开软件、或切回旧对话），裸 prompt 会走 agents.create() 抛
+       `session "conv-xxx" already exists`，界面显示「这一轮收尾不完整」且每句都失败。
+       promptSafely 先 resume 再发，旧对话能正常接着聊。 */
+    await k.promptSafely(sid, full)
     await k.wait(sid, 30 * 60 * 1000)
     // 等 idle 之后管道里可能还压着收尾文本，给它一点时间落地
     await new Promise((r) => setTimeout(r, 600))

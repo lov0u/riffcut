@@ -153,11 +153,43 @@ class Kernel extends EventEmitter {
   }
 
   /** 提交一句话，返回 {messageId}（消息收据，不阻塞）。 */
-  prompt(sessionId, text) {
+  async prompt(sessionId, text) {
     return this.call('session/prompt', {
       sessionId,
       contentBlocks: [{ type: 'text', text }],
     })
+  }
+
+  /** 恢复一个已经存在的内核会话。
+   *  ★ 2026-11-20 实测的坑：`session/prompt` 在会话首次出现时走
+   *    getOrCreateSession → openSession(sid, false) → agents.create()，
+   *    而 agents.create() 内部是 sessionStore.prepare(id)，**id 已存在就抛**
+   *    `session "xxx" already exists`。
+   *    但会话是持久化到 home/sessions 的 —— 用户重开软件、或者切回一个
+   *    旧对话，这个 id 天然就已经存在了。于是界面报
+   *    「这一轮收尾不完整：内核出错：session "conv-xxx" already exists」，
+   *    而且每一句都失败、无法自愈（只能手动点「新会话」绕开）。
+   *    正确路径是先 `session/resume`（它走 agents.resume() 读盘恢复），
+   *    再 prompt。这里由 promptSafely 自动做这件事。 */
+  resume(sessionId) {
+    return this.call('session/resume', { sessionId }, INIT_TIMEOUT)
+  }
+
+  /** 发话；会话已在盘上就自动 resume 后再发。
+   *  只对「already exists / already open」这一类可恢复错误兜底，
+   *  其它错误照样抛给上层 —— 不吞真错。 */
+  async promptSafely(sessionId, text) {
+    try {
+      await this.resume(sessionId)
+    } catch (e) {
+      const m = String(e && e.message || '')
+      /* 「already open」说明内核里这个会话还活着，直接发就行；
+         其它 resume 失败（会话真不存在）也不影响后面的 prompt —— 那次会新建。 */
+      if (!/already open|already exists|unknown SDK session/i.test(m)) {
+        if (this.debug) this.emit('log', '[kernel] resume 失败（继续尝试 prompt）: ' + m)
+      }
+    }
+    return this.prompt(sessionId, text)
   }
 
   /** 阻塞到这一轮彻底 idle（含子智能体）。 */
