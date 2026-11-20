@@ -133,6 +133,13 @@ function templatePage(project, rest, auto) {
   }
   if (!full || !fs.existsSync(full)) return new Response('no template: ' + rel, { status: 404 })
 
+  // ★ 模板的配套资源（assets/rmark.png、lib/gsap.min.js、字体等）走的是同一个
+  //   /edt/<工程>/assets/xxx 路由。它们是二进制文件，绝不能当 HTML 用 utf8 读出来
+  //   ——否则浏览器拿到一份乱码 text/html，图片 naturalWidth=0 全部裂成小图标。
+  //   只有 .html 才做下面的 GSAP 替换 + 自动播放注入；其余按真实 MIME 直接回文件。
+  //   这是所有带图片的模板在剪辑台预览都会裂的通用根因，不只影创 logo 这一例。
+  if (path.extname(full).toLowerCase() !== '.html') return fileResponse(full)
+
   let html = ''
   try { html = fs.readFileSync(full, 'utf8') } catch (e) {
     return new Response('template unreadable: ' + e.message, { status: 500 })
