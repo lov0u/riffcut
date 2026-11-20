@@ -432,15 +432,71 @@ function seedHomeIfEmpty() {
     }
   }
   /* 单文件铺底：AGENTS.md 这类放在 seed-home 根下的产品文件 */
-  for (const f of SEED_FILES) {
-    const src = join(seedRoot, f)
-    const dst = join(HOME, f)
-    if (!existsSync(src) || existsSync(dst)) continue
-    try { copyFileSync(src, dst); console.log('[main] 铺 ' + f) } catch (e) {
-      console.error('[main] 铺 ' + f + ' 失败: ' + e.message)
+  for (const f of SEED_FILES) syncSeedFile(seedRoot, f)
+  linkBigModels(seedRoot)
+}
+
+/** 产品文件（AGENTS.md）跟随版本更新，但不碰用户改过的那份。
+ *
+ *  ★ 为什么不能沿用「存在就跳过」（2026-11-20 实测踩到）：
+ *    提示词是我改频率最高的东西，一版改完，用户目录里那份还是上一个版本，
+ *    内核读的就是旧提示词 —— 表现是「代码明明改了，软件行为没变」。
+ *    同步文件时用 `existsSync(dst) continue` 会把这个坑藏得很深。
+ *
+ *  ★ 为什么不能无条件覆盖：这是用户唯一能自己调教 AI 的地方。
+ *    他把「别叫我老板」写进去，升级一次就没了，他只会觉得这软件不可控。
+ *
+ *  折中：记住「上一次我们从包里铺进去的那份」的哈希（存在 .seed-state.json）。
+ *    - 当前文件和记录一致 → 用户没动过 → 用新版覆盖，并更新记录
+ *    - 当前文件和记录不一致 → 用户改过 → 保留原文件，只在日志里说一声
+ *    - 没有记录（首次铺 / 老版本升上来）→ 当作「用户没动过」，覆盖并建立记录
+ *      这一条是给老用户补票的：他们的文件是旧版本铺的，没有记录，
+ *      不覆盖就永远停在旧提示词上。 */
+const SEED_STATE = '.seed-state.json'
+
+function readSeedState() {
+  const { readFileSync } = require('node:fs')
+  try { return JSON.parse(readFileSync(join(HOME, SEED_STATE), 'utf8')) || {} } catch (e) { return {} }
+}
+
+function syncSeedFile(seedRoot, name) {
+  const { readFileSync, writeFileSync, existsSync, copyFileSync } = require('node:fs')
+  const { createHash } = require('node:crypto')
+  const src = join(seedRoot, name)
+  const dst = join(HOME, name)
+  if (!existsSync(src)) return
+  const h = (buf) => createHash('sha256').update(buf).digest('hex')
+  let srcBuf, srcHash
+  try { srcBuf = readFileSync(src); srcHash = h(srcBuf) } catch (e) { return }
+
+  const state = readSeedState()
+  const known = state[name] || ''
+
+  if (existsSync(dst)) {
+    let curHash
+    try { curHash = h(readFileSync(dst)) } catch (e) { return }
+    if (curHash === srcHash) {                       /* 已经是新版，无事可做 */
+      if (known !== srcHash) { state[name] = srcHash; saveSeedState(state) }
+      return
+    }
+    if (known && curHash !== known) {                /* 用户改过，保留 */
+      console.log('[main] ' + name + ' 你改过，保留你的版本（包内有新版未覆盖）')
+      return
     }
   }
-  linkBigModels(seedRoot)
+  try {
+    copyFileSync(src, dst)
+    state[name] = srcHash
+    saveSeedState(state)
+    console.log('[main] 铺 ' + name)
+  } catch (e) {
+    console.error('[main] 铺 ' + name + ' 失败: ' + e.message)
+  }
+}
+
+function saveSeedState(state) {
+  const { writeFileSync } = require('node:fs')
+  try { writeFileSync(join(HOME, SEED_STATE), JSON.stringify(state, null, 2) + '\n') } catch (e) { /* 记不下不影响功能 */ }
 }
 
 /** 本地模型权重（语音识别 241MB、情感配音 1.5GB）不要复制进用户数据目录。
