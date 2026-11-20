@@ -2645,9 +2645,9 @@ body.rws-dragging *{cursor:col-resize !important}
        · 点侧栏条目 → 载入那条对话的历史消息到 #hMsgs
        · 首页每次发言 → 广播 riffcut-conv-saved，侧栏列表跟着刷新
      注意：载入历史时必须把 CONV.id 换成被点的那条，否则接着聊会写进旧对话。 */
-  function convLoad(cid){
+  function convLoad(cid, quiet){
     if(!cid)return Promise.resolve();
-    return window.api('/api/conversations',{action:'get',id:cid}).then(function(d){
+    return window.api('/api/conversations',{action:'get',id:cid}, quiet?{quiet:true}:undefined).then(function(d){
       var c=d;if(!c)return;            /* window.api 已解到 data 层，别再多套 .data */
       CONV.id=c.id;
       /* ★ 切到哪条对话，就用哪条的存档重建上下文 —— 不然会带着上一条对话的记忆，
@@ -2711,7 +2711,12 @@ body.rws-dragging *{cursor:col-resize !important}
         setSending(true);
         pollSteps(run.stepId,fw);
       }
-    }).catch(function(){window.say('这条对话读不出来')});
+    }).catch(function(e){
+      /* quiet：静默恢复专用，不弹提示；其它入口（用户主动点开对话）仍然提示。
+         无论哪种都把错误抛出去 —— restoreLastConv 要靠这个 catch 清掉失效的 lastConv。 */
+      if(!quiet)window.say('这条对话读不出来');
+      throw e;
+    });
   }
   window.__convLoad=convLoad;
 
@@ -2805,7 +2810,9 @@ body.rws-dragging *{cursor:col-resize !important}
 
   /* 侧栏点条目 → 这里接住 */
   document.addEventListener('riffcut-open-conv',function(e){
-    convLoad(e.detail&&e.detail.id);
+    /* convLoad 失败时会抛（好让启动恢复清 lastConv），这里主动点开的补个空 catch，
+       别让未捕获 rejection 冒到控制台；提示已在 convLoad 内弹过。 */
+    convLoad(e.detail&&e.detail.id).catch(function(){});
   });
 
   /* 侧栏点「新建会话」→ 清空当前对话（旧的那条仍在存档里，随时能点回来） */
@@ -2832,8 +2839,18 @@ body.rws-dragging *{cursor:col-resize !important}
   (function restoreLastConv(){
     var last='';
     try{ last=localStorage.getItem('riffcut.lastConv')||'' }catch(e){}
-    if(!last||!window.api)return;
-    setTimeout(function(){
+    if(!last)return;
+    /* ★ 首页脚本比 shell 里定义 window.api 的那段先执行 —— 原来这里
+       `if(!window.api)return` 直接退出，恢复逻辑从来没真正跑过，
+       失效的对话 id 也就一直留在 localStorage 里。改成等 api 挂上来。 */
+    var apiTries=0;
+    (function waitApi(){
+      if(!window.api){
+        if(apiTries++<40)return setTimeout(waitApi,200);  /* 最多等 8 秒 */
+        try{ localStorage.removeItem('riffcut.lastConv') }catch(e){}
+        return;
+      }
+      setTimeout(function(){
       /* ★ 用户已经动手了（发过消息 / 已经有对话 id / 消息区非空）就不要恢复。
          以前这里无条件 convLoad，而 convLoad 第一件事是 box.innerHTML='' 再按存档重建：
          用户启动后马上打字发送 → 先渲染一条，260ms 后恢复逻辑又把存档里的同一条重建一遍，
@@ -2845,10 +2862,13 @@ body.rws-dragging *{cursor:col-resize !important}
         if(box&&box.querySelector('.h-msg'))return;          /* 已经有消息了 */
         if(chatCtrl||document.querySelector('.bub.pending'))return;  /* 正在发 */
       }catch(e){}
-      convLoad(last).catch(function(){
+      /* quiet=true：这条对话可能已被删（用户手动删/清空），静默失败并清掉记录，
+         不要弹「找不到这个对话」红条 —— 重开软件看到这个只会以为软件坏了。 */
+      convLoad(last, true).catch(function(){
         try{ localStorage.removeItem('riffcut.lastConv') }catch(e){}
       });
-    },260);
+      },260);
+    })();
   })();
   /* 清空对话：删掉所有消息并恢复吉祥物欢迎区 */
   var clearBtn=$('#hChatClear');

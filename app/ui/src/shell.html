@@ -1315,7 +1315,9 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
            顺手复查一次，页眉告警自己就挂上去，用户不用等下一次点导出再撞一次。 */
          if(window.checkFfmpeg&&/ffmpeg|ffprobe/i.test(e.message)){
            window.checkFfmpeg({ok:false,ffmpeg:e.message,path:''});
-         } else {
+         } else if(!extra.quiet) {
+           /* extra.quiet：启动恢复这类"试一下、失败就算了"的静默探测专用。
+              重开软件自动载入上次对话，而那条对话可能已经被删了 —— 这不值得弹红条吓人。 */
            window.say(e.message);
          }
          throw e;
