@@ -121,6 +121,8 @@
 .ed-tl-h .zoom{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink3)}
 .ed-tl-h input[type=range]{width:80px}
 .ed-scroll{flex:0 1 auto;overflow:auto;position:relative;scrollbar-width:thin;
+  /* 轨道名列宽：拖右边缘的手柄可改。JS 的 LANE_W 必须跟这个值同步。 */
+  --lane-w:96px;
   /* 至少完整显示刻度 + 四条轨（20 + 4×32 = 148），否则音频轨会被切掉一半，
      看着像界面断了。轨道更多时才出现滚动条。 */
   min-height:148px;max-height:min(46vh,360px)}
@@ -130,9 +132,19 @@
 .ed-ruler .tk{position:absolute;top:0;height:100%;border-left:1px solid #E8ECF3;
   font-size:10.5px;color:#9AA2B1;padding-left:3px;line-height:20px;white-space:nowrap}
 .ed-lane{display:flex;align-items:stretch;border-bottom:1px solid #F1F4F8;min-height:32px}
-.ed-lane-lb{flex:0 0 62px;position:sticky;left:0;z-index:2;background:#FBFCFE;
-  border-right:1px solid var(--line);display:flex;align-items:center;gap:4px;
+/* 轨道名列加宽到 116px：把「加片段 / 锁 / 静音 / 删除」都集成在这一栏，
+   不用再跑到上面工具栏找。原来 62px 塞不下，红叉 hover 时被挤没了。 */
+.ed-lane-lb{flex:0 0 var(--lane-w,96px);position:sticky;left:0;z-index:2;background:#FBFCFE;
+  border-right:1px solid var(--line);display:flex;align-items:center;gap:3px;
   padding:0 6px;font-size:10.5px;color:var(--ink3);white-space:nowrap;overflow:hidden}
+/* 轨道名栏右边缘的拖拽手柄：往左拖只留图标、往右拖显示文字。
+   每条轨道栏右缘各有一个，视觉上连成一条竖线；拖任意一个都改同一个宽度。 */
+.ed-lane-lb .lb-resize{position:absolute;right:0;top:0;bottom:0;width:7px;
+  cursor:col-resize;z-index:6;background:transparent}
+.ed-lane-lb .lb-resize:hover,.ed-lane-lb .lb-resize.on{background:rgba(27,139,126,.4)}
+/* 窄栏（<100px）时把轨道名藏掉，只留图标和按钮——这样内容区不会被挤没。 */
+.ed-scroll.narrow .ed-lane-lb .lb-nm{display:none}
+.ed-scroll.narrow .ed-lane-lb{gap:2px;padding:0 4px}
 .ed-lane-lb .ic{width:11px;height:11px;flex:0 0 auto}
 .ed-lane-b{flex:1 1 auto;position:relative;min-height:32px}
 .ed-cl{position:absolute;top:3px;height:30px;border-radius:4px;overflow:hidden;
@@ -322,14 +334,16 @@
 .ed-cl .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 /* 轨道名那一列：锁 / 静音 / 删除，默认藏起来，hover 轨道才出现，省地方。 */
 .ed-lane-lb .lb-nm{flex:1;overflow:hidden;text-overflow:ellipsis}
-.ed-lane-lb .lb-t{width:16px;height:16px;flex:0 0 auto;border:0;border-radius:4px;
-  padding:0;display:none;place-items:center;cursor:pointer;color:var(--ink3);
-  background:transparent;font-size:11px;line-height:1}
-.ed-lane:hover .ed-lane-lb .lb-t,.ed-lane-lb .lb-t.on{display:grid}
+.ed-lane-lb .lb-t{width:18px;height:18px;flex:0 0 auto;border:0;border-radius:4px;
+  padding:0;display:grid;place-items:center;cursor:pointer;color:var(--ink3);
+  background:transparent;font-size:12px;line-height:1}
 .ed-lane-lb .lb-t:hover{background:rgba(27,139,126,.16);color:#12705F}
-/* 轨道删除 × 常显：用户加了多条轨道后找不到删按钮（锁/静音可继续 hover 才出，
-   只有删除常驻），颜色压低一点不抢轨道名。 */
-.ed-lane-lb .lb-del{display:grid;color:#A8634F}
+/* 加片段按钮：常显，绿底，靠它给这条轨放素材/字幕/声音 */
+.ed-lane-lb .lb-add{color:#12705F;background:rgba(27,139,126,.10);font-size:14px;font-weight:600}
+.ed-lane-lb .lb-add:hover{background:rgba(27,139,126,.24)}
+.ed-lane.locked .ed-lane-lb .lb-add{opacity:.35;pointer-events:none}
+/* 删除常显但颜色压低，不抢轨道名 */
+.ed-lane-lb .lb-del{color:#A8634F}
 .ed-lane-lb .lb-del:hover{background:rgba(168,99,79,.18);color:#8E3524}
 .ed-lane.locked .ed-lane-b{opacity:.55}
 .ed-lane.locked .ed-cl{cursor:not-allowed}
@@ -441,7 +455,7 @@
         <div class="ed-inner" id="edInner">
           <div class="ed-ruler" id="edRuler"></div>
           <div id="edLanes"></div>
-          <div class="ed-play" id="edPlay" style="left:62px"></div>
+          <div class="ed-play" id="edPlay" style="left:116px"></div>
         </div>
       </div>
     </div>
@@ -603,6 +617,9 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   if(o.value)say('用预设「'+(o.textContent||'').split(' · ')[0]+'」出片');
 });
 
+  /* 轨道名列宽（px）。CSS .ed-lane-lb 的 flex-basis 与这里必须一致：
+     时间刻度、播放头、滚轮定位都按它算偏移。加宽是为了把「＋/锁/静音/删除」集成进轨道栏。 */
+  var LANE_W=96;
   var ED={proj:null,data:null,assets:[],sel:null,pps:60,zoom:1,t:0,playing:false,dirty:false,
           compose:null,layers:{},kf:{track:null,i:null,prop:'x'},pvScale:1};
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -769,7 +786,10 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
        这样 12 秒的工程也铺满整条，不会右边留一大片空白；
        拉滑块只是在这个基准上放大缩小，不会一进来就半屏空着。 */
     var sc=$('#edScroll');
-    var visW=Math.max(400,((sc&&sc.clientWidth)||600)-62);
+    /* 轨道名栏宽窄同步到 CSS：拖手柄改了 LANE_W 后，这里让每栏跟上；
+       窄于 104px 收起轨道名只留图标+按钮，时间线内容就不会被挤没。 */
+    if(sc){sc.style.setProperty('--lane-w',LANE_W+'px');sc.classList.toggle('narrow',LANE_W<104)}
+    var visW=Math.max(400,((sc&&sc.clientWidth)||600)-LANE_W);
     var base=visW/dur;                       /* 铺满所需的 pps */
     ED.pps=Math.max(4, base*(ED.zoom||1));
     var wpx=Math.max(dur*ED.pps, visW);
@@ -782,9 +802,9 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     /* 刻度要跟片段对齐：轨道名那列占 62px，所以 tick 和 ruler 宽度都要加这 62。
        原来 tick 从 0 画、clip 从 62 画，00:00 跟片段差一整格，看着很别扭。 */
     for(var s2=0;s2<=visSec;s2+=step){
-      r+='<div class="tk" style="left:'+(62+s2*ED.pps)+'px">'+fmt(s2)+'</div>';
+      r+='<div class="tk" style="left:'+(LANE_W+s2*ED.pps)+'px">'+fmt(s2)+'</div>';
     }
-    ruler.innerHTML=r;ruler.style.width=(wpx+62)+'px';
+    ruler.innerHTML=r;ruler.style.width=(wpx+LANE_W)+'px';
     var laneIc={video:'#i-film',graphics:'#i-grid',text:'#i-text',audio:'#i-vol'};
     lanes.innerHTML=(ED.data.tracks||[]).map(function(tr){
       var clips=(tr.clips||[]).map(function(c,ci){
@@ -806,10 +826,12 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       var lb=(tr.locked?' lk':'')+(tr.mute?' mu':'');
       return '<div class="ed-lane'+lb+'" data-tr="'+esc(tr.id)+'">'+
         '<div class="ed-lane-lb"><svg class="ic"><use href="'+(laneIc[tr.kind]||'#i-list')+'"/></svg>'+
-        '<span class="lb-nm">'+esc(tr.name||tr.id)+'</span>'+
+        '<span class="lb-nm" title="'+esc(tr.name||tr.id)+'">'+esc(tr.name||tr.id)+'</span>'+
+        '<button class="lb-t lb-add" data-track-act="add" title="'+(tr.kind==='text'?'在这条轨加一段文字':tr.kind==='audio'?'导入音频到这条轨':'导入素材到这条轨')+'">＋</button>'+
         '<button class="lb-t'+(tr.locked?' on':'')+'" data-track-act="lock" title="锁定 / 解锁这条轨道">'+(tr.locked?'🔒':'🔓')+'</button>'+
-        '<button class="lb-t'+(tr.mute?' on':'')+'" data-track-act="mute" title="静音 / 取消静音">'+(tr.mute?'🔇':'♪')+'</button>'+
+        (tr.kind==='audio'?'<button class="lb-t'+(tr.mute?' on':'')+'" data-track-act="mute" title="静音 / 取消静音">'+(tr.mute?'🔇':'♪')+'</button>':'')+
         '<button class="lb-t lb-del" data-track-act="del" title="删除这条轨道">×</button>'+
+        '<span class="lb-resize" title="拖动改这一栏宽窄"></span>'+
         '</div>'+
         '<div class="ed-lane-b" data-tr="'+esc(tr.id)+'" data-kind="'+esc(tr.kind)+'">'+
         '<div class="ed-drop"></div>'+clips+'</div></div>';
@@ -826,7 +848,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   function edTime(){
     var t=Math.max(0,ED.t||0),dur=ED.data?edDuration():0;
     var el=$('#edTime');if(el)el.textContent=fmt(t)+' / '+fmt(dur);
-    var ph=$('#edPlay');if(ph)ph.style.left=(62+t*ED.pps)+'px';
+    var ph=$('#edPlay');if(ph)ph.style.left=(LANE_W+t*ED.pps)+'px';
   }
 
   /* ── 属性面板 ── */
@@ -1142,6 +1164,16 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   /* ── 拖拽 ── */
   var drag=null;
   document.addEventListener('mousedown',function(e){
+    /* 拖轨道名栏右缘的手柄 = 改这一栏宽窄。往左拖到 <100px 只留图标，
+       往右拖宽了显示轨道名。宽窄只影响界面，不改工程数据。 */
+    var rz=e.target.closest&&e.target.closest('.lb-resize');
+    if(rz){
+      e.preventDefault();e.stopPropagation();
+      var sc0=$('#edScroll');
+      drag={mode:'lanew',x0:e.clientX,w0:LANE_W,el:rz};
+      rz.classList.add('on');
+      return;
+    }
     /* 点菱形 = 播放头跳到这一帧，不启动片段拖拽 */
     var kf=e.target.closest&&e.target.closest('.ed-kf');
     if(kf){
@@ -1163,6 +1195,15 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     var c=edClipAt(tr,i);if(!c)return;
     if(c.locked){say('这个片段锁住了');return}
     ED.sel={track:tr,i:i};edLanes();edInsp();
+    /* 双击文字片段 = 直接把光标放进右侧文字框。
+       ★ 不能靠 dblclick 事件：上面 edLanes() 每次点击都全量重建时间线 DOM，
+       两次点击落在不同节点上，浏览器不会再派发 dblclick —— 这就是
+       用户说的「带着双击编辑但没用」。改用 mousedown 的 detail>=2 判定，
+       并且这次不 preventDefault、不进拖拽，焦点才能落到输入框。 */
+    if(e.detail>=2&&c.type==='text'){
+      var ft=$('#fText');if(ft){ft.focus();ft.select();say('直接改文字，改完点别处就存上了')}
+      return;
+    }
     var mode='move';
     if(e.target.classList.contains('h'))mode=e.target.classList.contains('l')?'left':'right';
     drag={mode:mode,c:c,x0:e.clientX,start0:+c.start||0,
@@ -1171,6 +1212,15 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   });
   document.addEventListener('mousemove',function(e){
     if(!drag)return;
+    if(drag.mode==='lanew'){
+      /* 拖轨道名栏宽窄：56~200px。同步 CSS 变量 + JS 常量，再重画刻度/播放头。
+         这里不调 edLanes()（会连手柄一起重建、丢掉 drag.el），只更新宽度并重画时间线。 */
+      LANE_W=Math.max(56,Math.min(200,Math.round(drag.w0+(e.clientX-drag.x0))));
+      var scx=$('#edScroll');
+      if(scx){scx.style.setProperty('--lane-w',LANE_W+'px');scx.classList.toggle('narrow',LANE_W<104)}
+      edLanes();
+      return;
+    }
     var dx=(e.clientX-drag.x0)/ED.pps;
     if(drag.mode==='move'){
       drag.c.start=Math.max(0,Math.round((drag.start0+dx)*100)/100);
@@ -1240,6 +1290,58 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     var act=b.getAttribute('data-track-act');
     if(act==='lock')tr.locked=!tr.locked;
     else if(act==='mute')tr.mute=!tr.mute;
+    else if(act==='add'){
+      /* 轨道栏的＋：按轨类型加东西。文字轨直接插可编辑字幕；
+         音视频/图形轨先给素材池里挑，池里没有就调系统文件对话框导入。 */
+      if(tr.locked){say('这条轨道锁住了，先解锁');return}
+      if(tr.kind==='text'){edAddTextAt(tr);return}
+      var want=(tr.kind==='audio')?'audio':(tr.kind==='graphics'?'image':'video');
+      var pool=(ED.assets||[]).filter(function(a){return a.kind===want});
+      var pick=function(a){
+        var c={id:'c'+Date.now(),src:a.src,in:0,out:a.duration||5,volume:1,speed:1};
+        c.type=(want==='image')?'image':want;
+        edPush(tr.id,c);
+        say('已加「'+(a.name||a.src.split('/').pop())+'」到这条轨');
+      };
+      if(pool.length){
+        var html='<div style="max-height:260px;overflow:auto">'+
+          pool.map(function(a,i){return '<div class="ed-as '+esc(a.kind)+'" data-pool="'+i+'" style="cursor:pointer">'+
+            '<svg class="ic"><use href="#i-'+(a.kind==='image'?'image':a.kind==='audio'?'vol':'film')+'"/></svg>'+
+            '<span class="nm">'+esc(a.name||a.src.split('/').pop())+'</span>'+
+            '<span class="du">'+Math.round(a.duration||0)+'s</span></div>'}).join('')+'</div>';
+        if(window.confirmAction){
+          var closePick=function(){
+            var m=document.getElementById('mConfirmModal');if(m)m.classList.remove('open');
+            document.body.classList.remove('modal-open');
+            document.removeEventListener('click',onPick);
+          };
+          var onPick=function(ev){
+            var it=ev.target.closest&&ev.target.closest('[data-pool]');if(!it)return;
+            pick(pool[+it.getAttribute('data-pool')]);closePick();
+          };
+          window.confirmAction({title:'选素材加到'+(tr.name||tr.kind)+'轨',
+            html:html+'<div style="font-size:11px;color:#8A92A2;margin-top:6px">点一条直接加到轨道上</div>',
+            okText:'取消',onOk:function(){}});
+          document.addEventListener('click',onPick);
+        } else { pick(pool[0]); }
+        return;
+      }
+      // 池里没有 → 弹系统文件对话框导入，导完自动落到这条轨
+      if(window.riffcut&&window.riffcut.pickFiles){
+        window.riffcut.pickFiles().then(function(r){
+          if(!r||!r.ok||!r.files||!r.files.length){if(r&&!r.canceled)say('没选到文件');return}
+          var f=r.files[0];
+          window.api('/api/edit',{action:'import',project:ED.proj,path:f}).then(function(j){
+            if(!j||!j.ok){say('导入失败：'+((j&&j.error)||'未知错误'));return}
+            var a=j.asset||{};
+            var c={id:'c'+Date.now(),src:a.src||f,in:0,out:a.duration||5,volume:1,speed:1,
+              type:(a.kind===want?want:(want==='image'?'image':want))};
+            edPush(tr.id,c);say('已导入并加到这条轨');
+          }).catch(function(err){say('导入失败：'+(err&&err.message||err))});
+        });
+      } else { say('这台机器没有文件选择通道，先把素材拖进来'); }
+      return;
+    }
     else if(act==='del'){
       if((ED.data.tracks||[]).length<=1){say('至少留一条轨道');return}
       var n=(tr.clips||[]).length;
@@ -1260,12 +1362,14 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   $('#edAddABtn')&&$('#edAddABtn').addEventListener('click',function(){edAddTrack('audio')});
   /* ＋文字：直接在播放头位置插一段可编辑的字幕。
      以前只能「＋字幕轨」加一条空轨，用户不知道怎么往里放字——现在一键就有字，
-     插完自动选中并把右侧属性面板的文本框聚焦，改完内容即时反映到时间线和预览。 */
-  $('#edAddTextBtn')&&$('#edAddTextBtn').addEventListener('click',function(){
+     插完自动选中并把右侧属性面板的文本框聚焦，改完内容即时反映到时间线和预览。
+     targetTr：可指定插到哪条轨（轨道栏的＋用）；不传就找/建第一条文字轨。 */
+  function edAddTextAt(targetTr){
     if(!ED.data){say('先选一个工程');return}
     ED.data.tracks=ED.data.tracks||[];
-    var tr=(ED.data.tracks||[]).filter(function(x){return x.kind==='text'})[0];
+    var tr=targetTr||(ED.data.tracks||[]).filter(function(x){return x.kind==='text'})[0];
     if(!tr){tr={id:'t'+Date.now().toString().slice(-5),kind:'text',name:'字幕',clips:[]};ED.data.tracks.push(tr)}
+    if(tr.locked){say('这条轨道锁住了，先解锁');return}
     var c={id:'c'+Date.now(),type:'text',text:'双击修改文字',start:Math.round((ED.t||0)*100)/100,
       duration:3,size:64,color:'#FFFFFF',weight:700};
     tr.clips=tr.clips||[];tr.clips.push(c);
@@ -1273,7 +1377,8 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     edDirty();edLanes();edInsp();edPreview();
     var ft=$('#fText');if(ft){ft.focus();ft.select()}
     say('已加一段文字，在右侧改内容');
-  });
+  }
+  $('#edAddTextBtn')&&$('#edAddTextBtn').addEventListener('click',function(){edAddTextAt()});
   /* 双击时间线上的文字片段 = 直接聚焦右侧文字框，改字不用先找面板。 */
   document.addEventListener('dblclick',function(e){
     var cl=e.target.closest&&e.target.closest('.ed-cl');if(!cl||!ED.data)return;
@@ -1605,7 +1710,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     if(!ED.data)return;
     var r=$('#edRuler');if(!r)return;
     var box=r.getBoundingClientRect();
-    var mouseSec=(e.clientX-box.left-62)/ED.pps;      /* 鼠标下的秒数 */
+    var mouseSec=(e.clientX-box.left-LANE_W)/ED.pps;      /* 鼠标下的秒数 */
     var old=ED.zoom;
     var next=old*(e.deltaY<0?1.12:0.89);              /* 上滚放大、下滚缩小 */
     next=Math.max(0.5,Math.min(4,next));
@@ -1614,12 +1719,12 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     var viewX=e.clientX-sc.getBoundingClientRect().left;  /* 鼠标在滚动容器里的视口位置 */
     edZoomSet(next);
     /* 缩放后让鼠标下那一点保持在原来的屏幕位置 */
-    sc.scrollLeft=Math.max(0,62+mouseSec*ED.pps-viewX);
+    sc.scrollLeft=Math.max(0,LANE_W+mouseSec*ED.pps-viewX);
   },{passive:false});
   if(sc)sc.addEventListener('click',function(e){
     var r=$('#edRuler');if(!r||!r.contains(e.target))return;
     var box=r.getBoundingClientRect();
-    ED.t=Math.max(0,(e.clientX-box.left-62)/ED.pps);   /* 62 = 轨道名列宽 */
+    ED.t=Math.max(0,(e.clientX-box.left-LANE_W)/ED.pps);   /* LANE_W = 轨道名列宽 */
     edTime();edPreview();edInsp();
   });
   /* 播放头可以直接拖 —— 剪映里最常用的是「抓着红线扫一遍看哪帧要打点」。 */
@@ -1631,7 +1736,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     if(!headDrag)return;
     var r=$('#edRuler');if(!r)return;
     var box=r.getBoundingClientRect();
-    ED.t=Math.max(0,Math.min(ED.data?edDuration():999,(e.clientX-box.left-62)/ED.pps));
+    ED.t=Math.max(0,Math.min(ED.data?edDuration():999,(e.clientX-box.left-LANE_W)/ED.pps));
     edTime();edPreview();
   });
   document.addEventListener('mouseup',function(){
