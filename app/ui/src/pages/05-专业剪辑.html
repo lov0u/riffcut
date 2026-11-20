@@ -115,6 +115,8 @@
 .ed-tl-h{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:6px 10px;
   border-bottom:1px solid var(--line);font-size:var(--f5);color:var(--ink)}
 .ed-tl-h .u-btn{height:23px;padding:0 8px;font-size:10.5px}
+.ed-tl-h .u-btn.primary{background:#1B8B7E;color:#fff;border-color:#1B8B7E;font-weight:600}
+.ed-tl-h .u-btn.primary:hover{background:#147365;color:#fff}
 .ed-tl-h .sp{flex:1 1 auto}
 .ed-tl-h .zoom{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink3)}
 .ed-tl-h input[type=range]{width:80px}
@@ -427,10 +429,12 @@
         <button class="u-btn" id="edDupBtn" title="复制选中的片段（Ctrl/Cmd+D）">复制</button>
         <button class="u-btn danger" id="edDelBtn" title="删除选中的片段（Delete）">删除</button>
         <span class="tlsep"></span>
+        <button class="u-btn primary" id="edAddTextBtn" title="在播放头位置插入一段文字，右侧属性面板直接改内容">＋文字</button>
         <button class="u-btn" id="edAddVBtn" title="加一条视频/图形轨">＋视频轨</button>
         <button class="u-btn" id="edAddTBtn" title="加一条字幕轨">＋字幕轨</button>
         <button class="u-btn" id="edAddABtn" title="加一条音频轨">＋音频轨</button>
         <span class="sp"></span>
+        <button class="u-btn" id="edTLFitBtn" title="让整条时间线正好铺满可视宽度">适应宽度</button>
         <span class="zoom">缩放<input type="range" id="edZoom" min="50" max="400" value="100" step="10"></span>
       </div>
       <div class="ed-scroll" id="edScroll">
@@ -733,7 +737,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       }
       var sub=$('#edSub');
       if(sub&&ED.data)sub.textContent='当前工程：'+name+' · '+ED.data.width+'×'+ED.data.height
-        +' · '+fmt(ED.data.duration)+' · '+((ED.data.tracks||[]).reduce(function(a,t){return a+(t.clips||[]).length},0))+' 个片段';
+        +' · '+fmt(edDuration())+' · '+((ED.data.tracks||[]).reduce(function(a,t){return a+(t.clips||[]).length},0))+' 个片段';
       return d;
     }).catch(function(e){say('打开工程失败：'+(e&&e.message||''))});
   }
@@ -760,7 +764,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     var lanes=$('#edLanes'),ruler=$('#edRuler');
     if(!lanes)return;
     if(!ED.data){lanes.innerHTML='';ruler.innerHTML='';return}
-    var dur=Math.max(ED.data.duration||10,10);
+    var dur=edDuration();
     /* 缩放口径：pps = 让整条时间线正好铺满可视宽度的每像素秒数 × 用户倍率。
        这样 12 秒的工程也铺满整条，不会右边留一大片空白；
        拉滑块只是在这个基准上放大缩小，不会一进来就半屏空着。 */
@@ -820,7 +824,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   }
 
   function edTime(){
-    var t=Math.max(0,ED.t||0),dur=ED.data?ED.data.duration||0:0;
+    var t=Math.max(0,ED.t||0),dur=ED.data?edDuration():0;
     var el=$('#edTime');if(el)el.textContent=fmt(t)+' / '+fmt(dur);
     var ph=$('#edPlay');if(ph)ph.style.left=(62+t*ED.pps)+'px';
   }
@@ -1011,6 +1015,10 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     function str(id,fn){var e=$(id);if(e)e.addEventListener('input',function(){fn(this.value);edDirty()})}
     var c=edSel();if(!c)return;
     str('#fText',function(v){c.text=v;edLanes();edPreview()});
+    /* 文字框内容可改：input 实时写回 clip.text，时间线标签和预览同步刷新，
+       失焦时保存一次（打字不用每敲一个字都落盘）。 */
+    var ft=$('#fText');
+    if(ft)ft.addEventListener('change',function(){edSave(true);say('文字已更新')});
     num('#fSize',function(v){c.size=v;edPreview()});
     str('#fColor',function(v){c.color=v;edPreview()});
     num('#fStart',function(v){c.start=Math.max(0,v);edLanes()});
@@ -1100,7 +1108,10 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
 
   function edSave(quiet){
     if(!ED.data||!ED.proj)return Promise.resolve();
-    ED.data.duration=Math.max(ED.data.duration||1,edTail());
+    /* 保存时把时长收敛到真实内容尾：有片段就写片段尾，没有才留原画布时长。
+       不能再用 max(旧值,尾) —— 那样 AI 初始写 10 秒、片段 3 秒，就永远是 10 秒。 */
+    var tail=edTail();
+    ED.data.duration=tail>0?tail:Math.max(1,+ED.data.duration||10);
     return window.api('/api/edit',{action:'save',project:ED.proj,project_data:ED.data})
       .then(function(d){
         if(d&&d.project)ED.data=d.project;
@@ -1118,6 +1129,14 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       });
     });
     return Math.round(end*100)/100;
+  }
+  /* 有效时长：有片段时跟内容走（最晚的片段结束点），一条片段都没有时才用工程画布时长。
+     ★ 以前一律用写死的 ED.data.duration（AI 常写成 10），片段只有 3 秒时播放头会
+     空跑到 10 秒、时间线右边空一大截，导出还会多渲 7 秒黑屏——用户说的「一共三秒
+     为什么指针一直跑」就是这个。播放/显示/刻度/保存统一走这里。 */
+  function edDuration(){
+    var tail=edTail();
+    return tail>0 ? tail : Math.max(1,+ED.data.duration||10);
   }
 
   /* ── 拖拽 ── */
@@ -1239,6 +1258,30 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   $('#edAddVBtn')&&$('#edAddVBtn').addEventListener('click',function(){edAddTrack('video')});
   $('#edAddTBtn')&&$('#edAddTBtn').addEventListener('click',function(){edAddTrack('text')});
   $('#edAddABtn')&&$('#edAddABtn').addEventListener('click',function(){edAddTrack('audio')});
+  /* ＋文字：直接在播放头位置插一段可编辑的字幕。
+     以前只能「＋字幕轨」加一条空轨，用户不知道怎么往里放字——现在一键就有字，
+     插完自动选中并把右侧属性面板的文本框聚焦，改完内容即时反映到时间线和预览。 */
+  $('#edAddTextBtn')&&$('#edAddTextBtn').addEventListener('click',function(){
+    if(!ED.data){say('先选一个工程');return}
+    ED.data.tracks=ED.data.tracks||[];
+    var tr=(ED.data.tracks||[]).filter(function(x){return x.kind==='text'})[0];
+    if(!tr){tr={id:'t'+Date.now().toString().slice(-5),kind:'text',name:'字幕',clips:[]};ED.data.tracks.push(tr)}
+    var c={id:'c'+Date.now(),type:'text',text:'双击修改文字',start:Math.round((ED.t||0)*100)/100,
+      duration:3,size:64,color:'#FFFFFF',weight:700};
+    tr.clips=tr.clips||[];tr.clips.push(c);
+    ED.sel={track:tr.id,i:tr.clips.length-1};
+    edDirty();edLanes();edInsp();edPreview();
+    var ft=$('#fText');if(ft){ft.focus();ft.select()}
+    say('已加一段文字，在右侧改内容');
+  });
+  /* 双击时间线上的文字片段 = 直接聚焦右侧文字框，改字不用先找面板。 */
+  document.addEventListener('dblclick',function(e){
+    var cl=e.target.closest&&e.target.closest('.ed-cl');if(!cl||!ED.data)return;
+    var tr=cl.getAttribute('data-tr'),i=+cl.getAttribute('data-i');
+    var c=edClipAt(tr,i);if(!c||c.type!=='text')return;
+    ED.sel={track:tr,i:i};edLanes();edInsp();
+    var ft=$('#fText');if(ft){ft.focus();ft.select()}
+  });
 
   /* ── 分割 / 复制 ── */
   function edSplit(){
@@ -1321,7 +1364,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     if(!t){t=(ED.data.tracks||[]).filter(function(x){return x.kind===trId})[0]}
     if(!t)return;
     t.clips=t.clips||[];t.clips.push(c);
-    ED.data.duration=Math.max(ED.data.duration||1,edTail());
+    ED.data.duration=edTail()||Math.max(1,+ED.data.duration||10);
     ED.sel={track:t.id,i:t.clips.length-1};
     edDirty();edLanes();edInsp();edSave(true);
   }
@@ -1336,7 +1379,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       var tick=function(){
         if(!ED.playing)return;
         ED.t=(performance.now()-t0)/1000;
-        if(ED.t>=(ED.data.duration||0)){ED.t=0;ED.playing=false;edTime();edPreview();return}
+        if(ED.t>=edDuration()){ED.t=0;ED.playing=false;edTime();edPreview();return}
         edTime();edPreview();raf=requestAnimationFrame(tick);
       };
       raf=requestAnimationFrame(tick);
@@ -1543,11 +1586,36 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
 
   /* ── 缩放 / 滚动定位 ── */
   var zm=$('#edZoom');
-  if(zm)zm.addEventListener('input',function(){
-    ED.zoom=(+this.value)/100;    /* 1.0 = 正好铺满；往右放大看细节 */
+  function edZoomSet(z){
+    z=Math.max(0.5,Math.min(4,z));
+    ED.zoom=z;
+    if(zm)zm.value=Math.round(z*100);
     edLanes();edTime();
+  }
+  if(zm)zm.addEventListener('input',function(){
+    edZoomSet((+this.value)/100);    /* 1.0 = 正好铺满；往右放大看细节 */
   });
+  /* 适应宽度：把倍率归 1，整条时间线正好铺满可视区（edLanes 里 base 已按可视宽算）。 */
+  $('#edTLFitBtn')&&$('#edTLFitBtn').addEventListener('click',function(){edZoomSet(1);say('时间线已适应宽度')});
   var sc=$('#edScroll');
+  /* 滚轮缩放：在轨道区滚轮 = 放大/缩小时间线（围绕鼠标下的时间点，不跳位）。
+     按住 Ctrl/⌘ 或直接滚轮都缩放；这样「滑动滚轮放大缩小看轨道」符合直觉。
+     需要横向平移时用Shift+滚轮或底部滚动条。 */
+  if(sc)sc.addEventListener('wheel',function(e){
+    if(!ED.data)return;
+    var r=$('#edRuler');if(!r)return;
+    var box=r.getBoundingClientRect();
+    var mouseSec=(e.clientX-box.left-62)/ED.pps;      /* 鼠标下的秒数 */
+    var old=ED.zoom;
+    var next=old*(e.deltaY<0?1.12:0.89);              /* 上滚放大、下滚缩小 */
+    next=Math.max(0.5,Math.min(4,next));
+    if(Math.abs(next-old)<0.001)return;
+    e.preventDefault();
+    var viewX=e.clientX-sc.getBoundingClientRect().left;  /* 鼠标在滚动容器里的视口位置 */
+    edZoomSet(next);
+    /* 缩放后让鼠标下那一点保持在原来的屏幕位置 */
+    sc.scrollLeft=Math.max(0,62+mouseSec*ED.pps-viewX);
+  },{passive:false});
   if(sc)sc.addEventListener('click',function(e){
     var r=$('#edRuler');if(!r||!r.contains(e.target))return;
     var box=r.getBoundingClientRect();
@@ -1563,7 +1631,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     if(!headDrag)return;
     var r=$('#edRuler');if(!r)return;
     var box=r.getBoundingClientRect();
-    ED.t=Math.max(0,Math.min(ED.data?ED.data.duration||999:999,(e.clientX-box.left-62)/ED.pps));
+    ED.t=Math.max(0,Math.min(ED.data?edDuration():999,(e.clientX-box.left-62)/ED.pps));
     edTime();edPreview();
   });
   document.addEventListener('mouseup',function(){
