@@ -117,9 +117,64 @@ function moveChromeLeftovers() {
   }
   if (n) process.stderr.write('[main] 运行时残留已归位: ' + n + ' 项\n')
 }
+
+/* ★ 浏览器缓存会无限长（2026-11-20，用户 m06193 明确要求「那个自动清理你做一下」）。
+   实测依据：这台机器上 Chrome-headless 攒了 3001 个 scoped_dir 目录、6GB。
+   Electron 的 Cache / Code Cache / GPUCache 一个道理 —— 只要在用就一直涨，
+   而且从来不会自己收缩。放在数据目录里，用户过几个月发现磁盘少了一个 G。
+
+   策略：启动时看一眼 运行时/ 总共多大，超过上限就整目录删掉重建。
+   ★ 删的是整个 运行时/ 而不是里面挑几个目录 —— 里面的东西全是可再生的
+     （缓存、窗口位置、Local Storage 里也就几个界面偏好），
+     挑着删容易漏（Chromium 的缓存目录名单每个版本都在变），整删最省心。
+   ★ 只删 运行时/，绝不碰 内核/ ——那里有历史对话。
+   ★ 删失败就当没这回事，继续启动。清缓存永远不该挡住用户用软件。 */
+const RUNTIME_LIMIT = 500 * 1024 * 1024   // 500MB
+
+function dirSizeBytes(dir) {
+  const { readdirSync, statSync } = require('node:fs')
+  const { join: j } = require('node:path')
+  let total = 0
+  const walk = (p) => {
+    let ents
+    try { ents = readdirSync(p, { withFileTypes: true }) } catch (e) { return }
+    for (const e of ents) {
+      const full = j(p, e.name)
+      try {
+        if (e.isDirectory()) walk(full)
+        else if (e.isFile()) total += statSync(full).size
+        /* 软链不算：size 是链接本身，跟目标无关，算进来没意义 */
+      } catch (e2) { /* 权限不足/文件刚被删，跳过 */ }
+    }
+  }
+  walk(dir)
+  return total
+}
+
+function pruneRuntimeIfHuge() {
+  const { rmSync } = require('node:fs')
+  try {
+    if (!existsSync(CHROME_DIR)) return
+    const size = dirSizeBytes(CHROME_DIR)
+    if (size < RUNTIME_LIMIT) return
+    const mb = Math.round(size / 1048576)
+    /* ★ 先删再建：反过来（先建后删）等于把自己刚建的空目录也删了，
+       后面 setPath 会指向一个不存在的路径，Chromium 会自己再建 —— 能用，
+       但日志里天天一行 ENOENT，纯噪音。 */
+    rmSync(CHROME_DIR, { recursive: true, force: true })
+    mkdirSync(CHROME_DIR, { recursive: true })
+    process.stderr.write('[main] 运行时缓存 ' + mb + 'MB 超过上限，已清空重建\n')
+  } catch (e) {
+    process.stderr.write('[main] 清运行时缓存失败（不影响使用）: ' + e.message + '\n')
+  }
+}
+
 try {
   mkdirSync(CHROME_DIR, { recursive: true })
   moveChromeLeftovers()
+  pruneRuntimeIfHuge()
+  /* ★ 顺序要紧：prune 必须在 setPath 之前 —— setPath 之后 Chromium 就开始
+     往里面写文件了，这时候 rm 会跟它抢同一个目录。 */
   app.setPath('userData', CHROME_DIR)
   app.setPath('sessionData', CHROME_DIR)
 } catch (e) {

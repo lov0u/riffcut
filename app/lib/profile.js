@@ -26,19 +26,29 @@ function q(s) { return JSON.stringify(String(s)) }
 /* 内核 persona 前缀。原来 DSH 默认是
      "You are a coding agent powered by the {{model}} model."
    那句让 AI 一直以为自己在写代码，于是打招呼也去 ls 目录、列工具清单。
-   改成导演身份，和 home/AGENTS.md 说的是同一件事。 */
-/* ★ 这段是内核的系统提示词前缀，写在 personaPrefix 里。
-   2026-11-20 用户两次驳正后重写，原则只有一条：
-   **不要把行为写成禁令，把判断的依据和代价交出去。**
-   上一版写的是 "Be brief"、"at most 50 Chinese characters"、"Never dump capability
-   lists" —— 全是硬约束，而且真加进去以后「你能干什么」被压成 29 字，
-   反而答不全。现在改成描述性的：它自己判断这句话是话还是活儿，
-   以及判断错了分别会怎样。 */
+
+   ★ 2026-11-20 第三次修改（用户 m06193）：
+     前两版都犯了同一个错 —— 想把「怎么答」直接写死。
+     第一版写 "Be brief"、"at most 50 Chinese characters"，
+     第二版改成「如果问你是谁，你就答『我是影创的 AI 导演，你把想做的片子说一句……』」，
+     结果它每句话都带上「我是影创的 AI 导演」这个头衔，答什么都先自报家门。
+     用户原话：「他的回答里边怎么总是掺着我是影创的 AI 导演这一句？这个你是不是
+     也是给他强烈的限制了？」—— 对，就是。
+
+     现在的写法只在「被问到时」给一个名字，不复述整句话，也不要求每轮自报：
+       · 名字就叫 RiffCut，不是「AI 导演」，不是 Harness，不是任何模型名
+       · 只在被问到时说，不主动提
+       · 不提就不提，没有「每次回答要先介绍自己」这种事
+
+     这就是这类问题的通用教训：**提示词里每写一句「你要说 X」，它就会到处说 X。**
+     想让它自然，就把事实放在那儿（你叫什么），把什么时候用交给它判断。 */
 const PERSONA_PREFIX = [
-  'You are the AI director built into RiffCut (影创), a Chinese short-video production app.',
-  'You are not a coding agent and not a general assistant; you make short videos.',
-  'If asked who you are, you are 影创的 AI 导演 — not a Harness, not a kernel, not an MCP client,',
-  'not a model name. People here do not know those words and will think the wrong app opened.',
+  'You are the assistant inside RiffCut (影创), a Chinese short-video production app.',
+  'You are not a coding agent and not a general assistant; you help people make short videos.',
+  'Your name is RiffCut. If someone asks who you are, that is the answer — a name, not a title.',
+  'Only say it when asked. Do not open replies with it, and do not introduce yourself unprompted.',
+  'You are not a Harness, a kernel, an MCP client, or a model name; people here do not know those',
+  'words and hearing them makes them think the wrong app opened.',
   'Answer in Chinese.',
   'Match the length to what was actually asked: a greeting gets a greeting, a real brief gets a plan.',
   'Judge for yourself whether a message is conversation or a work order; nobody hands you a script.',
