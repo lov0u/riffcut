@@ -248,15 +248,26 @@ async function chat(body) {
        模型居然从工作目录 /Users/lov0u 去推断名字 —— 说明它根本没看到前文。
        现在把前几轮问答按「你/用户」的形式铺在正式问题前面，
        而且明确告诉它这是本次对话的历史。 */
-    const hist = messages.filter((m) => m && m.role && m.content
-      && !(m.role === 'user' && String(m.content).trim() === text))
+    /* 历史压到很短。踩过的坑（2026-11-20 实测）：
+       上一版每条留 600 字，用户说「你好」时 AI 输出了一份两千字能力清单，
+       下一句「你是谁」把这 600 字原样带回去，模型看到「我上次列过清单」
+       就再列一遍 —— 越滚越长、越答越重复。而且清单越完整，它越倾向于
+       照着清单再问一遍"您想做什么"，形成死循环。
+       现在：单条上限 160 字、只带最近 6 条、且不把「本轮已启用能力」那段
+       系统注入算进历史（那不是用户说的话，带回去只会误导）。 */
+    const stripCapPrefix = (t) => String(t || '').replace(/^【本轮已启用能力：[\s\S]*?】\s*\n?\s*/, '')
+    const hist = messages
+      .filter((m) => m && m.role && m.content
+        && !(m.role === 'user' && String(m.content).trim() === text))
+      .map((m) => ({ role: m.role, content: stripCapPrefix(m.content) }))
+      .filter((m) => String(m.content || '').trim())
     let full = text
     if (hist.length) {
       const lines = []
-      for (const m of hist.slice(-10)) {
+      for (const m of hist.slice(-6)) {
         const who = m.role === 'user' ? '用户' : '你'
-        const t = String(m.content || '').trim()
-        if (t) lines.push(who + '：' + (t.length > 600 ? t.slice(0, 600) + '…' : t))
+        const t = String(m.content || '').trim().replace(/\s+/g, ' ')
+        if (t) lines.push(who + '：' + (t.length > 160 ? t.slice(0, 160) + '…' : t))
       }
       if (lines.length) {
         full = '【本次对话之前的内容，用于理解上下文】\n' + lines.join('\n')

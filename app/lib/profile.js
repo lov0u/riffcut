@@ -23,6 +23,22 @@ const BUNDLES = [
 
 function q(s) { return JSON.stringify(String(s)) }
 
+/* 内核 persona 前缀。原来 DSH 默认是
+     "You are a coding agent powered by the {{model}} model."
+   那句让 AI 一直以为自己在写代码，于是打招呼也去 ls 目录、列工具清单。
+   改成导演身份，和 home/AGENTS.md 说的是同一件事。 */
+const PERSONA_PREFIX = [
+  'You are the AI director built into RiffCut (影创), a Chinese short-video production app.',
+  'You are not a coding agent and not a general assistant; you make short videos.',
+  'If asked who you are, answer exactly: 我是影创的 AI 导演，你把想做的片子说一句，我负责做出来。',
+  'Answer in Chinese. Be brief — this is a chat box in a video editor, not a document.',
+  'Greetings, thanks, and questions about your identity: one short sentence, no tool calls.',
+  'Questions about what you can do: one sentence only, at most 50 Chinese characters. Say:',
+  '"写分镜、找画面、配音、剪成片、发出去。你给个主题我就开工。" Never demonstrate a scenario,',
+  'no emoji headings, no markdown tables, and never name tools, models, MCP, or frameworks.',
+  'Only turn ordinary user requests into tool calls when the user actually says what to make.',
+].join(' ')
+
 function ensureDir(p) { if (!existsSync(p)) mkdirSync(p, { recursive: true }); return p }
 
 /**
@@ -210,6 +226,25 @@ function patchYaml({ models, env, homeDir }) {
     lines.push('    customSkillDirs:')
     for (const d of skillDirs.slice(0, 1)) lines.push(`      - ${q(d)}`)
   }
+
+  /* ★ 把内核自带的 persona 换掉。
+     2026-11-20 实测：DSH 的每个 preset（standard/ptc/minimal/cordis）都挂了一个
+     persona 插件，前缀写死成 `You are a coding agent powered by the {{model}} model.`。
+     这句话是给写代码场景的，在影创里它带来两个实际问题：
+       ① AI 自称「DeepSeek Harness 的 AI 助手 / 视频创作代理」，用户问"你是谁"时
+          它答的是宿主框架的名字，不是产品的名字；
+       ② 它把整轮当成编码任务，用户说「你好」，它去 ls 目录、list_mcp_resources、
+          列能力清单，一轮走 48 步 —— 因为这确实是 coding agent 的开场动作。
+
+     ★ 覆盖方式：patch 里同 id 的条目是「修改已有条目」不是新增，
+       所以直接写 `- id: persona` + `config.prefix` 就能把四个 preset 的
+       persona 一起改掉（cordis 的 patch 合并规则按 id 匹配）。
+     ★ 这里不再是 "coding agent"，而是一个短视频导演 —— 和 home/AGENTS.md 对齐。
+     ★ 只改前缀不改插件结构：DSH 内部逻辑不读这段话，纯提示词层。 */
+  lines.push('- id: system-prompt')
+  lines.push('  config:')
+  lines.push('    includeHarnessIdentity: false')
+  lines.push('    personaPrefix: ' + q(PERSONA_PREFIX))
 
   return lines.join('\n') + '\n'
 }

@@ -146,6 +146,21 @@ python3 "$ROOT/tools/make-seed.py" "$SEEDCFG" || {
   echo "✗ 干净种子生成失败，停止打包" >&2
   exit 1
 }
+
+# ★ 6.6 AGENTS.md 是内核的系统提示词，必须随包走。
+#   2026-11-20 实测：这个文件一直在 home/ 根下，却从没被打进包 ——
+#   SEED_DIRS 只有「模板库/内置/配置/系统」，make-seed 只管「配置」子目录。
+#   结果是内核完全没读到产品提示词，用的是 DSH 默认的
+#   "You are a coding agent powered by the auto model"，
+#   于是用户说「你好」，它去 ls 目录、list_mcp_resources、列能力清单，走 48 步。
+echo "── 6.6/8 打包系统提示词 AGENTS.md"
+if [ -f "$ROOT/home/AGENTS.md" ]; then
+  cp "$ROOT/home/AGENTS.md" "$SEEDCFG/AGENTS.md"
+  echo "   AGENTS.md $(wc -c < "$ROOT/home/AGENTS.md" | tr -d ' ') 字节"
+else
+  echo "✗ home/AGENTS.md 不存在，内核将没有产品提示词" >&2
+  exit 1
+fi
 # 打包前最后一道闸：包内不许出现任何凭据文件
 for f in 服务.token 开放接口.json 凭据.vault 模型.json 设置.json 全局记忆.md; do
   if [ -e "$SEEDCFG/配置/$f" ]; then

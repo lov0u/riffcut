@@ -233,6 +233,12 @@ function pickPort() {
    ★ 逐个子目录搬，不整体搬：整体 cpSync 遇到 HOME 里已有同名目录时
      行为取决 force 选项，容易把人家的配置覆盖掉。 */
 const SEED_DIRS = ['模板库', '内置', '配置', '系统']
+/* ★ AGENTS.md 是内核的系统提示词，躺在 seed-home 根下而不是某个子目录里，
+   所以不在上面那个列表里 —— 结果一直没被铺到用户目录，内核从来没读到。
+   2026-11-20 实测：用户说「你好」，内核按 DSH 默认的 coding agent 提示词行事，
+   去 ls 目录、list_mcp_resources、列能力清单，走了 48 步。
+   这里单独补上：只在用户目录没有时铺一次，之后用户改了就不再覆盖。 */
+const SEED_FILES = ['AGENTS.md']
 
 /** 把 src 里「dst 还没有」的文件补过去，已存在的一律不覆盖。
  *  只用于初始数据铺底：目的是让升级后新增的默认文件能到位，
@@ -260,7 +266,7 @@ function fillMissing(src, dst) {
 
 function seedHomeIfEmpty() {
   if (!app.isPackaged) return
-  const { existsSync, mkdirSync, cpSync } = require('node:fs')
+  const { existsSync, mkdirSync, cpSync, copyFileSync } = require('node:fs')
   const seedRoot = join(ROOT, 'seed-home')
   if (!existsSync(seedRoot)) return
   mkdirSync(HOME, { recursive: true })
@@ -290,6 +296,15 @@ function seedHomeIfEmpty() {
       console.log('[main] 铺初始数据：' + d)
     } catch (e) {
       console.error('[main] 铺 ' + d + ' 失败（不影响启动）: ' + e.message)
+    }
+  }
+  /* 单文件铺底：AGENTS.md 这类放在 seed-home 根下的产品文件 */
+  for (const f of SEED_FILES) {
+    const src = join(seedRoot, f)
+    const dst = join(HOME, f)
+    if (!existsSync(src) || existsSync(dst)) continue
+    try { copyFileSync(src, dst); console.log('[main] 铺 ' + f) } catch (e) {
+      console.error('[main] 铺 ' + f + ' 失败: ' + e.message)
     }
   }
   linkBigModels(seedRoot)
