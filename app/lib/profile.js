@@ -30,13 +30,11 @@ function q(s) { return JSON.stringify(String(s)) }
 const PERSONA_PREFIX = [
   'You are the AI director built into RiffCut (影创), a Chinese short-video production app.',
   'You are not a coding agent and not a general assistant; you make short videos.',
-  'If asked who you are, answer exactly: 我是影创的 AI 导演，你把想做的片子说一句，我负责做出来。',
-  'Answer in Chinese. Be brief — this is a chat box in a video editor, not a document.',
-  'Greetings, thanks, and questions about your identity: one short sentence, no tool calls.',
-  'Questions about what you can do: one sentence only, at most 50 Chinese characters. Say:',
-  '"写分镜、找画面、配音、剪成片、发出去。你给个主题我就开工。" Never demonstrate a scenario,',
-  'no emoji headings, no markdown tables, and never name tools, models, MCP, or frameworks.',
-  'Only turn ordinary user requests into tool calls when the user actually says what to make.',
+  'If asked who you are, you are 影创的 AI 导演 — never a Harness, kernel, MCP client, or model.',
+  'Answer in Chinese. Match the length to what was actually asked: a greeting gets a greeting,',
+  'a real brief gets a plan. Never dump capability lists, tables, or tool names at people.',
+  'Judge for yourself whether a message is conversation or a work order; nobody hands you a script.',
+  'Conversation gets words. A work order gets tools, and then a finished cut.',
 ].join(' ')
 
 function ensureDir(p) { if (!existsSync(p)) mkdirSync(p, { recursive: true }); return p }
@@ -236,15 +234,59 @@ function patchYaml({ models, env, homeDir }) {
        ② 它把整轮当成编码任务，用户说「你好」，它去 ls 目录、list_mcp_resources、
           列能力清单，一轮走 48 步 —— 因为这确实是 coding agent 的开场动作。
 
-     ★ 覆盖方式：patch 里同 id 的条目是「修改已有条目」不是新增，
-       所以直接写 `- id: persona` + `config.prefix` 就能把四个 preset 的
-       persona 一起改掉（cordis 的 patch 合并规则按 id 匹配）。
+     ★ 真正生效的字段是 personaPrefix，不是 preset.plugins[] 里那个嵌套的 persona：
+       patch 按**顶层 id** 匹配（dsh-app-boot 的 applyEntryPatches），而
+       preset 的 plugins 是普通对象数组、不是 group，里层条目永远进不了 entryMap；
+       且 config 是整体替换、不深合并。所以只能patch顶层这条 system-prompt。
      ★ 这里不再是 "coding agent"，而是一个短视频导演 —— 和 home/AGENTS.md 对齐。
      ★ 只改前缀不改插件结构：DSH 内部逻辑不读这段话，纯提示词层。 */
   lines.push('- id: system-prompt')
   lines.push('  config:')
   lines.push('    includeHarnessIdentity: false')
   lines.push('    personaPrefix: ' + q(PERSONA_PREFIX))
+
+  /* ★★ 自动上下文压缩：必须提到顶层，preset 里那份用不上。
+     2026-11-20 实测过程（这一段踩了两天）：
+       ① 内核里 compaction 相关包一共六个，cfg 里 25 处 compaction 引用，
+          preset-standard/ptc/minimal 内部都有 `- id: compaction`（cordis:group,
+          group: true, isolate: {compaction, toolResultPruner}），看起来是启用的。
+       ② 但 SDK 起会话走的不是 preset 组装路径：dsh-sdk-jsonrpc-server 的
+          createSession() 直接 `this.ctx.agents.create({sessionId, meta, agentOptions})`，
+          agentOptions 只有 provider/model/reasoningEffort/maxTokens —— 没有 preset。
+          所以 preset 里那份 compaction-basic 从来没被实例化。
+       ③ 顶层那条本来写着 `disabled: true`（dsh-base 关掉的），patch 想启用必须
+          显式写 `disabled: false`，只写 config 不会让它活过来。
+       ④ 实测对照：只在模型上注入 contextWindow=70000（理论阈值 2464 token）、
+          塞 5200 token/轮 × 3 轮 → **0 个压缩事件**；
+          再加顶层 `- id: compaction-basic / disabled: false` → compaction/start、
+          compaction/summary、compaction/end 全部正常，摘要里能读出中英文 checkpoint。
+     阈值公式（dsh-compaction-basic/lib/index.js:124-132）：
+       pressureBudget = contextWindow - reservedCompletionTokens - headroomTokens(65536)
+       thresholdTokens = min(contextWindow * thresholdRatio(0.8), pressureBudget)
+     默认 256K 窗口下 = min(209715, 163840) = **163840 token** 才触发 —— 也就是
+     约 65 万汉字。这不是"没生效"，是"阈值等于永远不触发"。
+     headroomTokens 从 65536 降到 16384：留 16K 给下一轮请求足够，阈值同时降到
+     min(209715, 229376) = 209715，虽然还是很宽松但不再是天文数字。
+     ★ 用户明确要求「上下文越长越好，越长的智力越高」——所以这里不给小阈值，
+       只保证机制真的在工作。真要省 token 由用户自己说。 */
+  lines.push('- id: compaction-basic')
+  lines.push("  name: '@deepseek-ai/dsh-compaction-basic'")
+  lines.push('  disabled: false')
+  lines.push('  config:')
+  lines.push('    headroomTokens: 16384')
+  lines.push('    thresholdRatio: 0.8')
+  lines.push('    auto: true')
+  /* tool-result-pruner 也提上来：单个工具结果超过 8192 字符就压到
+     头 4096 + 尾 1024。这个不需要触发阈值，每一步都生效，是最便宜的省上下文手段。
+     注意它和 compaction-basic 是两件不同的事：前者剪单条工具结果，
+     后者把整段历史换成摘要 checkpoint。 */
+  lines.push('- id: tool-result-pruner')
+  lines.push("  name: '@deepseek-ai/dsh-compaction-tool-result-pruner'")
+  lines.push('  disabled: false')
+  lines.push('  config:')
+  lines.push('    thresholdChars: 8192')
+  lines.push('    headChars: 4096')
+  lines.push('    tailChars: 1024')
 
   return lines.join('\n') + '\n'
 }

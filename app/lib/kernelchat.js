@@ -248,13 +248,13 @@ async function chat(body) {
        模型居然从工作目录 /Users/lov0u 去推断名字 —— 说明它根本没看到前文。
        现在把前几轮问答按「你/用户」的形式铺在正式问题前面，
        而且明确告诉它这是本次对话的历史。 */
-    /* 历史压到很短。踩过的坑（2026-11-20 实测）：
-       上一版每条留 600 字，用户说「你好」时 AI 输出了一份两千字能力清单，
-       下一句「你是谁」把这 600 字原样带回去，模型看到「我上次列过清单」
-       就再列一遍 —— 越滚越长、越答越重复。而且清单越完整，它越倾向于
-       照着清单再问一遍"您想做什么"，形成死循环。
-       现在：单条上限 160 字、只带最近 6 条、且不把「本轮已启用能力」那段
-       系统注入算进历史（那不是用户说的话，带回去只会误导）。 */
+    /* ★ 2026-11-20 用户驳正（m04568）：
+       「啰嗦跟上下文没有关系，上下文越长越好，智力水平越高。关键是他应该知道
+        他干什么，不要去限制他的上下文的长度和几条。」
+       所以这里不再截断：一条都不丢、一个字都不砍。上下文长了由内核的
+       compaction-basic 自动压缩（阈值 contextWindow*0.8 = 163840 token）。
+       之前我改成 slice(-6)/160 字是错的方向，判断力问题不该用削字数解决。
+       只保留一个清理：剥掉「本轮已启用能力」那段系统注入 —— 那不是用户说的话。 */
     const stripCapPrefix = (t) => String(t || '').replace(/^【本轮已启用能力：[\s\S]*?】\s*\n?\s*/, '')
     const hist = messages
       .filter((m) => m && m.role && m.content
@@ -264,10 +264,10 @@ async function chat(body) {
     let full = text
     if (hist.length) {
       const lines = []
-      for (const m of hist.slice(-6)) {
+      for (const m of hist) {
         const who = m.role === 'user' ? '用户' : '你'
-        const t = String(m.content || '').trim().replace(/\s+/g, ' ')
-        if (t) lines.push(who + '：' + (t.length > 160 ? t.slice(0, 160) + '…' : t))
+        const t = String(m.content || '').trim()
+        if (t) lines.push(who + '：' + t)
       }
       if (lines.length) {
         full = '【本次对话之前的内容，用于理解上下文】\n' + lines.join('\n')
