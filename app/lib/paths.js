@@ -20,6 +20,51 @@ function defaultHome() {
 }
 const HOME = defaultHome()
 
+/* ★★ 数据根目录分三层（2026-11-20，用户 m05899 要求「根目录你要做一个」）。
+   以前这三类东西全挤在 HOME 一层，点开数据目录第一屏是二十几个 Chromium
+   缓存目录（Cache / Code Cache / GPUCache / DawnWebGPUCache / Local Storage /
+   Session Storage / DIPS / Trust Tokens / Network Persistent State…），
+   中间夹着 DSH 内核的 profiles/sessions/storages，业务数据反而被埋在最下面。
+   AI 的工作目录就挂在这一层，`ls` 一次看到的就是这堆垃圾 —— 它当然会去翻。
+   这不是它不听话，是环境没收拾。
+
+   拆成：
+     HOME/            业务数据（客户、资源、模板库、配置、系统、知识库、内置、缓存）
+     HOME/内核/        DSH 内核自己的状态（profiles、sessions、storages、logs）
+     HOME/运行时/      Electron/Chromium 的 userData（由 main.js 的 setPath 指过去）
+
+   AI 的 cwd 给 HOME —— 第一层全是人话，没有一个缓存目录。 */
+const KERNEL_HOME = process.env.RiffCut_KERNEL_HOME || join(HOME, '内核')
+const RUNTIME = process.env.RiffCut_RUNTIME || join(HOME, '运行时')
+
+/* 一次性迁移旧布局：把 HOME 根下这四个内核目录搬进 HOME/内核/。
+   不搬的话老用户升级后会话历史全丢（内核按 DSH_HOME 找 sessions），
+   界面上「历史对话」会突然全空，看起来像数据被删了。
+   ★ 用 renameSync 而不是 cp+rm：同一文件系统上是原子的、瞬间完成，
+     不需要遍历 151M 的 profiles（里面主要是 node_modules 软链）。
+   ★ 只在「新位置还没有、旧位置有」时才搬，重复执行无副作用。 */
+function migrateKernelHome() {
+  const legacy = ['profiles', 'sessions', 'storages', 'logs']
+  let moved = 0
+  for (const name of legacy) {
+    const from = join(HOME, name)
+    const to = join(KERNEL_HOME, name)
+    try {
+      if (existsSync(to)) continue
+      if (!existsSync(from)) continue
+      ensureDir(KERNEL_HOME)
+      renameSync(from, to)
+      moved++
+      console.log('[paths] 内核目录已迁移: ' + name + ' → 内核/' + name)
+    } catch (e) {
+      /* 搬不动（跨盘、权限）就留着，内核会在新位置重建 —— 只是历史读不到，
+         不至于让软件起不来。这里绝不能抛，模块加载期抛异常 = 双击没反应。 */
+      console.error('[paths] 迁移 ' + name + ' 失败（将使用新目录，旧数据保留在原处）: ' + e.message)
+    }
+  }
+  return moved
+}
+
 const CFG = join(HOME, '配置')
 const RES = join(HOME, '资源')
 const SYS = join(HOME, '系统')
@@ -99,6 +144,8 @@ const BASE = {
   system_dir: SYS,
   customers_dir: CUS,
   home: HOME,
+  kernel_home: KERNEL_HOME,
+  runtime_dir: RUNTIME,
   root: ROOT,
 }
 
@@ -281,18 +328,27 @@ const NAMES = { VIDEO_EXT, IMAGE_EXT, AUDIO_EXT, MEDIA_EXT, DEFAULT_CUSTOMER, CU
    一个目录失败（权限、坏软链、磁盘满）不该让整个软件起不来。
    记一行日志，继续往下走 —— 真正需要那个目录的功能自己会报错。 */
 function initDirs() {
-  for (const k of ['skills', 'templates', 'brand', 'endings', 'legal', 'music', 'local_models', 'backups', 'logs', 'knowledge', 'config_dir', 'resources', 'system_dir', 'customers_dir']) {
+  /* 先迁移再建目录：顺序反了的话 ensureDir(KERNEL_HOME) 会先把 内核/ 建出来，
+     renameSync 到已存在的目标会失败（或者变成 内核/sessions/sessions 套娃）。 */
+  try { migrateKernelHome() } catch (e) { console.error('[paths] 内核目录迁移失败: ' + e.message) }
+  for (const k of ['skills', 'templates', 'brand', 'endings', 'legal', 'music', 'local_models', 'backups', 'logs', 'knowledge', 'config_dir', 'resources', 'system_dir', 'customers_dir', 'kernel_home', 'runtime_dir']) {
     /* ★ 逐个 try/catch：这里是模块加载期，任何一个目录建不出来都不该让
        整个软件起不来。坏软链、权限、磁盘满都会在这里炸 —— 一旦炸出去，
        窗口连创建的机会都没有，用户看到的就是「双击没反应」。 */
     try { ensureDir(BASE[k]) } catch (e) { console.error('[paths] 建目录失败 ' + k + ': ' + e.message) }
   }
   try { custPaths() } catch (e) { console.error('[paths] 客户目录初始化失败: ' + e.message) }
+  /* 根目录说明书：只写一次，用户改过就不再覆盖。见 lib/readme-home.js
+     放在 initDirs 最后 —— 它要引用上面已经算好的 KERNEL_HOME / RUNTIME。 */
+  try {
+    const made = require('./readme-home').ensureReadme({ HOME, KERNEL_HOME, RUNTIME })
+    if (made) console.log('[paths] 已写根目录说明 README.md')
+  } catch (e) { console.error('[paths] 写说明失败: ' + e.message) }
 }
 initDirs()
 
 module.exports = { assertName,
-  ROOT, HOME, CFG, RES, SYS, KB, LOG, CUS, FFMPEG, FFPROBE,
+  ROOT, HOME, CFG, RES, SYS, KB, LOG, CUS, FFMPEG, FFPROBE, KERNEL_HOME, RUNTIME,
   RES_SKILLS, RES_TEMPLATES, RES_BRAND, RES_ENDINGS, RES_MUSIC, RES_LEGAL, RES_PRESETS,
   SYSMODELS, SYS_BACKUPS, DEFAULT_CUSTOMER,
   BASE, CUST_KEYS, VIDEO_EXT, IMAGE_EXT, AUDIO_EXT, MEDIA_EXT,

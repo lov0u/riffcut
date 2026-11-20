@@ -55,11 +55,21 @@ function adopt(k) {
 
 async function kernel() {
   if (_k && _k.child) return _k
-  const home = P.HOME
-  _prof = Pr.buildProfile({ homeDir: home, profile: 'velora' })
-  const k = new Kernel({ homeDir: home, profile: 'velora' })
+  /* ★★ homeDir（= 内核的 DSH_HOME）和 cwd 是两件事，以前混成了一个（2026-11-20）。
+     homeDir 决定内核把 profiles/sessions/storages 写哪；
+     cwd 决定 AI 眼里的「当前目录」是什么 —— 它 `ls` 看到的第一层就是这个。
+     以前两个都传 P.HOME，于是内核状态（profiles/sessions/storages/logs）
+     和业务数据（客户/资源/模板库/配置）挤在同一层，
+     再加上 Electron 的 Chromium 缓存目录也在那儿，AI 一 ls 就是二十几个
+     Cache/GPUCache/Local Storage —— 它当然会去翻那些目录，
+     这不是它不听话，是环境没收拾干净。
+     现在：DSH_HOME → HOME/内核/（AI 看不见），cwd → HOME/（全是人话目录）。 */
+  const kernelHome = P.KERNEL_HOME
+  const workDir = P.HOME
+  _prof = Pr.buildProfile({ homeDir: kernelHome, profile: 'velora' })
+  const k = new Kernel({ homeDir: kernelHome, profile: 'velora' })
   k.on('event', () => {})            // 事件在这一层按 stepId 分发，见 chat()
-  await k.start({ provider: _prof.provider, model: _prof.model, cwd: home, env: _prof.env })
+  await k.start({ provider: _prof.provider, model: _prof.model, cwd: workDir, env: _prof.env })
   _k = k
   return k
 }

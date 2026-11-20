@@ -341,7 +341,13 @@ function plugins(d) {
   const K = lazy('./kernel')
   const act = str(d.action, 'list')
   const kd = K.KERNEL_DIR
-  const prof = path.join(P.HOME, 'profiles', 'velora')
+  /* ★ 2026-11-20：内核 profile 搬到了 HOME/内核/profiles（见 lib/paths.js），
+     兜底旧位置让没迁完的用户也能看到插件列表。 */
+  let prof = path.join(P.KERNEL_HOME, 'profiles', 'velora')
+  if (!fs.existsSync(prof)) {
+    const legacy = path.join(P.HOME, 'profiles', 'velora')
+    if (fs.existsSync(legacy)) prof = legacy
+  }
   const pkgFile = path.join(prof, 'package.json')
   let pkg = {}
   try { pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8')) } catch (e) { pkg = {} }

@@ -126,3 +126,11 @@ desktop.ini
 *.pkg
 dist/
 release/
+
+# 数据根目录三分之后的两个运行时目录（2026-11-20）
+# 内核状态（profiles/sessions/storages/logs）和 Electron 的 Chromium userData
+# 都不该进仓库：前者每次启动都在变，后者是几百个缓存文件。
+home/内核/
+home/运行时/
+内核/
+运行时/

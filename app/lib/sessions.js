@@ -20,7 +20,15 @@ const path = require('node:path')
 const zlib = require('node:zlib')
 const P = require('./paths')
 
-const SESSIONS = path.join(P.HOME, 'sessions')
+/* ★ 2026-11-20：内核的会话目录搬到了 HOME/内核/sessions（见 lib/paths.js）。
+   这里跟着走，并且兜底旧位置 —— 老用户可能还没完成迁移就升级了。 */
+const SESSIONS = path.join(P.KERNEL_HOME, 'sessions')
+const LEGACY_SESSIONS = path.join(P.HOME, 'sessions')
+function sessionsRoot() {
+  try { if (fs.existsSync(SESSIONS)) return SESSIONS } catch (e) {}
+  try { if (fs.existsSync(LEGACY_SESSIONS)) return LEGACY_SESSIONS } catch (e) {}
+  return SESSIONS
+}
 
 /** 内核把 cwd 里的 `/` 换成 `-` 再加前后 `--` 当目录名。 */
 function cwdKey(cwd) {
@@ -139,12 +147,13 @@ function contentText(c) {
 /** 列出全部会话（按最近活跃排序）。scope=all 时包含所有工作区。 */
 function list(opts = {}) {
   const out = []
-  if (!fs.existsSync(SESSIONS)) return out
+  const ROOT = sessionsRoot()
+  if (!fs.existsSync(ROOT)) return out
   const wantKey = opts.cwd ? cwdKey(opts.cwd) : ''
-  for (const dirName of fs.readdirSync(SESSIONS)) {
+  for (const dirName of fs.readdirSync(ROOT)) {
     if (!dirName.startsWith('--')) continue
     if (wantKey && dirName !== wantKey) continue
-    const dir = path.join(SESSIONS, dirName)
+    const dir = path.join(ROOT, dirName)
     if (!fs.statSync(dir).isDirectory()) continue
     for (const sid of fs.readdirSync(dir)) {
       const sdir = path.join(dir, sid)
@@ -216,4 +225,4 @@ function detailText(id) {
   return L.join('\n')
 }
 
-module.exports = { SESSIONS, cwdKey, readEvents, summarize, contentText, isInjectedContext, stripInjected, list, detail, listText, detailText }
+module.exports = { SESSIONS, sessionsRoot, cwdKey, readEvents, summarize, contentText, isInjectedContext, stripInjected, list, detail, listText, detailText }

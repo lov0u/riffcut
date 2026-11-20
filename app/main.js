@@ -44,9 +44,39 @@ const WIN_W = 1440, WIN_H = 900
 // 私有协议登记成 standard + secure 之后就能正常嵌。
 /* ★ 应用名要在 app.whenReady 之前设。
    不设的话 Dock / 菜单栏 / 关于面板都显示 package.json 里的 productName（「影创新版」），
-   而用户认的是 RiffCut影创。userData 目录也跟着这个名字走，
-   所以第一次改会让它指向新目录 —— 下面 resolveHome 用的是固定名，不受影响。 */
+   而用户认的是 RiffCut影创。 */
 app.setName('RiffCut影创')
+
+/* ★★ 把 Electron 自己的 userData 挪进子目录（2026-11-20）。
+   根目录脏的根因就在这里：app.setName('RiffCut影创') 之后，
+   Electron 默认把 userData 定在 ~/Library/Application Support/RiffCut影创，
+   而 resolveHome() 也返回同一个路径 —— 两者撞在一起了。
+
+   结果是那一层混了三类完全不该混的东西：
+     · Chromium 的：Cache / Code Cache / GPUCache / DawnWebGPUCache /
+       GraphiteDawnCache / Local Storage / Session Storage / blob_storage /
+       DIPS / Trust Tokens / Network Persistent State / Preferences / SingletonLock…
+     · DSH 内核的：profiles/ sessions/ storages/ logs/
+     · 我们自己的：客户/ 资源/ 模板库/ 配置/ 系统/ 知识库/ 内置/ 缓存/
+
+   用户点开数据目录看到的第一屏就是二十几个 Chromium 缓存目录，
+   AI 拿这个当工作目录 `ls` 一次，看到的第一层也是这些 —— 它当然会去翻，
+   这不是它不听话，是环境本身没收拾干净。用户原话（m05899）：
+   「不要用一些东西去限制 AI 的能力，如果说哪里有问题，考虑一下是不是
+     你的流程设置得不对，而不要去强烈地限制它。」
+
+   所以拆开：Electron 的东西进 <HOME>/运行时/，业务数据留在 <HOME>/ 根，
+   内核状态进 <HOME>/内核/。AI 的 cwd 只给业务数据这一层。
+   ★ 必须在 whenReady 之前调用，晚了 Chromium 已经开始往旧位置写。 */
+const USER_HOME = resolveHome()
+const CHROME_DIR = join(USER_HOME, '运行时')
+try {
+  mkdirSync(CHROME_DIR, { recursive: true })
+  app.setPath('userData', CHROME_DIR)
+  app.setPath('sessionData', CHROME_DIR)
+} catch (e) {
+  process.stderr.write('[main] 设置运行时目录失败，退回默认: ' + e.message + '\n')
+}
 
 /* ★ 调试端口开关：只有显式设了 RiffCut_DEBUG_PORT 才开。
    为什么需要它：Electron 的打包产物不认命令行里的 --remote-debugging-port
