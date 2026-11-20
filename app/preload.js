@@ -42,6 +42,9 @@ contextBridge.exposeInMainWorld('riffcut', {
   // 反馈：唤起系统邮件客户端，预填版本与系统信息
   feedbackMail: (opts) => ipcRenderer.invoke('feedback:mail', opts || {}),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', String(url || '')),
+  // 复制代码到剪贴板：走主进程 clipboard，渲染进程 sandbox + velora:// 协议下
+  // navigator.clipboard / execCommand 都不可靠，主进程写系统剪贴板最稳
+  copyText: (text) => ipcRenderer.invoke('app:copyText', String(text == null ? '' : text)),
   // 选文件夹（原生对话框，返回绝对路径）——添加工作区/拖入素材用
   pickFolder: (opts) => ipcRenderer.invoke('sys:pickFolder', opts || {}),
   // 拖拽的 File 取绝对路径（Electron 32+ 用 webUtils，File.path 已移除）

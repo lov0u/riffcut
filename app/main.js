@@ -784,6 +784,19 @@ ipcMain.handle('app:info', () => {
   }
 })
 
+/* 复制代码到系统剪贴板。渲染进程是 velora:// 自定义协议 + sandbox，
+   navigator.clipboard 需要安全上下文和用户手势、execCommand 也常被拒；
+   主进程 clipboard 模块直接写系统剪贴板，最可靠。 */
+ipcMain.handle('app:copyText', async (_e, text) => {
+  try {
+    const { clipboard } = require('electron')
+    clipboard.writeText(String(text == null ? '' : text))
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: String((e && e.message) || e) }
+  }
+})
+
 /* 打开外链（注册页 / 控制台）。
    为什么单独做一个 IPC：渲染进程是 velora:// 自定义协议 + sandbox，
    直接 window.open 会被 setWindowOpenHandler 里的 deny 拦掉；

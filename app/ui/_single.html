@@ -1451,21 +1451,30 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-msg:not(.me) .bub b{font-weight:650;color:#232A36}
 .h-msg:not(.me) .bub code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.94em;
   background:#E9EDF4;border-radius:4px;padding:1px 5px}
-/* 代码块：AI 给整段 jsx/js/python 时用。深色底 + 等宽 + 横向滑，
-  不再让代码裸在正文里占满一屏。pre 里的 code 去掉行内样式 */
-.h-msg .bub pre{margin:7px 0 9px;background:#1B2230;color:#DCE4F0;border-radius:10px;
-  padding:11px 14px;overflow-x:auto;overflow-y:hidden;max-width:100%;
+/* 代码块：一层 .h-code 包裹 = 顶部工具条（语言名 + 复制/展开）+ 限高的 pre。
+   长代码不再撑满一屏，超出部分在块内滚动；点「展开」取消限高、可再收起。 */
+.h-msg .bub .h-code{margin:7px 0 9px;max-width:100%;border-radius:10px;overflow:hidden;
+  background:#1B2230;border:1px solid #2A3444}
+.h-msg .bub .h-code-bar{display:flex;align-items:center;justify-content:space-between;
+  height:34px;padding:0 8px 0 13px;background:#222B3B;border-bottom:1px solid #2E394C}
+.h-msg .bub .h-code-lang{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#8FA0BB}
+.h-msg .bub .h-code-acts{display:flex;gap:6px}
+.h-msg .bub .h-code-acts button{font:inherit;font-size:11px;line-height:1;color:#AEBBD0;
+  background:#2C384C;border:1px solid #3A485E;border-radius:6px;padding:5px 9px;cursor:pointer}
+.h-msg .bub .h-code-acts button:hover{background:#3A485E;color:#fff}
+.h-msg .bub pre{margin:0;background:#1B2230;color:#DCE4F0;
+  padding:11px 14px;overflow-x:auto;overflow-y:auto;max-height:340px;max-width:100%;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
   line-height:1.62;white-space:pre;tab-size:2;-webkit-overflow-scrolling:touch}
-.h-msg .bub pre::-webkit-scrollbar{height:7px}
+.h-msg .bub .h-code.open pre{max-height:none;overflow-y:hidden}
+.h-msg .bub pre::-webkit-scrollbar{width:7px;height:7px}
 .h-msg .bub pre::-webkit-scrollbar-thumb{background:#4A566B;border-radius:7px}
 .h-msg .bub pre::-webkit-scrollbar-track{background:transparent}
 /*  specificity：上面行内 code 规则是 .h-msg:not(.me) .bub code（0,3,1），
-   比 .h-msg .bub pre code（0,2,2）更高，会把浅灰底盖到代码块上 ——
-   这里补 :not(.me) 提到（0,3,2）并显式写死背景/颜色，代码块才是真深色。 */
+    比 .h-msg .bub pre code（0,2,2）更高，会把浅灰底盖到代码块上 ——
+    这里补 :not(.me) 提到（0,3,2）并显式写死背景/颜色，代码块才是真深色。 */
 .h-msg:not(.me) .bub pre code,.h-msg.me .bub pre code{
   background:none;border-radius:0;padding:0;color:#DCE4F0;font-size:12.5px;white-space:pre}
-.h-msg .bub pre[data-lang]::before{content:attr(data-lang);display:block;margin:-3px 0 7px;
   font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8FA0BB}
 .h-msg:not(.me) .bub h3,.h-msg:not(.me) .bub h4,.h-msg:not(.me) .bub h5{
   margin:10px 0 5px;font-size:15px;font-weight:650;color:#232A36}
@@ -3197,8 +3206,15 @@ body.rws-dragging *{cursor:col-resize !important}
         var buf=[];
         i++;
         while(i<lines.length && !/^\s*```/.test(lines[i])){buf.push(lines[i]);i++}
-        out.push('<pre><code'+(lang?' class="lang-'+lang+'" data-lang="'+lang+'"':'')
-          +'>'+escMd(buf.join('\n'))+'</code></pre>');
+        /* 工具条：语言名 + 复制 + 展开/收起。复制读 code.textContent（浏览器解码后的原文），
+           不走 data 属性，避免引号/尖括号转义把原文弄脏。 */
+        var codeTxt=buf.join('\n');
+        out.push('<div class="h-code"><div class="h-code-bar"><span class="h-code-lang">'
+          +(lang||'code')+'</span><span class="h-code-acts">'
+          +'<button type="button" data-code-act="copy">复制</button>'
+          +'<button type="button" data-code-act="toggle">展开</button>'
+          +'</span></div><pre><code'+(lang?' class="lang-'+lang+'" data-lang="'+lang+'"':'')
+          +'>'+escMd(codeTxt)+'</code></pre></div>');
         continue;
       }
       if(/^(-{3,}|\*{3,}|_{3,})$/.test(t)){closeList();out.push('<hr>');continue}
@@ -3605,6 +3621,55 @@ body.rws-dragging *{cursor:col-resize !important}
     });
     marks.innerHTML='';marks.appendChild(frag);
     railMarkActive();
+  }
+  /* 代码块工具条：复制 + 展开/收起。委托到 document，
+     addMsg/历史载入/流式/文档预览四条渲染路径都覆盖到，不用逐个绑。
+     复制读 code.textContent —— 这是浏览器把 &lt; &amp; 解码后的原始代码，
+     直接写剪贴板就是用户看到的原文，不用再反转义。 */
+  document.addEventListener('click',function(e){
+    var btn=e.target&&e.target.closest?e.target.closest('[data-code-act]'):null;
+    if(!btn)return;
+    var act=btn.getAttribute('data-code-act');
+    var wrap=btn.closest('.h-code');if(!wrap)return;
+    var code=wrap.querySelector('code');
+    if(act==='toggle'){
+      var open=wrap.classList.toggle('open');
+      btn.textContent=open?'收起':'展开';
+      return;
+    }
+    if(act==='copy'){
+      var text=code?code.textContent:'';
+      var done=function(){window.say&&window.say('代码已复制')};
+      var fail=function(){window.say&&window.say('复制失败，请手动选中代码',true)};
+      /* 优先走主进程 clipboard（最可靠），失败再退回浏览器 API */
+      if(window.riffcut&&window.riffcut.copyText){
+        window.riffcut.copyText(text).then(function(r){
+          if(r&&r.ok!==false)done();else legacyCopy(text)?done():fail();
+        }).catch(function(){ legacyCopy(text)?done():fail() });
+      }else if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(function(){
+          legacyCopy(text)?done():fail();
+        });
+      }else{ legacyCopy(text)?done():fail(); }
+    }
+  });
+  function legacyCopy(text){
+    var ta=null;
+    try{
+      ta=document.createElement('textarea');
+      ta.value=text;
+      ta.setAttribute('readonly','');
+      ta.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;outline:0;box-shadow:none;background:transparent;opacity:0.01';
+      document.body.appendChild(ta);
+      var sel=document.getSelection();
+      var oldRange=sel&&sel.rangeCount?sel.getRangeAt(0):null;
+      ta.focus();ta.select();ta.setSelectionRange(0,ta.value.length);
+      var ok=false;
+      try{ok=document.execCommand('copy')}catch(e){ok=false}
+      if(sel){sel.removeAllRanges();if(oldRange)sel.addRange(oldRange)}
+      if(ta.parentNode)ta.parentNode.removeChild(ta);
+      return ok;
+    }catch(e){ if(ta&&ta.parentNode)ta.parentNode.removeChild(ta); return false }
   }
   window.__railSync=railSync;
   (function bindRailScroll(){
