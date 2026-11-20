@@ -100,6 +100,14 @@ function save(name, data) {
   const f = fileOf(name)
   const d = { ...(data || {}) }
   d.name = String(name)
+  /* ★ 2026-11-20：画幅兜底。AI 用 save 手搓 JSON 建工程时经常不写 width/height，
+     以前这里只补 name/duration，于是落盘的 timeline.json 完全没有画幅：
+     预览 edComposeFit 拿到 undefined → NaN，渲染也只能猜画幅，
+     片尾模板塞进「没画幅」的工程自然画面对不上。
+     blank() 建工程时有默认 1920×1080，save 也必须兜底，别让手搓工程把画幅丢了。 */
+  d.width = Number(d.width) > 0 ? Math.round(Number(d.width)) : W_DEFAULT
+  d.height = Number(d.height) > 0 ? Math.round(Number(d.height)) : H_DEFAULT
+  d.fps = Number(d.fps) > 0 ? Number(d.fps) : FPS_DEFAULT
   // 时长永远不短于最后一个片段的尾巴，否则渲出来会被截断
   d.duration = Math.round(Math.max(1.0, Number(d.duration || 1.0), tail(d)) * 1000) / 1000
   writeFileSync(f, JSON.stringify(d, null, 2), 'utf8')

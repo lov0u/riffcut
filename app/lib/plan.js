@@ -703,9 +703,25 @@ async function pictureCheck(file, dur) {
     const sc = await E.run(P_FFMPEG(), ["-hide_banner", "-i", file, "-vf", "select='gt(scene,0.12)',metadata=print", "-f", "null", "-"], { timeout: 300000 })
     const txt = String(sc.stdout || "") + String(sc.stderr || "")
     out.cuts = (txt.match(/lavfi\.scene_score=/g) || []).length
-    out.motion = out.cuts
+
+    /* ★ 2026-11-20：scene>0.12 只认「硬切」，抓不到平滑动效。
+       片尾的玻璃球缩放、logo 揭示、淡入淡出都是连续帧变化，硬切数=0，
+       旧逻辑就把它们判成「整片静止图」打回 —— 明明三帧画面都不一样
+       （抽帧字节 129K/274K/264K），AI 却被逼着重做已经对的片尾。
+       补一个 freezedetect 信号：统计真正冻死的时长，画面活动时间够长就算在动。 */
+    let freezeSec = 0
+    try {
+      const fz = await E.run(P_FFMPEG(), ["-hide_banner", "-i", file, "-vf", "freezedetect=n=0.005:d=0.4", "-f", "null", "-"], { timeout: 300000 })
+      for (const m of String(fz.stderr || "").matchAll(/freeze_duration:\s*([\d.]+)/g)) freezeSec += Number(m[1])
+    } catch (e) {}
+    out.freezeSec = Math.round(freezeSec * 100) / 100
+    const movingSec = Math.max(0, dur - freezeSec)
+    // 有硬切，或画面活动时间 >= 1 秒（短片按 20% 算），都算「画面在变」
+    const hasMotion = out.cuts > 0 || movingSec >= Math.min(1.0, dur * 0.2)
+    out.motion = hasMotion ? Math.max(1, out.cuts) : 0
+
     // 每 10 秒至少换 1 次画面；短于 3 秒的片子不按这个判
-    if (dur >= 3 && out.cuts < Math.floor(dur / 10)) {
+    if (dur >= 3 && out.cuts < Math.floor(dur / 10) && !hasMotion) {
       out.problems.push(`画面只换了 ${out.cuts} 次（${dur.toFixed(0)} 秒的片子每 10 秒至少该换 1 次）`)
     }
   } catch (e) {}

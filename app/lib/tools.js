@@ -465,8 +465,17 @@ tool('templates', '搜模板库：448 个现成的动效模板。片头、转场
   if (a.kind) items = items.filter(x => x.kind === String(a.kind))
   if (a.q) items = T.search(items, String(a.q))
   const lim = Math.max(1, Number(a.limit) || 30)
-  const lines = items.slice(0, lim).map(x => `- ${x.name}  [${x.cat}/${x.kind}]  ${x.duration ? x.duration + 's' : ''}  ${x.title || ''}`)
-  return clip(`共 ${items.length} 个（全库 ${all.length}）：\n` + lines.join('\n'))
+  /* ★ 2026-11-20 修：模板画幅必须显示出来。之前只给名字/分类/时长，
+     AI 看不到模板是 1920x1080 横屏，就把它塞进 1080x1920 竖屏工程，
+     两边被裁掉——青衣 Cyanweb 片尾那次大字「Cyanweb」被裁成「yanwe」。
+     显示画幅后 AI 才能自己判断：横屏模板配横屏工程，或按 contain 完整缩放。 */
+  const lines = items.slice(0, lim).map(x => {
+    /* component 跟随宿主工程画幅（容器查询），本身不会被裁；只有 block 有固定画幅。
+       标清楚，AI 才知道 component 安全、block 要配画幅。 */
+    const dim = x.w && x.h ? x.w + 'x' + x.h : (x.kind === 'component' ? '自适应画幅' : '画幅未知')
+    return `- ${x.name}  [${x.cat}/${x.kind}]  ${dim}  ${x.duration ? x.duration + 's' : ''}  ${x.title || ''}`
+  })
+  return clip(`共 ${items.length} 个（全库 ${all.length}）：\n画幅格式=宽x高；block 有固定画幅（横屏 block 塞竖屏工程会被裁，工程画幅要跟着模板走）；component 自适应工程画幅、但多为静态卡片。\n★ 做片尾：用「片头片尾」分类里带 gsap 动效的 block（logo-outro 6s / extruded-logo 5s / glass-hero 5s / glass-shard-title 12s），别用 cta-close 这类静态 component——会被交付闸门判"静止画面"打回。用 dur 参数把 5~6s 裁到要的秒数。\n` + lines.join('\n'))
 })
 
 tool('template_vars', '模板里哪些字能改：给模板名，列出它声明了哪些可改项（文字/图片/颜色/数字）与默认值。',
@@ -477,7 +486,11 @@ tool('template_vars', '模板里哪些字能改：给模板名，列出它声明
   if (!name) return '❌ 给 name'
   const vars = T.varsFor(String(a.which || 'auto'), name)
   if (!vars || !vars.length) return `「${name}」没声明可改项，或者模板名不对`
-  return clip(`「${name}」可改 ${vars.length} 项：\n` + vars.map(v => `- ${v.name}（${v.type}${v.role ? '/' + v.role : ''}）${v.default != null ? ' 默认：' + JSON.stringify(v.default).slice(0, 60) : ''}`).join('\n'))
+  /* ★ 2026-11-20：这里原来写 v.name，但 varsFor 返回的字段是 id
+     （readVars 里 v.id），所以 AI 看到的变量名全是 undefined —— 它根本没法
+     照着去改模板文字，只能另外叠一层 addtext，成片就是「英文默认字 + 中文覆盖」。
+     改成 v.id，AI 才能拿到 action_line / button_label 这种真变量名。 */
+  return clip(`「${name}」可改 ${vars.length} 项：\n` + vars.map(v => `- ${v.id}（${v.type}${v.role ? '/' + v.role : ''}）${v.default != null ? ' 默认：' + JSON.stringify(v.default).slice(0, 60) : ''}`).join('\n') + '\n改法：addtemplate 时传 vars，如 vars={\"' + (vars[0] ? vars[0].id : '变量名') + '\":\"你的文案\"}；这样改的是模板自己的字，不用再叠 addtext。')
 })
 
 tool('template_recipe', '拆模板的动画配方：给一个模板名，告诉它到底怎么动的——进场缓动、持续时间、错开多少。',
@@ -570,6 +583,7 @@ tool('edit_timeline', '剪辑台的时间线。AI 剪片一律先建成可改的
     action: 'new | get | save | add | addtext | addtemplate | del | move | trim | split | track | assets | list | delete | render',
     project: '工程名', clip: '片段 id', track: '轨道 v1/g1/t1/a1', at: '开始秒', dur: '时长秒',
     path: '素材路径（add 用）：直接写 assets list/find 返回的文件名就行（如 xxx.png），别自己拼「素材库/图片」这种目录，系统会自动找真实位置', text: '文字（addtext 用）', template: '模板名（addtemplate 用）',
+    vars: '模板变量（addtemplate 用）：先用 template_vars 查出可改项，如 {"action_line":"青衣 Cyanweb","button_label":"关注我们"}。改的是模板自己的字，不用再叠 addtext',
     width: '画布宽', height: '画布高', fps: '帧率', data: '整份时间线 JSON（save 用）',
   },
   { level: '建议', mutates: 'render' })(async (a, customer) => {
@@ -683,12 +697,36 @@ tool('edit_timeline', '剪辑台的时间线。AI 剪片一律先建成可改的
   }
   if (act === 'addtemplate') {
     const R = require('./render')
+    /* ★ 2026-11-20 画幅硬兜底：模板库的片头片尾模板全是 1920×1080 横屏，
+       竖屏工程（1080×1920）塞进去两边会被裁 —— 青衣 Cyanweb 那次
+       "Cyanweb" 被裁成 "yanwe"，黑底半截大字。提示词讲了不一定被读，
+       这里在装模板时直接比对工程与模板画幅，不匹配就明确拦下来。 */
+    const proj = T.load(name)
+    const tplName = String(a.template || '')
+    const tpl = require('./templates').catalog().find(x => x.name === tplName)
+    if (proj && tpl && proj.width && proj.height && tpl.w && tpl.h) {
+      const pLand = Number(proj.width) > Number(proj.height)
+      const tLand = Number(tpl.w) > Number(tpl.h)
+      if (pLand !== tLand) {
+        return `❌ 画幅不匹配：模板「${tplName}」是 ${tpl.w}×${tpl.h}（${tLand ? '横' : '竖'}屏），工程「${name}」是 ${proj.width}×${proj.height}（${pLand ? '横' : '竖'}屏）。硬塞进去画面两边会被裁掉（"Cyanweb" 被裁成 "yanwe" 就是这样）。两种改法：① 把工程画幅改成 ${tpl.w}×${tpl.h} 再装；② 换一个跟工程同画幅的模板。`
+      }
+    }
     /* ★ 不传 dur 就让模板用自己的设计时长。
        以前这里写的是 `dur: Number(a.dur) || 3` —— 于是每个模板都被切成 3 秒：
        19 秒的动画只播了开头就断，看着像「渲染坏了」，其实是参数把时长钉死了。
        模型调用时基本不会主动给 dur，所以这条默认值等于对所有模板生效。 */
     const opt = { at: Number(a.at) || 0 }
     if (Number(a.dur) > 0) opt.dur = Number(a.dur)
+    /* ★ 2026-11-20：模板变量的最后一环。template_vars 能列出 action_line /
+       button_label 这些可改项，渲染层 render.js 也支持 opts.vars 写进片段，
+       但这里从来没把 AI 传的 vars 接过来 —— 于是模板永远显示英文默认值
+       「Make it happen / Start now」，AI 只能再叠一层 addtext，成片就是
+       「英文默认字 + 中文覆盖」。现在把 vars 接上（对象或 JSON 字符串都收）。 */
+    if (a.vars) {
+      let vars = a.vars
+      if (typeof vars === 'string') { try { vars = JSON.parse(vars) } catch (e) { return '❌ vars 不是合法 JSON：' + e.message } }
+      if (vars && typeof vars === 'object') opt.vars = vars
+    }
     const r = await R.addTemplate(name, String(a.template || ''), opt)
     /* ★ 2026-11-20：必须同时看 mounted。
        以前只看 r.ok（恒 true），component 类模板只拷了文件没挂到 g1 时也回「✓ 加了模板」，

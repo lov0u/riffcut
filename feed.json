@@ -1,10 +1,10 @@
 {
   "version": "0.1.0",
-  "build": 9,
+  "build": 10,
   "channel": "stable",
   "url": "https://github.com/lov0u/riffcut/releases/download/v0.1.0/RiffCut-lite-0.1.0.zip",
-  "sha256": "bca5c2db2b5ad4384636d3b109e79d226eb048d249b745db8595edb1963bc0c3",
-  "size": 2226703210,
+  "sha256": "eecd6c27265aef5b02cc2a1ab8c166ff7b8748988a3ee50324d3ff04591ef956",
+  "size": 2226706854,
   "min_version": "0.0.1",
   "released_at": "2026-11-20",
   "notes": [
@@ -16,6 +16,7 @@
     "聊天区右侧加提问刻度条：每个小横杠对应一条提问，悬停看提问和回答摘要，点一下跳到那条消息",
     "代码块限高 340px、块内滚动；右上角加「复制」「展开/收起」按钮，复制走主进程剪贴板",
     "剪辑台预览模板居中不再跑偏到右下角；加「适应／放大／缩小」预览按钮；时间线和轨道加明面删除按钮",
-    "工作流每步可查（输入/输出/耗时）且切对话保留；修 addtemplate 假成功、素材路径幻觉、save 对象 tracks 兼容、plan_check"
+    "工作流每步可查（输入/输出/耗时）且切对话保留；修 addtemplate 假成功、素材路径幻觉、save 对象 tracks 兼容、plan_check",
+    "做片尾先出分镜再动手：工程画幅跟着模板走不再裁字；模板变量（template_vars+vars）可改中文不再叠英文默认字；闸门用 freezedetect 识别平滑动效，不再把动画误判成静止图"
   ]
 }
