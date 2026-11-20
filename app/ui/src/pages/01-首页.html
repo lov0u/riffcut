@@ -1628,7 +1628,7 @@ body.rws-dragging *{cursor:col-resize !important}
     <!-- 左：AI 导演 + 选择文件夹 -->
     <div class="u-card h-ai">
       <div class="h-aihead">
-        <svg class="ic spark"><use href="#i-spark"/></svg><span class="h-title">AI 导演</span><span class="h-beta">Beta</span>
+        <svg class="ic spark"><use href="#i-spark"/></svg><span class="h-title">RiffCut</span><span class="h-beta">Beta</span>
 
         <span class="rec rec-new" id="hChatClear" role="button" tabindex="0" title="开始一个新会话">
           <svg class="ic"><use href="#i-plus"/></svg><span class="rec-t">新会话</span></span>
@@ -2703,7 +2703,7 @@ body.rws-dragging *{cursor:col-resize !important}
           mine.appendChild(mw);mine.appendChild(mb);
           box.appendChild(mine);
         }
-        var pb=addMsg('AI 导演','',true,{pending:true});
+        var pb=addMsg('RiffCut','',true,{pending:true});
         chatPending=pb||null;
         var fw=flowNode();
         if(box){box.appendChild(fw);box.scrollTop=box.scrollHeight}
@@ -3841,14 +3841,14 @@ body.rws-dragging *{cursor:col-resize !important}
   function missingModel(kind){
     var label=kind==='video'?'视频模型':'生图模型';
     window.say('未添加'+label);
-    addMsg('AI 导演','未添加'+label+'。到「模型管理 → 添加模型」读取可用模型，把类型选成「'+
+    addMsg('RiffCut','未添加'+label+'。到「模型管理 → 添加模型」读取可用模型，把类型选成「'+
       label+'」即可；之后你只要说要什么，我会自己调用，不用在首页选。');
   }
   function runGen(kind,prompt){
     var list=genModels(kind);
     if(!list.length){missingModel(kind);return}
     var nm=(list[0]&&(list[0].name||list[0].id))||'后台模型';
-    addMsg('AI 导演','正在用「'+nm+'」'+(kind==='video'?'生成视频':'生成图片')+'…');
+    addMsg('RiffCut','正在用「'+nm+'」'+(kind==='video'?'生成视频':'生成图片')+'…');
     var box=$('#hMsgs'),wait=box&&box.lastChild;
     var ep=kind==='video'?'/api/video/generate':'/api/image/generate';
     window.api(ep,{prompt:prompt}).then(function(d){
@@ -3857,7 +3857,7 @@ body.rws-dragging *{cursor:col-resize !important}
       window.say((kind==='video'?'视频':'图片')+'已生成，保存在软件自己的产出目录');
     }).catch(function(e){
       if(wait&&wait.parentNode)wait.parentNode.removeChild(wait);
-      addMsg('AI 导演','生成没成：'+(e.message||'未知错误'));
+      addMsg('RiffCut','生成没成：'+(e.message||'未知错误'));
     });
   }
   /* 解析导演回复里的生成指令；没按协议返回时，用用户原话兜底自动出内容 */
@@ -3873,7 +3873,7 @@ body.rws-dragging *{cursor:col-resize !important}
       runGen(kind,prompt||original||t);
       return;
     }
-    addMsg('AI 导演',t||'（模型没有返回内容）');
+    addMsg('RiffCut',t||'（模型没有返回内容）');
     /* 只有「用户明确要生成 + 后台确实配了生成模型」才自动跑；
        没配生成模型时不链式失败，让用户先看到模型的回答。 */
     if(intent&&genModels(intent).length)runGen(intent,original);
@@ -4471,7 +4471,7 @@ body.rws-dragging *{cursor:col-resize !important}
       return;
     }
     try{
-      addMsg('AI 导演',txt||'（模型没有返回内容）',false,
+      addMsg('RiffCut',txt||'（模型没有返回内容）',false,
              {usage:(d&&d.usage)||null,model:(d&&d.model)||'',ms:(d&&d.ms)||0});
     }catch(e){
       try{
@@ -4621,7 +4621,7 @@ body.rws-dragging *{cursor:col-resize !important}
        前端这个下拉只是「让用户知道大概是谁在回答」。真没配好会由后端如实报错。 */
     /* 占位气泡：三个点跳动，不写「正在思考…」四个字 ——
        文字是静态的，看着像卡死；点会动，才知道机器还在跑。 */
-    addMsg('AI 导演','',true,{pending:true});   /* 占位气泡不进存档 */
+    addMsg('RiffCut','',true,{pending:true});   /* 占位气泡不进存档 */
     var box=$('#hMsgs');chatPending=box&&box.lastChild;
     /* 工作流卡片：先插一张「正在动手」，随后由步骤总线实时填充 */
     var flowW=flowNode();
@@ -4698,7 +4698,7 @@ body.rws-dragging *{cursor:col-resize !important}
       if(chatTimer){clearTimeout(chatTimer);chatTimer=null}
       if(chatPending&&chatPending.parentNode)chatPending.parentNode.removeChild(chatPending);
       chatPending=null;chatCtrl=null;setSending(false);
-      addMsg('AI 导演','没连上模型：'+(e.message||'未知错误')+'。本地出片不受影响，点「开始生成」即可。');
+      addMsg('RiffCut','没连上模型：'+(e.message||'未知错误')+'。本地出片不受影响，点「开始生成」即可。');
     });
   }
 
@@ -4782,7 +4782,7 @@ body.rws-dragging *{cursor:col-resize !important}
         btn.disabled=false;btn.textContent='✓ 确认方案并开始剪辑';
         if(card){var t=card.querySelector('.ph .u-tag');if(t){t.textContent='已确认';t.className='u-tag green'}}
         if(res&&res.files){
-          addMsg('AI 导演','成片好了：'+(res.qc?res.qc.summary:'')+'。可到「专业剪辑」预览、任务中心查看文件。');
+          addMsg('RiffCut','成片好了：'+(res.qc?res.qc.summary:'')+'。可到「专业剪辑」预览、任务中心查看文件。');
           convPatch({status:'已完成'});
           document.dispatchEvent(new CustomEvent('renderdone',{detail:res}));
           if(window.refreshTimeline)window.refreshTimeline();   /* 新成片写了工程 timeline，立刻刷新 */
@@ -4950,12 +4950,12 @@ body.rws-dragging *{cursor:col-resize !important}
       },900);
       window.pollTask(r.task_id,function(res){
         askFinish('');
-        if(!res){addMsg('AI 导演','素材分析已结束。');return}
+        if(!res){addMsg('RiffCut','素材分析已结束。');return}
         if(!res.total){
-          addMsg('AI 导演','没有新增素材需要分析，原有索引保持原样。');
+          addMsg('RiffCut','没有新增素材需要分析，原有索引保持原样。');
           window.say('没有新素材，无需分析');
         }else{
-          addMsg('AI 导演',
+          addMsg('RiffCut',
             (mode==='new'?'新增素材分析完成':'素材分析完成')+'：'+res.ok+'/'+res.total
             +' 个成功，挑出 '+(res.picked||0)+' 个好画面'
             +(res.skipped?('，跳过已分析的 '+res.skipped+' 个'):'')+'。'
@@ -4991,7 +4991,7 @@ body.rws-dragging *{cursor:col-resize !important}
     if(ASK.running&&ASK.task){
       window.api('/api/tasks',{action:'cancel',id:ASK.task}).then(function(){
         askFinish('已停止素材分析');
-        addMsg('AI 导演','素材分析已停止，已完成的部分仍保留在素材库里。');
+        addMsg('RiffCut','素材分析已停止，已完成的部分仍保留在素材库里。');
         refreshIndex();
       }).catch(function(e){askFinish('停止失败：'+e.message)});
     }else{

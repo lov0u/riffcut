@@ -99,7 +99,9 @@ function bookUsage(modelName, usage, ms) {
   try {
     const M = require('./models')
     M.recordUsage({
-      at: P.now(), model: modelName || 'AI 导演', kind: 'chat',
+      /* 记账名会显示在「调用明细」里。以前写 'AI 导演'，现在统一叫 RiffCut ——
+         用户在费用页看到的是自己认识的软件名，不是一个职位。 */
+      at: P.now(), model: modelName || 'RiffCut', kind: 'chat',
       ok: true, ms: Number(ms) || 0,
       in: usage.in || 0, out: usage.out || 0, cached: usage.cached || 0, price: 0,
     })

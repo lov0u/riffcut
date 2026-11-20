@@ -15,7 +15,11 @@ const P = require('./paths')
 const FILE = path.join(P.HOME, '配置', '对话.json')
 const MAX_MSG = 400
 /** 这些标题是占位，接真实对话内容后要自动重算 */
-const DEFAULT_TITLES = new Set(['', '新对话', '你好', 'AI 导演', '未命名对话'])
+/* ★ 这张表是「标题还是占位符，需要按真实内容重算」的判断依据。
+   加了 'RiffCut' 让新对话的占位标题也能被重算；
+   'AI 导演' 保留 —— 用户已有的历史对话里可能就存着这个标题，
+   从这里删掉会让那些对话的标题永远停在占位状态。 */
+const DEFAULT_TITLES = new Set(['', '新对话', '你好', 'RiffCut', 'AI 导演', '未命名对话'])
 
 /** 六项需求澄清（旧版 BRIEF_FIELDS 的 key） */
 const BRIEF_FIELDS = [
