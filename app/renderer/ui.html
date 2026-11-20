@@ -10102,8 +10102,9 @@ body.rws-dragging *{cursor:col-resize !important}
 .ed-tl-h .zoom{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink3)}
 .ed-tl-h input[type=range]{width:80px}
 .ed-scroll{flex:0 1 auto;overflow:auto;position:relative;scrollbar-width:thin;
-  /* 轨道名列宽：拖右边缘的手柄可改。JS 的 LANE_W 必须跟这个值同步。 */
-  --lane-w:96px;
+  /* 轨道名列宽：拖右边缘的手柄可改，并记进 localStorage，下次打开还是这个宽度。
+     JS 的 LANE_W 从存储读取，这里是首次打开（没存过）的默认值：108px。 */
+  --lane-w:108px;
   /* 至少完整显示刻度 + 四条轨（20 + 4×32 = 148），否则音频轨会被切掉一半，
      看着像界面断了。轨道更多时才出现滚动条。 */
   min-height:148px;max-height:min(46vh,360px)}
@@ -10113,9 +10114,9 @@ body.rws-dragging *{cursor:col-resize !important}
 .ed-ruler .tk{position:absolute;top:0;height:100%;border-left:1px solid #E8ECF3;
   font-size:10.5px;color:#9AA2B1;padding-left:3px;line-height:20px;white-space:nowrap}
 .ed-lane{display:flex;align-items:stretch;border-bottom:1px solid #F1F4F8;min-height:32px}
-/* 轨道名列加宽到 116px：把「加片段 / 锁 / 静音 / 删除」都集成在这一栏，
+/* 轨道名列默认 108px、可拖动调宽窄并记忆：把「加片段 / 锁 / 静音 / 删除」都集成在这一栏，
    不用再跑到上面工具栏找。原来 62px 塞不下，红叉 hover 时被挤没了。 */
-.ed-lane-lb{flex:0 0 var(--lane-w,96px);position:sticky;left:0;z-index:2;background:#FBFCFE;
+.ed-lane-lb{flex:0 0 var(--lane-w,108px);position:sticky;left:0;z-index:2;background:#FBFCFE;
   border-right:1px solid var(--line);display:flex;align-items:center;gap:3px;
   padding:0 6px;font-size:10.5px;color:var(--ink3);white-space:nowrap;overflow:hidden}
 /* 轨道名栏右边缘的拖拽手柄：往左拖只留图标、往右拖显示文字。
@@ -10436,7 +10437,7 @@ body.rws-dragging *{cursor:col-resize !important}
         <div class="ed-inner" id="edInner">
           <div class="ed-ruler" id="edRuler"></div>
           <div id="edLanes"></div>
-          <div class="ed-play" id="edPlay" style="left:116px"></div>
+          <div class="ed-play" id="edPlay" style="left:108px"></div>
         </div>
       </div>
     </div>
@@ -10599,8 +10600,12 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
 });
 
   /* 轨道名列宽（px）。CSS .ed-lane-lb 的 flex-basis 与这里必须一致：
-     时间刻度、播放头、滚轮定位都按它算偏移。加宽是为了把「＋/锁/静音/删除」集成进轨道栏。 */
-  var LANE_W=96;
+     时间刻度、播放头、滚轮定位都按它算偏移。加宽是为了把「＋/锁/静音/删除」集成进轨道栏。
+     ★ 拖过的宽度记进 localStorage，下次打开还是用户调的；没存过默认 108px。 */
+  var LANE_KEY='riffcut.edit.laneWidth';
+  function laneStored(){try{var v=parseInt(localStorage.getItem(LANE_KEY)||'',10);
+      return v>=56&&v<=200?v:108}catch(e){return 108}}
+  var LANE_W=laneStored();
   var ED={proj:null,data:null,assets:[],sel:null,pps:60,zoom:1,t:0,playing:false,dirty:false,
           compose:null,layers:{},kf:{track:null,i:null,prop:'x'},pvScale:1};
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -11224,7 +11229,10 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     edDirty();edLanes();
   });
   document.addEventListener('mouseup',function(){
-    if(!drag)return;drag=null;edInsp();
+    if(!drag)return;
+    /* 拖轨道栏宽结束时写回存储，下次打开还是这个宽度 */
+    if(drag.mode==='lanew'){try{localStorage.setItem(LANE_KEY,String(LANE_W))}catch(e){}}
+    drag=null;edInsp();
   });
 
   function edClipAt(tr,i){
