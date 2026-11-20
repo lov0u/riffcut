@@ -473,7 +473,9 @@ tool('templates', '搜模板库：448 个现成的动效模板。片头、转场
     /* component 跟随宿主工程画幅（容器查询），本身不会被裁；只有 block 有固定画幅。
        标清楚，AI 才知道 component 安全、block 要配画幅。 */
     const dim = x.w && x.h ? x.w + 'x' + x.h : (x.kind === 'component' ? '自适应画幅' : '画幅未知')
-    return `- ${x.name}  [${x.cat}/${x.kind}]  ${dim}  ${x.duration ? x.duration + 's' : ''}  ${x.title || ''}`
+    // ★ 陷阱标记：有中文内容要避开的模板，直接标出来，AI 列表里一眼能看见
+    const trap = x.trap ? `  ⚠️有中文勿用(${x.trap.kind})` : ''
+    return `- ${x.name}  [${x.cat}/${x.kind}]  ${dim}  ${x.duration ? x.duration + 's' : ''}  ${x.title || ''}${trap}`
   })
   return clip(`共 ${items.length} 个（全库 ${all.length}）：\n画幅格式=宽x高；block 有固定画幅（横屏 block 塞竖屏工程会被裁，工程画幅要跟着模板走）；component 自适应工程画幅、但多为静态卡片。\n★ 做片尾：用「片头片尾」分类里带 gsap 动效的 block（logo-outro 6s / extruded-logo 5s / glass-hero 5s / glass-shard-title 12s），别用 cta-close 这类静态 component——会被交付闸门判"静止画面"打回。用 dur 参数把 5~6s 裁到要的秒数。\n` + lines.join('\n'))
 })
@@ -709,6 +711,19 @@ tool('edit_timeline', '剪辑台的时间线。AI 剪片一律先建成可改的
       const tLand = Number(tpl.w) > Number(tpl.h)
       if (pLand !== tLand) {
         return `❌ 画幅不匹配：模板「${tplName}」是 ${tpl.w}×${tpl.h}（${tLand ? '横' : '竖'}屏），工程「${name}」是 ${proj.width}×${proj.height}（${pLand ? '横' : '竖'}屏）。硬塞进去画面两边会被裁掉（"Cyanweb" 被裁成 "yanwe" 就是这样）。两种改法：① 把工程画幅改成 ${tpl.w}×${tpl.h} 再装；② 换一个跟工程同画幅的模板。`
+      }
+    }
+    /* ★ 2026-11-20：两类陷阱模板的硬兜底。
+       「中文缺字形」类（extruded-logo 等）的文字走 Geist 拉丁字库，中文会渲成 ?? 或空白。
+       只要 vars 里带了中文，就直接拦下并给替代方案 —— 不管 AI 读没读提示词。
+       KB-254 记了同类 frost 事故：中文标题渲出来是空白。 */
+    if (tpl && tpl.trap && tpl.trap.kind === '中文缺字形') {
+      let varText = ''
+      if (a.vars) {
+        try { const vv = typeof a.vars === 'string' ? JSON.parse(a.vars) : a.vars; varText = Object.values(vv || {}).join(' ') } catch (e) { varText = String(a.vars) }
+      }
+      if (/[\u4e00-\u9fff]/.test(varText)) {
+        return `❌ 模板「${tplName}」${tpl.trap.note}。你传的变量里有中文，装进去会渲成 ?? 或空白。有中文内容请换 glass-hero（普通 DOM 文字、中文正常）；纯英文 logo 才用这个。`
       }
     }
     /* ★ 不传 dur 就让模板用自己的设计时长。

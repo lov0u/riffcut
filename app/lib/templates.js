@@ -58,6 +58,31 @@ function registryRoot() { return join(tplRoot(), 'registry') }
 function thumbsRoot() { return join(tplRoot(), 'thumbs') }
 
 /**
+ * ★ 2026-11-20：两类「有中文就别用」的陷阱模板，集中标记，不逐个改 448 个 json。
+ * 命中后 catalog() 会给条目带 trap 字段，templates 工具列表和提示词都会显示，
+ * AI 看到中文内容就能自己避开；addtemplate 还会做硬兜底告警。
+ *
+ * 两类判据：
+ *   中文缺字形 —— 文字走 Geist/typeface.json 拉丁字形做 3D 挤出或描摹，中文渲染成 ?? 或空白
+ *   （KB-254 已记 frost 同类坑；extruded-logo 实测「青衣 Cyanweb」→「?? CYANW」）。
+ *   静态收尾卡 —— 动效结束后完全静止的 end card，整片只用它会被引擎判「静止画面」打回。
+ *
+ * glass-hero / logo-outro 不在此表：它们用普通 DOM 文字、有平滑动效，中文正常。
+ */
+const TRAPS = {
+  // 文字走拉丁字形 → 中文变 ?? / 空白，有中文换 glass-hero
+  'extruded-logo':                 { kind: '中文缺字形', note: 'Geist 拉丁字库做 3D 挤出，中文渲染成 ?? 或空白；有中文换 glass-hero' },
+  'frost-sequence-camera-orbit':   { kind: '中文缺字形', note: 'Geist 拉丁字体，中文渲染空白；中文放字幕轨或换模板' },
+  'glass-shard-title':             { kind: '中文缺字形', note: 'Geist 拉丁字体，中文可能变 ??；有中文换 glass-hero' },
+  'wireframe-portal-title':        { kind: '中文缺字形', note: 'Geist 拉丁字体；有中文换 glass-hero' },
+  'variable-font-flex':            { kind: '中文缺字形', note: '可变拉丁字体，中文可能缺字；有中文换普通文字模板' },
+  // 动完完全静止 → 整片只用会被判静止画面打回，用带动画 block
+  'cta-close':                     { kind: '静态收尾卡', note: '动完完全静止，会被交付闸门判「静止画面」打回；用 logo-outro / glass-hero' },
+  'cta-lockup':                    { kind: '静态收尾卡', note: '同上：静态收尾卡，别单独成片' },
+  'logo-brand-close':              { kind: '静态收尾卡', note: '同上：静态收尾卡，别单独成片' },
+}
+
+/**
  * 模板目录。只扫 blocks / components —— examples/ 是「整场戏」完整示例，
  * 不是能装进时间线的模板，混进卡片墙点「装进工程」必然失败。
  */
@@ -91,6 +116,7 @@ function catalog(force = false) {
         poster: localThumb ? `/tplthumb/${nm}.png` : (pv.poster || ''),
         tags: m.tags || [],
         hasThumb: localThumb,
+        trap: TRAPS[nm] || null,   // ★ 有中文内容要避开的陷阱标记（见 TRAPS 表）
       })
     }
   }
@@ -266,7 +292,7 @@ function family(name, limit = 8) {
 }
 
 module.exports = {
-  CATS, OTHER, ZH_QUERY, UI_KEYS, classify,
+  CATS, OTHER, ZH_QUERY, UI_KEYS, classify, TRAPS,
   catalog, stats, search, readVars, varsFor, itemMeta, htmlOf, recipe, family,
   tplRoot, registryRoot, thumbsRoot,
 }

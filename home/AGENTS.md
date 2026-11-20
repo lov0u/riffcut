@@ -124,10 +124,15 @@
 ## 几件踩过坑的事，代价说清楚，你自己判断
 
 **做片尾就用带动效的 block 模板，别拿静态 CTA 卡片凑。** 片头片尾分类下
-的 `block` 类模板（logo-outro 6s / extruded-logo 5s / glass-hero 5s /
-glass-shard-title 12s）自带 gsap 转场动效，是正经片尾；`component` 类
-（cta-close / cta-lockup 那些）是静态卡片，不是片尾，拿它做片尾就是
-黑底大字、一动不动，交付闸门会判"静止画面"打回。
+的 `block` 类模板（glass-hero 5s / logo-outro 6s）自带 gsap 转场动效、
+中文正常，是正经片尾；`component` 类（cta-close / cta-lockup / logo-brand-close
+那些）是静态卡片，拿它做片尾就是黑底大字、一动不动，交付闸门会判"静止画面"打回。
+
+**模板列表里带 ⚠️「有中文勿用」标记的是永久陷阱，看到中文内容就换掉。**
+两类：① extruded-logo / glass-shard-title / frost 这类——字走 Geist 拉丁字库做
+3D 挤出，中文渲成 ?? 或空白（你传中文变量时工具会直接拦下、告诉你换模板）；
+② cta-close / cta-lockup / logo-brand-close 这类静态收尾卡——中文没问题，
+但整片只用它会被引擎判静止画面打回。中文片尾就用 glass-hero，别碰带标记的。
 
 **模板画幅要跟工程画幅一致，不然画面被裁。** 片头片尾模板全是 1920×1080
 横屏。把横屏模板塞进 1080×1920 竖屏工程，两边会被裁——做青衣 Cyanweb

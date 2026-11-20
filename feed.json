@@ -1,10 +1,10 @@
 {
   "version": "0.1.0",
-  "build": 11,
+  "build": 12,
   "channel": "stable",
   "url": "https://github.com/lov0u/riffcut/releases/download/v0.1.0/RiffCut-lite-0.1.0.zip",
-  "sha256": "ccd931c2840c5e340ba64ba5b2faf28b25096ecb91f0d98648d2d66cee7b6f42",
-  "size": 2226711402,
+  "sha256": "5bdd7c6bb6431b281a3025feaf28a5df01ff442fc2452a638a8c68b7e141c340",
+  "size": 2226713206,
   "min_version": "0.0.1",
   "released_at": "2026-11-20",
   "notes": [
@@ -18,6 +18,7 @@
     "剪辑台预览模板居中不再跑偏到右下角；加「适应／放大／缩小」预览按钮；时间线和轨道加明面删除按钮",
     "工作流每步可查（输入/输出/耗时）且切对话保留；修 addtemplate 假成功、素材路径幻觉、save 对象 tracks 兼容、plan_check",
     "做片尾先出分镜再动手：工程画幅跟着模板走不再裁字；模板变量（template_vars+vars）可改中文不再叠英文默认字；闸门用 freezedetect 识别平滑动效，不再把动画误判成静止图",
-    "聊天里的成片路径可点一下直接在剪辑台打开；AI 做完的工程自动切到剪辑台当前工程，不再找不到；修复导入素材按钮点了没反应（Electron 文件选择桥）"
+    "聊天里的成片路径可点一下直接在剪辑台打开；AI 做完的工程自动切到剪辑台当前工程，不再找不到；修复导入素材按钮点了没反应（Electron 文件选择桥）",
+    "模板库给两类「有中文勿用」陷阱打标记：拉丁字库 3D 挤出（中文变 ??）和静态收尾卡（判静止画面）；传中文变量装这类模板会被直接拦下并提示换 glass-hero"
   ]
 }
