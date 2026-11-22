@@ -613,7 +613,10 @@ async function audio(d) {
     const r = await AU.tts(str(d.text) || '这是一段试听', {
       engine: wantSystem ? 'system' : undefined,
       voice: str(d.voice), rate: num(d.rate, 175),
-      template: str(d.template) || (str(d.emotion) ? 'emotion' : 'tts'),
+      /* ★ 这里绝不能兜底成 'tts'：audio.js 的模板选择是 `opts.template || autoTemplate || (useInstruct?'freeform':'tts')`，
+         一兜底就把 autoTemplate/freeform 短路掉了 —— 表现是「换音色试听声音全一样」。
+         只有调用方明确点名模板时才传，其余交给 audio.js 按音色的 instruct 自己选。 */
+      template: str(d.template) || (str(d.emotion) ? 'emotion' : ''),
       language: str(d.language) || 'zh',
       emotion: str(d.emotion), speed: str(d.speed),
       pitch: str(d.pitch), volume: str(d.volume), instruct: str(d.instruct),

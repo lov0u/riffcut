@@ -3509,6 +3509,15 @@ body.rws-dragging *{cursor:col-resize !important}
         else if(st==='playing'){btn.classList.add('playing');btn.textContent='播放中'}
         else btn.textContent='试听';
       });
+      /* 播放中再点一下 = 停，不是重新合成一遍。
+         以前这里无条件往下走 preview_voice，用户点「暂停」实际是排队再合成 6 秒
+         （2026-11-22 用户「点这个暂停按钮，它能停止吗？功能都要有用啊」）。 */
+      var AU=$('#auPlayer');
+      if(b.classList.contains('busy'))return;                     /* 合成中：吞掉 */
+      if(b.classList.contains('playing')){
+        try{ if(AU&&!AU.paused)AU.pause() }catch(e){}
+        LB(b,'');window.say('已停止播放');return;
+      }
       LB(b,'busy');
       window.api('/api/audio',{action:'preview_voice',model:mid,voice:vid,
         text:$('#auText').value.trim()||'在影创的镜头下，每一个瞬间都值得被定格，让创意，成为影像。',rate:+$('#auRate').value})

@@ -222,6 +222,20 @@ async function tts(text, opts = {}) {
     } catch (e) { autoRef = '' }
   }
   const effectiveRef = opts.voiceRef || autoRef
+  /* ★ 2026-11-22：Ming 3.0 不认音色名字（实测三个音色合成 md5 完全相同）。
+     它能控音色的只有 instruct（文字描述）、voice_ref（参考音频）、
+     ip 模板的 voice_id（仅 4 个英文音色）。
+     所以选了一个「预设音色名」时，必须把它的声音描述翻成 instruct 一起传进去，
+     否则等于没选 —— 出来的永远是同一个默认嗓子。
+     用户自己录的音色走 effectiveRef（克隆），不需要 instruct。 */
+  let autoInstruct = '', autoTemplate = '', autoVid = ''
+  if (!effectiveRef && voice) {
+    try {
+      const sp = require('./voicemodels').mingVoiceSpec(voice)
+      if (sp) { autoInstruct = sp.instruct || ''; autoTemplate = sp.template || ''; autoVid = sp.vid || '' }
+    } catch (e) {}
+  }
+  const useInstruct = opts.instruct || autoInstruct
   const rate = parseInt(opts.rate || s.voice_rate || 175, 10)
   const outdir = C.custPaths().voice
   P.ensureDir(outdir)
@@ -235,10 +249,17 @@ async function tts(text, opts = {}) {
     const m = await mingTts(text, {
       out,
       task: effectiveRef ? 'clone' : 'tts',
-      template: opts.template || (opts.emotion ? 'emotion' : 'tts'),
+      /* 有 instruct 描述 → 走 freeform（自由文字描述声音）；
+         英文内置音色 → 走 ip 模板配 voice_id；
+         用户自带 emotion → 走 emotion 模板；都没有 → 普通 tts。 */
+      template: opts.template
+        || (opts.emotion ? 'emotion' : '')
+        || autoTemplate
+        || (useInstruct ? 'freeform' : 'tts'),
+      voiceId: autoVid || undefined,
       language: opts.language || 'zh',
       speed: opts.speed, pitch: opts.pitch, volume: opts.volume,
-      emotion: opts.emotion, instruct: opts.instruct, dialect: opts.dialect,
+      emotion: opts.emotion, instruct: useInstruct, dialect: opts.dialect,
       voiceRef: effectiveRef, referenceText: opts.referenceText,
       backend: opts.backend,
     })

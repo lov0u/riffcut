@@ -3,6 +3,8 @@
 ## 变更记录
 | 日期 | 记录 |
 |---|---|
+| 2026-11-22 | **换音色声音一模一样**。根因：`voicemodels.js` 的 93 个「音色」是我编的名字，Ming 3.0 引擎根本不认 —— request option 全量里没有 speaker/voice，传 `--request-option speaker=灵小安` 直接报 `unknown Ming TTS request option: speaker`；三个音色合成同一句 WAV md5 完全相同（`8e269c86…`）。引擎真正控音色只有三条路：①`template_name=freeform` + `instruct=<中文描述>`（实测基频 96.7Hz 老男 / 247.8Hz 少女 / 254.9Hz 默认；同 instruct 跑两次 md5 相同，可复现）②`--voice-ref`（克隆）③`template_name=ip` + `voice_id`（仅 US_Emma/US_James/UK_George/UK_Charlotte）。改法：`MING_VOICE_ROWS` 换成 `[名字, 性别, instruct 描述]` 三元组（年龄+性别+音色质感+语速四要素），新增 `mingVoiceSpec(name)`；`audio.js` 的 `tts()` 选预设音色时把它翻成 `instruct` 并按需切 freeform/ip。**短路坑**：`api.js` 的 `preview_voice` 把 `template` 兜底写成 `|| 'tts'`，把 `audio.js` 里 `opts.template || autoTemplate || (useInstruct?'freeform':'tts')` 整条短路 → 试听永远走普通 tts，点哪个音色都一样。改成只在调用方点名时传。 |
+| 2026-11-22 | 顺带修「播放中再点一下变转圈重新合成」：`tryTogglePlay(btn)` 在 busy 时吞掉点击、playing 时只 `pause()` 并复原按钮，不再走 `doPreview`。实测点第二次 +0.6s 按钮即回 `vm-mini`，3.6s 后不重合成。教训：instruct 里别加「播音腔/字正腔圆」这类评价词，模型会往同一方向收、音色差异被抹平。 |
 | 2026-11-21 | 修复"每次启动弹'正在验证 RiffCut影创…'"：根因是签名后有人手工把 3 个语音模型权重（1.6G+228M+308K）塞进 `.app` 包内，破坏代码签名密封，Gatekeeper 每次启动重新评估。已将冗余副本移出包到备份目录，密封恢复（`codesign -vvv --deep` → valid on disk），启动验收弹窗消失。用户数据目录的软链指向 `home/` 里的权重正本，不受影响。 |
 | 2026-11-21 | 轨道栏再修：非音频轨加 `.lb-t-ph` 等宽占位，四轨 ＋/锁/静音/删除 槽位与名字中线完全对齐；`edZoomSet()` 放大后把播放头自动拉回可视区（原来放大到 400% 播放头被推出视野，看着像指针没了）。同样 build→同步包内→重签→重启。 |
 | 2026-11-21 | 时间线轨道 UI：轨道名统一按「类型+同类序号」重算（视频1/图形1/字幕1/音频1，全等长，忽略数据源乱名），见 `app/ui/src/pages/05-专业剪辑.html` 的 `edTrackName()`；＋/锁/静音/删除 由字符/emoji 换成统一 SVG 线性图标 + 微描边/悬浮浮起质感；删轨改为一律弹确认（原来空轨直接删）。改完 `python3 app/ui/build.py` → 同步包内 ui.html → `codesign --force --deep --sign -` 重签，验证 valid on disk。 |
