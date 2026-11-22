@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('riffcut', {
   // 选素材文件（原生对话框，可多选）——剪辑台「导入」用。选完拿到绝对路径
   // 再走 onFilesPicked → /api/edit import，绝不经过不存在的 window.webkit。
   pickFiles: (opts) => ipcRenderer.invoke('sys:pickFiles', opts || {}),
+  pickAudio: (opts) => ipcRenderer.invoke('sys:pickAudio', opts || {}),
   // 拖拽的 File 取绝对路径（Electron 32+ 用 webUtils，File.path 已移除）。
   // ★ 必须在 preload（渲染进程侧）直接调 webUtils.getPathForFile，只回传路径字符串。
   // 曾经走 ipcRenderer.invoke('sys:pathForFile', file) 把 File 对象跨 IPC 传给主进程，

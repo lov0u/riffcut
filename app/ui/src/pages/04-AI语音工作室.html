@@ -968,11 +968,19 @@
   }
   function doImport(){
     if(!V||!V.model||!V.model.can_import){hint('当前模型不支持导入音色样本','bad');return}
-    hint('请在弹出的窗口里选择音色样本…');
-    A('/api/voicemodels',{action:'import',id:ACTIVE}).then(function(r){
-      if(!r.ok){hint(r.error,'bad');return}
-      hint(r.note,'ok');return loadVoices();
-    }).catch(function(e){hint(e.message,'bad')});
+    /* 选文件必须在主进程做（ripgrep 页面里没有 fs），所以先 pickAudio 拿路径再入库。
+       以前这里直接 POST {action:'import'} 不带路径 —— 后端只能回「请用添加模型 →
+       从文件夹接入」，用户点这个按钮永远等不到选文件窗口（2026-11-22 报障）。 */
+    var pick=window.riffcut&&window.riffcut.pickAudio;
+    if(!pick){hint('这台机器选不了文件，可以点「录制我的音色」直接录','bad');return}
+    pick({title:'选一段干净人声当音色样本'}).then(function(p){
+      if(!p||p.ok===false){if(p&&p.error)hint(p.error,'bad');return}   /* 取消不提示 */
+      hint('正在导入「'+p.path.split('/').pop()+'」…','');
+      return A('/api/voicemodels',{action:'import',id:ACTIVE,path:p.path}).then(function(r){
+        if(!r.ok){hint(r.error,'bad');return}
+        hint(r.note,'ok');return loadVoices();
+      });
+    }).catch(function(e){hint(e.message||String(e),'bad')});
   }
   function doRecordGo(){
     var name=($('#vmRName').value||'').trim()||('我的音色-'+new Date().toISOString().slice(0,10));

@@ -184,7 +184,7 @@
         +'<span class="vcg-tag" data-tag>准备</span></div>'
         +'<div class="vcg-bd">'
           +'<div class="vcg-lead">对着麦克风，用你平时说话的语气念下面这句，一次念完、中间别停。'
-          +'点「开始朗读」后倒数 3 秒才开始计时。</div>'
+          +'卡片弹出后倒数 3 秒自动开始录音，念完自动停；录完先放一遍给你听，满意再保存。</div>'
           +'<div class="vcg-text">'+esc(text)+'</div>'
           +'<div class="vcg-prog"><i data-bar></i></div>'
           +'<div class="vcg-meta" data-meta>共 <b>'+sec+'</b> 秒 · 准备好了就点右下角</div>'
@@ -194,12 +194,16 @@
       document.body.appendChild(wrap);
       var q=function(s){return wrap.querySelector(s)},
           card=q('.vcg-card'),go=q('[data-go]'),cancel=q('[data-cancel]'),
-          bar=q('[data-bar]'),meta=q('[data-meta]'),tag=q('[data-tag]');
-      var phase='idle',timer=null,dropped=false,closed=false;
+          bar=q('[data-bar]'),meta=q('[data-meta]'),tag=q('[data-tag]'),ft=q('.vcg-ft');
+      var phase='idle',timer=null,dropped=false,closed=false,au=null;
+      var FT_IDLE='<button class="vcg-btn" data-cancel>取消</button>'
+        +'<button class="vcg-btn primary" data-go>开始朗读</button>';
       function setTag(t,cls){tag.className='vcg-tag'+(cls?' '+cls:'');tag.textContent=t}
+      function stopAudio(){ if(au){try{au.pause()}catch(e){} au=null} }
       function closeCard(){
         if(closed)return;closed=true;
         if(timer){clearInterval(timer);timer=null}
+        stopAudio();
         document.removeEventListener('keydown',onKey,true);
         if(wrap.parentNode)wrap.parentNode.removeChild(wrap);
       }
@@ -210,19 +214,74 @@
       function doCancel(){
         if(phase==='saving')return;          /* 保存中不让关，不然样本丢了没反馈 */
         if(timer){clearInterval(timer);timer=null}
+        stopAudio();
         if(phase==='rec'){dropped=true;try{window.riffcutRecStop()}catch(e){}}
         closeCard();resolve(null);
       }
       function startCount(){
         phase='count';go.disabled=true;go.textContent='准备中…';
         setTag('准备','warm');card.classList.remove('rec');meta.classList.remove('err');
-        var n=3;
-        meta.innerHTML='<b>'+n+'</b> 秒后开始，张嘴念上面这句话';
-        timer=setInterval(function(){
-          n--;
-          if(n>0){meta.innerHTML='<b>'+n+'</b> 秒后开始，张嘴念上面这句话';return}
-          clearInterval(timer);timer=null;startRec();
-        },1000);
+        /* ★ 用时间戳算剩余，不用「每秒 n--」。
+           原来是 n-- 每秒减一，第一次要等满 1 秒才变，用户看到 3 → 2 → 1
+           中间有好几百毫秒都停在同一个数字，像卡住了。 */
+        var t0=Date.now(),total=3;
+        function tick(){
+          var left=Math.max(0,total-Math.floor((Date.now()-t0)/1000));
+          if(left<=0){clearInterval(timer);timer=null;startRec();return}
+          meta.innerHTML='<b>'+left+'</b> 秒后开始，张嘴念上面这句话';
+        }
+        tick();
+        timer=setInterval(tick,200);
+      }
+      /* 试听态：循环放一遍刚录的，给三个出口（重录 / 用这个音色 / 取消） */
+      function enterPreview(r){
+        phase='preview';timer=null;card.classList.remove('rec');setTag('录好了，听一下','ok');
+        bar.style.width='100%';meta.classList.remove('err');
+        var s=Math.max(1,Math.round(r.seconds||sec));
+        meta.innerHTML='共 <b>'+s+'</b> 秒。先听一遍：有杂音、念漏了、太短，就点「重录」';
+        /* 用 data URL 直接播，不落盘不占文件 —— 用户取消了就等于没录过 */
+        var url='data:audio/wav;base64,'+r.b64;
+        au=new Audio(url);au.loop=false;
+        au.addEventListener('ended',function(){
+          if(closed||phase!=='preview')return;
+          setTag('听完了？','warm');
+          meta.innerHTML='听着没问题就点「用这个音色」，不满意点「重录」';
+        });
+        try{au.play()}catch(e){}
+        ft.innerHTML='<button class="vcg-btn" data-cancel>取消</button>'
+          +'<button class="vcg-btn" data-again>重录</button>'
+          +'<button class="vcg-btn" data-replay>再听一遍</button>'
+          +'<button class="vcg-btn primary" data-use>用这个音色</button>';
+        ft.querySelector('[data-cancel]').addEventListener('click',doCancel);
+        ft.querySelector('[data-replay]').addEventListener('click',function(){
+          if(!au){au=new Audio(url)} try{au.currentTime=0;au.play()}catch(e){}
+          setTag('正在回放','warm');
+        });
+        ft.querySelector('[data-again]').addEventListener('click',function(){
+          /* 重录：清掉旧的，回到倒数 —— 不额外弹新卡片，避免两张卡叠在一起 */
+          stopAudio();
+          ft.innerHTML=FT_IDLE;
+          bindIdleBtns();
+          phase='idle';go=ft.querySelector('[data-go]');cancel=ft.querySelector('[data-cancel]');
+          cancel.addEventListener('click',doCancel);
+          bar.style.width='0%';
+          startCount();
+        });
+        ft.querySelector('[data-use]').addEventListener('click',function(){
+          stopAudio();
+          phase='saving';
+          ft.innerHTML='';
+          setTag('保存中','ok');
+          meta.innerHTML='正在保存「'+(opts.nameHint||'我的音色')+'」…';
+          resolve({b64:r.b64,seconds:r.seconds,close:closeCard});
+        });
+      }
+      function bindIdleBtns(){
+        var g=ft.querySelector('[data-go]');
+        if(g)g.addEventListener('click',function(){
+          if(phase==='idle')startCount();
+          else if(phase==='rec'){try{window.riffcutRecStop()}catch(e){}}
+        });
       }
       function startRec(){
         phase='rec';card.classList.add('rec');setTag('录音中','live');
@@ -234,17 +293,19 @@
           meta.innerHTML='正在录音 · 还剩 <b>'+left+'</b> 秒，把这句话念完';
         }}).then(function(r){
           if(closed||dropped){closeCard();resolve(null);return}
-          phase='saving';card.classList.remove('rec');setTag('已录好','ok');
-          bar.style.width='100%';meta.classList.remove('err');
-          meta.innerHTML='正在保存并识别你念的词…';
-          go.style.display='none';cancel.textContent='关闭';cancel.disabled=true;
-          resolve({b64:r.b64,seconds:r.seconds,close:closeCard});
+          /* ★ 录完不直接存：先放一遍给用户听，可以重录，满意点「用这个音色」才交出去。
+             2026-11-22 用户报「点完录制完成之后直接就关闭对话框了，应该让用户听一下，
+             没有问题再保存」——以前这里 phase='saving' 后立刻 resolve，调用方存完就关窗，
+             用户根本没机会发现录进去了杂音或念漏了半句。 */
+          enterPreview(r);
         }).catch(function(e){
           if(closed||dropped){closeCard();resolve(null);return}
           phase='idle';card.classList.remove('rec');setTag('没录成','bad');
           meta.className='vcg-meta err';meta.innerHTML=esc((e&&e.message)||'录音失败');
-          go.style.display='';go.disabled=false;go.textContent='重新录';
-          cancel.textContent='取消';
+          ft.innerHTML=FT_IDLE;bindIdleBtns();
+          go=ft.querySelector('[data-go]');cancel=ft.querySelector('[data-cancel]');
+          cancel.addEventListener('click',doCancel);
+          go.disabled=false;go.textContent='重新录';
         });
       }
       go.addEventListener('click',function(){
@@ -253,6 +314,13 @@
       });
       cancel.addEventListener('click',doCancel);
       document.addEventListener('keydown',onKey,true);
+      /* ★ 卡片一出来就自动倒数 3 秒，不再要求用户再点一次「开始朗读」。
+         以前是 idle 态等点击：用户在外层弹窗点过「开始录制」，卡片弹出后
+         看到「准备 / 准备好了就点右下角」，就以为操作已经结束或取消了
+         （2026-11-22 用户报「点开始录制就取消了」）。
+         现在「取消」仍然随时可点，倒数期间点它就是真的取消。
+         卡片上留 300ms 让用户先看清要念的句子，再开始倒数。 */
+      setTimeout(function(){ if(!closed && phase==='idle') startCount(); },300);
     });
   };
 

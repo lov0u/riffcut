@@ -3555,12 +3555,22 @@ body.rws-dragging *{cursor:col-resize !important}
   $('#auImportBtn').addEventListener('click',function(){
     var mid=cloneModel();if(!mid)return;
     /* 和录音同一个坑：/api/audio 里没有 import_sample，走 /api/voicemodels。
-       导入样本走「先让用户挑文件 → 再存进音色库」两步，服务端选不了文件。 */
-    window.api('/api/voicemodels',{action:'import',id:mid})
-      .then(function(r){
-        if(r&&r.ok===false){window.say(r.error||r.note||'导入失败');return}
-        window.say((r&&r.note)||'已导入样本');loadAudio(true);
-      }).catch(function(e){window.say(e.message)});
+       导入样本必须「先让用户挑文件」——HTTP 请求里开不了系统对话框，
+       所以先走主进程的 riffcut.pickAudio 拿绝对路径，再交给后端转码入库。
+       2026-11-22 之前这里直接 POST {action:'import'} 不带路径，后端只能回一句
+       「请用添加模型 → 从文件夹接入」，用户点按钮永远看不到选文件窗口。 */
+    var pick=window.riffcut&&window.riffcut.pickAudio;
+    if(!pick){window.say('这台机器选不了文件，可以点「录制我的音色」直接录');return}
+    pick({title:'选一段干净人声当音色样本'}).then(function(p){
+      if(!p||p.ok===false){ if(p&&p.error)window.say(p.error); return }   /* 用户取消，不提示 */
+      return window.api('/api/voicemodels',{action:'import',id:mid,path:p.path})
+        .then(function(r){
+          if(r&&r.ok===false){window.say(r.error||r.note||'导入失败');return}
+          window.say((r&&r.note)||'已导入样本');
+          if(window.loadVoiceModels) try{window.loadVoiceModels()}catch(e){}
+          loadAudio(true);
+        });
+    }).catch(function(e){window.say(e.message||String(e))});
   });
   $('#auGoVoice').addEventListener('click',function(){
     closeAM('hAudioModal');if(window.goPage)window.goPage('voice');

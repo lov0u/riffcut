@@ -212,7 +212,13 @@ if (!_single) {
 }
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'velora', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
+  /* ★ stream:true 不能少。少了它，Chromium 的媒体管线不认这个自定义协议下的
+     音频/视频 —— <audio src="velora://..."> 一律报
+     MEDIA_ELEMENT_ERROR: Format error（error.code 4），文件本身是好的 WAV。
+     2026-11-22 用户报「所有播放按钮都无效」的真实根因就在这：
+     路由补通了、fetch 也 200 拿到完整字节，但 audio 元素就是播不出来。
+     stream:true 打开后 Chromium 会用 Range 请求走流式读取。 */
+  { scheme: 'velora', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
 ])
 
 /**
@@ -1045,6 +1051,26 @@ ipcMain.handle('sys:pickFiles', async (_e, opts = {}) => {
     if (r.canceled || !r.filePaths || !r.filePaths.length) return { ok: false, canceled: true, files: [] }
     return { ok: true, files: r.filePaths }
   } catch (e) { return { ok: false, error: String(e.message || e), files: [] } }
+})
+
+/* 选音色样本（原生对话框，只挑音频）。
+   原来的「导入音色样本」按钮后端只返回一句「请用添加模型 → 从文件夹接入」，
+   等于按钮是假的 —— 用户点它永远拿不到选文件窗口（2026-11-22 报障）。
+   这里给一条真通道：只让选音频，单选。 */
+ipcMain.handle('sys:pickAudio', async (_e, opts = {}) => {
+  try {
+    const w = BrowserWindow.fromWebContents(_e.sender) || mainWin
+    const r = await dialog.showOpenDialog(w, {
+      title: opts.title || '选择音色样本（干净人声，10 秒以上最好）',
+      properties: ['openFile'],
+      filters: [
+        { name: '音频', extensions: ['wav', 'mp3', 'm4a', 'aac', 'flac', 'ogg', 'aiff', 'aif', 'caf', 'opus'] },
+        { name: '所有文件', extensions: ['*'] },
+      ],
+    })
+    if (r.canceled || !r.filePaths || !r.filePaths.length) return { ok: false, canceled: true, path: '' }
+    return { ok: true, path: r.filePaths[0] }
+  } catch (e) { return { ok: false, error: String(e.message || e), path: '' } }
 })
 
 /* 拖进来的东西是文件还是文件夹。渲染进程拿不到 fs，又必须区分：

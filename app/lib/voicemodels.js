@@ -238,9 +238,19 @@ function myVoices() {
     const file = String((idx[name] && idx[name].file) || '')
     /* 样本文件被删了就不要再列 —— 列出来选上去合不出来，等于骗人 */
     if (!file || !existsSync(file)) continue
+    /* playable 是前端 voiceRow 判断副标题用的（「可克隆说话」还是「样本文件已丢失」）。
+       以前后端不返回这个字段 → 永远 undefined → 明明文件好好的也显示「样本文件已丢失」。
+       文件在上面已经 existsSync 过了，能走到这里就是能用的。 */
+    let sec = 0
+    try {
+      const st = require('node:fs').statSync(file)
+      /* WAV：字节数 ÷ (16000 × 1 × 2) ；别的格式给 0，前端不显示秒数 */
+      sec = st.size > 44 ? +(((st.size - 44) / 32000).toFixed(1)) : 0
+    } catch (e) { sec = 0 }
     out.push({
       name, label: name, lang: 'zh_CN', kind: '我的音色', usable: true,
       featured: true, mine: true, ref: file,
+      playable: true, seconds: sec,
     })
   }
   return out
@@ -556,13 +566,57 @@ async function doDelete(d = {}) {
 }
 
 /* ══════════ 音色样本导入 / 录音 / 重扫 / 保存 / 删除 ══════════ */
-async function doImport() {
-  /* 选文件是主进程的事（Electron dialog），接口这边只负责把「选中的文件」收进音色库。
-     旧接口是同步阻塞式唤起对话框 —— 在 HTTP 请求里做不到，所以返回一句明确的指引。 */
+async function doImport(d = {}) {
+  /* 真导入：前端先用 Electron 原生对话框（riffcut.pickAudio）拿到绝对路径，
+     再把它交给这里。流程是「转成 16k 单声道 WAV → 落到 音色/<名字>/sample.wav
+     → 写索引」，和录音那条路走同一个落盘函数，所以后面的列表/试听/出片全部复用。
+     2026-11-22 之前这里只 return 一句「请用添加模型 → 从文件夹接入」，
+     等于按钮是假的。 */
+  const src = String(d.path || '').trim()
+  if (!src) return { ok: false, needPick: true, error: '没有收到文件路径，请重新选择音色样本' }
+  if (!existsSync(src)) return { ok: false, error: '文件不在了：' + src }
+  if (!/\d+$|\.\w+$/.test(src)) return { ok: false, error: '这个路径看起来不像文件：' + src }
+
+  const name = String(d.name || '').trim() ||
+    require('node:path').basename(src).replace(/\.[^.]+$/, '').slice(0, 40) || '导入的音色'
+  const dir = join(VM_DIR, '音色', safeName(name))
+  P.ensureDir(dir)
+  const dst = join(dir, 'sample.wav')
+
+  /* 统一转 16k 单声道 WAV：克隆要的就是这个格式，源头是 mp3/m4a 也一并吃掉。
+     已经是 16k 单声道 WAV 时 ffmpeg 也会原样再转一遍（几十毫秒，不值得为省这点加判断）。 */
+  let converted = false
+  try {
+    const EX = require('./exec')
+    const r = await EX.run(P.FFMPEG, [
+      '-y', '-v', 'error', '-i', src,
+      '-ac', '1', '-ar', '16000', '-acodec', 'pcm_s16le', dst,
+    ], { timeout: 120000 })
+    converted = !!r.ok && existsSync(dst)
+  } catch (e) { converted = false }
+
+  if (!converted) {
+    /* 转不了就原样复制（已经是 wav 且格式凑合时引擎也能吃），至少别让用户白选一次 */
+    try {
+      require('node:fs').copyFileSync(src, dst)
+    } catch (e) {
+      return { ok: false, error: '这个文件读不出来：' + (e.message || e) }
+    }
+  }
+
+  saveVoiceIndex(name, dst)
+  const p = await require('./exec').probe(dst)
+  const sec = p ? Number(p.duration) || 0 : 0
+  if (!sec) return { ok: false, error: '这个文件里没有声音，换一个再试' }
+  if (sec < 3) {
+    return {
+      ok: true, name, path: dst, duration: sec, short: true,
+      note: '已导入「' + name + '」（只有 ' + sec.toFixed(1) + ' 秒，短了点）。录 10 秒以上效果更稳。',
+    }
+  }
   return {
-    ok: false,
-    error: '导入音色请用「添加模型 → 从文件夹接入」，或在音色区点麦克风直接录音（录音不用选文件）',
-    needPick: true,
+    ok: true, name, path: dst, duration: sec,
+    note: '已导入「' + name + '」（' + sec.toFixed(1) + ' 秒）。现在就能用它配音。',
   }
 }
 async function doRecord(d = {}) {

@@ -105,6 +105,59 @@ function fileResponse(file, extraType) {
 }
 
 /** 只允许访问 dir 里的文件，挡掉 ../ 和绝对路径。 */
+/** 音频响应：必须支持 Range。
+ *
+ *  ★ 为什么不能直接 fileResponse：
+ *    Chromium 播媒体会先发 `Range: bytes=0-` 探测，拿到 200 全量也能播，
+ *    但拖动进度条 / 长时间音频会重新发带偏移的 Range 请求。
+ *    只回 200 全量的话，播放到一半会重新从 0 开始，或者干脆只有声音没有时长。
+ *    回 206 + Content-Range 才是标准做法（2026-11-22 播放按钮修好后实测需要）。 */
+function audioResponse(file, req) {
+  const stat = fs.statSync(file)
+  const size = stat.size
+  const type = MIME[path.extname(file).toLowerCase()] || 'audio/wav'
+  const range = req && req.headers && (req.headers.get ? req.headers.get('range') : req.headers.range)
+  if (range) {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(String(range).trim())
+    if (m) {
+      let start = m[1] === '' ? null : parseInt(m[1], 10)
+      let end = m[2] === '' ? null : parseInt(m[2], 10)
+      /* 尾段请求（bytes=-1024）表示「最后 1024 字节」 */
+      if (start === null && end !== null) { start = Math.max(0, size - end); end = size - 1 }
+      if (start === null) start = 0
+      if (end === null || end >= size) end = size - 1
+      if (start > end || start >= size) {
+        return new Response('range not satisfiable', {
+          status: 416, headers: { 'Content-Range': 'bytes */' + size },
+        })
+      }
+      const fd = fs.openSync(file, 'r')
+      const len = end - start + 1
+      const buf = Buffer.alloc(len)
+      try { fs.readSync(fd, buf, 0, len, start) } finally { fs.closeSync(fd) }
+      return new Response(buf, {
+        status: 206,
+        headers: {
+          'Content-Type': type,
+          'Content-Range': 'bytes ' + start + '-' + end + '/' + size,
+          'Content-Length': String(len),
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'no-cache',
+        },
+      })
+    }
+  }
+  return new Response(fs.readFileSync(file), {
+    status: 200,
+    headers: {
+      'Content-Type': type,
+      'Content-Length': String(size),
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'no-cache',
+    },
+  })
+}
+
 function inside(dir, rel) {
   const clean = String(rel || '').replace(/\.\./g, '').replace(/^\/+/, '')
   const abs = path.resolve(path.join(dir, clean))
@@ -363,6 +416,37 @@ function handler(opt) {
       const C = require('./core')
       const f = inside(C.custPaths().videos, p.slice('/vid/'.length))
       return f ? fileResponse(f) : new Response('forbidden', { status: 403 })
+    }
+    /* ★ 配音试听 / 成片配音的音频。
+       以前 fileUrl() 把绝对路径压成 '/voice/文件名.wav' 交给前端，但这里根本没有
+       /voice/ 这条路由 —— 每个音色的播放按钮都拿到 404，表现是「播放点了没反应」
+       （2026-11-22 用户报「所有的播放按钮都无效」）。
+       这里按文件名在「当前客户产出/配音」里找；找不到再全局扫一遍各客户目录，
+       因为试听是即时产物，用户切过客户后旧文件还在原来那个客户目录下。 */
+    if (p.startsWith('/voice/')) {
+      const C = require('./core')
+      const name = p.slice('/voice/'.length)
+      if (!name || name.indexOf('/') >= 0) return new Response('bad name', { status: 400 })
+      const tryDirs = []
+      try { tryDirs.push(C.custPaths().voice) } catch (e) {}
+      try { tryDirs.push(path.join(C.custPaths('影创').root, '产出', '配音')) } catch (e) {}
+      let hit = ''
+      for (const d of tryDirs) {
+        const f = inside(d, name)
+        if (f && fs.existsSync(f)) { hit = f; break }
+      }
+      if (!hit) {
+        try {
+          const P2 = require('./paths')
+          const base = P2.customers_dir
+          for (const cust of fs.readdirSync(base)) {
+            const f = path.join(base, cust, '产出', '配音', name)
+            if (fs.existsSync(f)) { hit = f; break }
+          }
+        } catch (e) {}
+      }
+      if (!hit) return new Response('not found: ' + name, { status: 404 })
+      return audioResponse(hit, req)
     }
     if (p.startsWith('/tplthumb/')) {
       const T = require('./templates')
