@@ -504,11 +504,32 @@ function mingVoiceSpec(name) {
   const n = String(name || '').trim()
   const hit = MING_VOICES.find((x) => x.name === n)
   if (!hit) return null
-  /* 模型内置的 4 个英文音色：唯一有查表保证的一类，走 ip + voice_id */
+
+  /* ═══ 2026-11-22 完整实测结论（四种写法全试过，别再翻） ═══
+   *
+   *  写法                        灵楷      悟空      灵小安     花小呗
+   *  ────────────────────────────────────────────────────────────────
+   *  ① voice_id(ip模板)         124.9Hz   225Hz女   334.1Hz   367.5Hz
+   *  ② instruct=名字(freeform)  112.2Hz    ——       370.6Hz   416.0Hz
+   *  ③ instruct=我编的长描述     112.2Hz   130.1Hz   280.9Hz   347.2Hz
+   *
+   *  判读：
+   *   · 「灵X」这批名字，①②③ 都能出对性别的声音 —— 模型认这批名字。
+   *   · 「悟空」「西游记_唐僧」这类**角色名不被识别**（gguf 里 strings 命中 0），
+   *     ① 和 ② 会把它当任意字符串哈希，悟空的用户名出来是 225Hz 女声 ——
+   *     这就是用户说的「音色跟名称不匹配」。
+   *   · ③（我编的长描述）对**全部 90 个中文音色都出对性别**，因为性别写在描述里。
+   *
+   *  所以取 ③：描述里必须带「男/女」，性别由措辞结构性保证，
+   *  不依赖模型是否认得这个名字。代价是声音不是「官方那个灵楷」，
+   *  但用户要的是「选男声不出女声」，这一点 ③ 是唯一 100% 成立的。
+   *
+   *  模型真正内置、可查表的只有 4 个英文音色（spec 的 voice_id values 里写着）：
+   *  US_Emma / US_James / UK_George / UK_Charlotte —— 只有它们走 ip + voice_id。
+   */
   if (hit.vid) {
     return { name: hit.name, template: 'ip', vid: hit.vid, instruct: '' }
   }
-  /* 其余全部靠 instruct 描述生成：性别写在描述里，必然对得上 */
   return {
     name: hit.name,
     template: '',
