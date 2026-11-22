@@ -4469,12 +4469,16 @@ body.rws-dragging *{cursor:col-resize !important}
     var mid=row.getAttribute('data-mid'),vid=row.getAttribute('data-vid'),
         kind=row.getAttribute('data-kind')||'';
     if(b.getAttribute('data-au-act')==='preview'){
-      window.api('/api/audio',{action:'preview_voice',model_id:mid,voice_id:vid,
+      /* ★ 参数名必须是 model / voice —— 后端 preview_voice 读的是 d.model 和 d.voice，
+         以前这里传 model_id / voice_id，后端全是 undefined，于是「点哪个音色试听
+         听到的都是同一个默认嗓子」，连「我的音色」也听不出来。 */
+      window.api('/api/audio',{action:'preview_voice',model:mid,voice:vid,
         text:$('#auText').value.trim()||'在影创的镜头下，每一个瞬间都值得被定格，让创意，成为影像。',rate:+$('#auRate').value})
         .then(function(r){
           if(!r||r.ok===false){window.say((r&&r.error)||'这个音色暂时不能试听');return}
           var a=$('#auPlayer');a.src=r.url;a.style.display='';a.play().catch(function(){});
-          window.say('正在试听：'+(r.mode||'')+(r.note?' · '+r.note:''));
+          var aux=(r.engine==='ming'?'本地 Ming':'系统配音')+(kind?' · '+kind:'');
+          window.say('正在试听：'+aux);
         }).catch(function(e){window.say(e.message)});
     }else{
       AUD.vpick={mid:mid,vid:vid,kind:kind};AUD.vtab='choose';syncAuTabs();renderVoiceGroups();
@@ -4488,26 +4492,36 @@ body.rws-dragging *{cursor:col-resize !important}
   }
   $('#auRecordBtn').addEventListener('click',function(){
     var mid=cloneModel();if(!mid)return;
-    /* 服务端 ffmpeg 没有麦克风输入，录音只能走界面这层：网页话筒录 6 秒再交给本机存。
-       录之前先弹居中卡片给词，点「开始朗读」倒数 3 秒才计时，不然 6 秒不够念。 */
+    /* 服务端 ffmpeg 没有麦克风输入，录音只能走界面这层：网页话筒录 8 秒再交给本机存。
+       录之前先弹居中卡片给词，点「开始朗读」倒数 3 秒才计时，不然 8 秒不够念。
+       ★ 接口必须是 /api/voicemodels —— /api/audio 里没有 record_audio 这个 action，
+       它会把请求当「还没接」返回 ok:true+note，前端看见 ok 就当成功、音频直接丢，
+       用户看到的是「已录制」但音色列表里什么都没有。 */
     if(!window.riffcutRecGuide){window.say('这台机器打不开麦克风，可改用「导入样本」');return}
+    var myName=(window.prompt&&window.prompt('给这个音色起个名字（之后配音时按名字选）','我的音色'))||'我的音色';
+    myName=String(myName).trim(); if(!myName) myName='我的音色';
     window.riffcutRecGuide({seconds:8,title:'录一段参考音频',
       text:window.RiffCut_SAMPLE_TEXT||'在影创的镜头下，每一个瞬间都值得被定格，让创意，成为影像。'
     }).then(function(r){
       if(!r)return;
-      return window.api('/api/audio',{action:'record_audio',model_id:mid,audio:r.b64})
+      return window.api('/api/voicemodels',{action:'record_audio',id:mid,name:myName,audio:r.b64})
         .then(function(res){
           r.close();
-          if(res&&res.ok===false){window.say(res.error||'录制失败');return}
-          window.say((res&&res.note)||'已录制');loadAudio(true);
+          if(!res||res.ok===false){window.say((res&&(res.error||res.note))||'录制失败');return}
+          window.say('已录好音色「'+(res.name||myName)+'」，配音时在音色列表最上面就能选到它');
+          /* 重载音色列表，让「我的音色」立刻出现在最前面 */
+          if(window.loadVoiceModels) try{window.loadVoiceModels()}catch(e){}
+          loadAudio(true);
         }).catch(function(e){r.close();window.say(e.message)});
     }).catch(function(e){window.say(e.message)});
   });
   $('#auImportBtn').addEventListener('click',function(){
     var mid=cloneModel();if(!mid)return;
-    window.api('/api/audio',{action:'import_sample',model_id:mid})
+    /* 和录音同一个坑：/api/audio 里没有 import_sample，走 /api/voicemodels。
+       导入样本走「先让用户挑文件 → 再存进音色库」两步，服务端选不了文件。 */
+    window.api('/api/voicemodels',{action:'import',id:mid})
       .then(function(r){
-        if(r&&r.ok===false){window.say(r.error||'导入失败');return}
+        if(r&&r.ok===false){window.say(r.error||r.note||'导入失败');return}
         window.say((r&&r.note)||'已导入样本');loadAudio(true);
       }).catch(function(e){window.say(e.message)});
   });

@@ -226,12 +226,42 @@ async function catalog() {
   }
 }
 
+/** 用户自己录/导入的音色：读 音色/index.json，只报磁盘上样本真在的那些。
+    以前这里只有写没有读（saveVoiceIndex 写了没人看），所以录完音色列表里
+    永远只有 100 个预设，用户以为「录制没成功」。 */
+function myVoices() {
+  const f = join(VM_DIR, '音色', 'index.json')
+  let idx = {}
+  try { idx = JSON.parse(require('node:fs').readFileSync(f, 'utf8')) || {} } catch (e) { return [] }
+  const out = []
+  for (const name of Object.keys(idx)) {
+    const file = String((idx[name] && idx[name].file) || '')
+    /* 样本文件被删了就不要再列 —— 列出来选上去合不出来，等于骗人 */
+    if (!file || !existsSync(file)) continue
+    out.push({
+      name, label: name, lang: 'zh_CN', kind: '我的音色', usable: true,
+      featured: true, mine: true, ref: file,
+    })
+  }
+  return out
+}
+
+/** 按名字找用户音色的样本路径（合成时要用它当参考音频） */
+function myVoiceFile(name) {
+  const n = String(name || '').trim()
+  if (!n) return ''
+  const hit = myVoices().find((x) => x.name === n)
+  return hit ? hit.ref : ''
+}
+
 /** 右栏：音色列表严格来自当前模型 */
 function voices(mid) {
   const id = String(mid || activeId())
   const ms = configModels()
   const m = ms.find((x) => x.id === id) || ms[0]
   const caps = m.caps || []
+  /* 我的音色排在最前面 —— 用户刚录完就想看见它，不该翻到 100 个预设后面 */
+  const mine = caps.includes('clone') ? myVoices() : []
   let list = []
   let bad = 0
   if (m.voices === 'system') {
@@ -246,7 +276,7 @@ function voices(mid) {
     /* Ming 这类需要权重。权重没下就不列它的音色 —— 列出来选了上去合不出来 */
     const st = m.id === 'ming-tts' ? mingStateOf() : ttsState(m.id)
     if (st.installed) {
-      list = MING_VOICES.map((x) => ({ ...x, label: x.label || x.name, kind: '预设音色', usable: true }))
+      list = mine.concat(MING_VOICES.map((x) => ({ ...x, label: x.label || x.name, kind: '预设音色', usable: true })))
     } else {
       bad = 1
     }
@@ -265,7 +295,9 @@ function voices(mid) {
     count: list.length,
     unusable_count: bad,
     picks: picksOf(m.id),
+    clones_imported: mine.length,
     clone_hint: caps.includes('clone') ? '录 10 秒以上干净人声（不要有背景音乐），越像越好。' : '',
+
     note: bad ? '「' + m.name + '」的权重还没下载，音色暂时列不出来。到本地模型里装好再回来。' : '',
   }
 }
@@ -456,8 +488,18 @@ async function doTts(d = {}) {
   const A = require('./audio')
   const text = String(d.text || '').trim()
   if (!text) throw new Error('配音文本是空的')
+  const voice = String(d.voice || '')
+  /* ★ 用户自己录的音色要真克隆：传 task:'clone' + voiceRef 参考音频。
+     以前只把名字丢给 voiceId —— Ming 的 voice_id 只认 4 个内置英文音色
+     （US_Emma 等，且只属于 ip 模板），中文音色名一个都不认，于是
+     「选了我的音色」和「选默认音色」出来的声音完全一样。 */
+  const ref = myVoiceFile(voice)
+  const useRef = !!ref
   const r = await A.mingTts(text, {
-    voiceId: String(d.voice || ''),
+    voiceId: useRef ? '' : voice,
+    task: useRef ? 'clone' : 'tts',
+    voiceRef: useRef ? ref : '',
+    referenceText: useRef ? String(d.reference_text || '') : '',
     speed: d.speed, pitch: d.pitch, volume: d.volume, emotion: d.emotion,
     language: 'zh',
   })
@@ -465,7 +507,8 @@ async function doTts(d = {}) {
   return {
     ok: true, url: fileUrl(r.path), path: r.path, name: r.name,
     duration: r.duration || 0, mode: '本地离线', ms: r.ms,
-    note: '本地 Ming 合成',
+    cloned: useRef,
+    note: useRef ? ('本地 Ming 合成 · 用你的音色「' + voice + '」') : '本地 Ming 合成',
   }
 }
 
@@ -564,6 +607,17 @@ async function doVoiceDelete(d = {}) {
   if (!name) throw new Error('要给音色名')
   const dir = join(VM_DIR, '音色', safeName(name))
   try { require('node:fs').rmSync(dir, { recursive: true, force: true }) } catch (e) {}
+  /* 索引条目也要删 —— 只删目录会留下一条指向不存在文件的记录。
+     myVoices() 虽然会过滤掉失效条目（不会显示幽灵音色），但索引越攒越脏，
+     用户以后想核对「我到底录过几个」就说不清了。 */
+  const f = join(VM_DIR, '音色', 'index.json')
+  try {
+    const m = JSON.parse(require('node:fs').readFileSync(f, 'utf8')) || {}
+    if (Object.prototype.hasOwnProperty.call(m, name)) {
+      delete m[name]
+      require('node:fs').writeFileSync(f, JSON.stringify(m, null, 1), 'utf8')
+    }
+  } catch (e) {}
   return { ok: true, name }
 }
 
@@ -581,5 +635,5 @@ function saveVoiceIndex(name, file) {
 
 module.exports = {
   VM_DIR, CAP_LABELS, TTS_OPTS, PIP_MIRRORS, WEIGHT_SOURCES, MING_VOICES,
-  catalog, voices, setActive, getPicks, savePicks, planScript, mirrorSave, main, configModels,
+  catalog, voices, myVoices, myVoiceFile, setActive, getPicks, savePicks, planScript, mirrorSave, main, configModels,
 }

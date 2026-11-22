@@ -549,14 +549,67 @@ async function audio(d) {
   const act = str(d.action, 'bootstrap')
   if (act === 'bootstrap') {
     const v = await AU.systemVoices()
-    return r_ok({ voices: v.good || [], music: AU.musicFiles ? AU.musicFiles() : [], moods: Object.keys(AU.AUDIO_LAYER_DB || {}) })
+    /* ★ 首页的「配音音色」弹窗靠这里拿音色清单，但它以前只返回系统音色
+       （voices: v.good）—— 没有 groups 字段，界面的 renderVoiceGroups()
+       遍历空数组，于是 Ming 的 100 个预设 + 用户自己录的音色一个都不显示。
+       用户看到的是「录完了但没有音色可选」，其实是数据没接上。
+       这里按 /api/voicemodels 同一套逻辑拼一份 groups（每个可配音模型一组）。 */
+    const VM = lazy('./voicemodels')
+    let groups = []
+    try {
+      const cat = await VM.catalog()
+      const ms = (cat && cat.models) || []
+      for (const m of ms) {
+        if (!(m.caps || []).includes('tts')) continue
+        let vv = { voices: [], clones_imported: 0, clone_hint: '' }
+        try { vv = VM.voices(m.id) || vv } catch (e) {}
+        groups.push({
+          id: m.id, name: m.name, category: m.category, engine: m.engine,
+          desc: m.desc, note: m.note,
+          cap_labels: Object.fromEntries((m.caps || []).map((k) => [k, (VM.CAP_LABELS || {})[k] || k])),
+          caps: m.caps || [],
+          /* state / installed 必须带上 —— 界面的「已就绪 / 未安装」标签读的是这两个字段，
+             漏了就会把已经能用的 Ming 显示成「未安装」，用户以为还得再装一遍。 */
+          state: m.state || (m.installed ? 'ready' : 'none'),
+          installed: !!m.installed,
+          used_mb: m.used_mb || 0,
+          step: m.step || '',
+          can_preview: (m.caps || []).includes('preview'),
+          can_clone: (m.caps || []).includes('clone'),
+          can_import: (m.caps || []).includes('import'),
+          clone_hint: vv.clone_hint || '',
+          clones_imported: vv.clones_imported || 0,
+          /* 我的音色已经在 voices() 里排在最前，统一带上 is_mine 让界面标金色 */
+          voices: (vv.voices || []).map((x) => ({
+            name: x.name, label: x.label || x.name, kind: x.kind || '',
+            lang: x.lang || 'zh_CN', is_mine: !!x.mine,
+          })),
+        })
+      }
+    } catch (e) { /* 语音模型这一层挂了也不该让整个弹窗白屏 */ }
+    const voiceCount = groups.reduce((n, g) => n + (g.voices || []).length, 0)
+    return r_ok({
+      voices: v.good || [],
+      groups,
+      voice_count: voiceCount,
+      group_count: groups.length,
+      settings: C.settings ? C.settings() : {},
+      music: AU.musicFiles ? AU.musicFiles() : [],
+      moods: Object.keys(AU.AUDIO_LAYER_DB || {}),
+    })
   }
   if (act === 'preview_voice') {
     /* 试听要把引擎选对：界面选的是 Ming 的音色（电台叙述/纪录片旁白…）就走 Ming，
-       选的是 macOS 系统音色才走 say。不分开的话用户选了 Ming 音色听到的是系统女声。 */
+       选的是 macOS 系统音色才走 say。不分开的话用户选了 Ming 音色听到的是系统女声。
+       ★ 选的是「我的音色」时必须走克隆：拿 sample.wav 当参考音频传进去。
+       以前这里不问音色来源，一律只传 voice 名字 —— 试听听到的是 Ming 默认嗓子，
+       跟真正配音出来的声音不一样，用户会以为克隆没生效。 */
     const vm = str(d.model) || str(d.voice_model) || ''
     const wantMing = vm === 'ming-tts' || (!vm && str(d.engine) === 'mlx')
     const wantSystem = vm === 'macos-system' || str(d.engine) === 'system'
+    const VM = lazy('./voicemodels')
+    let refFile = ''
+    try { refFile = VM.myVoiceFile(str(d.voice)) } catch (e) {}
     const r = await AU.tts(str(d.text) || '这是一段试听', {
       engine: wantSystem ? 'system' : undefined,
       voice: str(d.voice), rate: num(d.rate, 175),
@@ -565,6 +618,9 @@ async function audio(d) {
       emotion: str(d.emotion), speed: str(d.speed),
       pitch: str(d.pitch), volume: str(d.volume), instruct: str(d.instruct),
       voiceName: str(d.voice),
+      voiceRef: refFile || undefined,
+      referenceText: refFile ? str(d.reference_text) : undefined,
+      strictMing: !!refFile,
     })
     return r_ok(r)
   }
@@ -573,8 +629,37 @@ async function audio(d) {
     return r_ok(r)
   }
   if (act === 'pick_music') return r_ok(AU.musicFiles ? AU.musicFiles() : [])
+  /* ★ 首页「保存配音设置」调的就是 save_voice，但这里以前没这个分支 ——
+     走末尾兜底返回 ok:true + note「这个 action 还没接」，前端看见 ok 就当成功，
+     于是用户选的音色从来没被真的存下来，出片永远用默认嗓子。 */
+  if (act === 'save_voice') {
+    const S = lazy('./core')
+    const patch = {}
+    const src = str(d.source)
+    if (src === 'auto' || src === 'off' || src === 'choose') patch.voice_source = src
+    if (d.rate !== undefined) patch.voice_rate = num(d.rate, 175)
+    if (d.volume !== undefined) patch.voice_volume = num(d.volume, 1)
+    const mid = str(d.model_id) || str(d.model)
+    const vid = str(d.voice_id) || str(d.voice)
+    if (mid) {
+      /* 当前生效的语音模型 + 音色，出片时 A.tts 会读这两个 */
+      if (vid) patch.voice = vid
+      patch.voice_model = mid
+    }
+    try {
+      const vm = lazy('./voicemodels')
+      if (mid && vid) vm.savePicks(mid, vid, [vid], [])
+    } catch (e) {}
+    const st = S.settings()
+    Object.assign(st, patch)
+    S.saveSettings(st)
+    return r_ok({
+      ok: true, settings: patch,
+      note: vid ? ('配音音色已存为「' + vid + '」，出片会用这个声音念') : '配音设置已保存',
+    })
+  }
   if (act === 'reveal') return r_ok({ path: str(d.path) })
-  return r_ok({ note: '这个 action 还没接：' + act })
+  return r_ok({ note: '这个 action 还没接：' + act, unsupported: true })
 }
 
 /* ══════════════ 模型 ══════════════ */

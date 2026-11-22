@@ -175,7 +175,12 @@ async function mingTts(text, opts) {
   }
   if (tpl === 'dialect') opt('dialect', opts.dialect)
   opt('instruct', opts.instruct)
-  opt('voice_ref', opts.voiceRef)
+  /* ★ voice_ref 是顶层参数，不是 request-option。
+     实测 `--request-option voice_ref=...` 会被引擎直接拒绝：
+       audiocpp_cli failed: unknown Ming TTS request option: voice_ref
+     只有顶层的 `--voice-ref <file>` 才认。以前这里写成 opt('voice_ref', ...)
+     等于克隆永远传不进参考音频，所谓「用我的音色」出来的全是默认嗓子。 */
+  if (opts.voiceRef) args.push('--voice-ref', String(opts.voiceRef))
   opt('reference_text', opts.referenceText)
 
   const t0 = Date.now()
@@ -206,6 +211,17 @@ async function tts(text, opts = {}) {
     const sv = await systemVoices()
     voice = (sv.good[0] && sv.good[0].name) || 'Tingting'
   }
+  /* ★ 音色名如果是用户自己录的（音色/index.json 里有），就必须走克隆：
+     传 sample.wav 当参考音频。否则 Ming 拿到一个它不认识的音色名，
+     照样用默认嗓子念 —— 用户「选了我的音色」，成品却是别人的声音。
+     这一段放在最前面，保证试听、配音工具、出片全走同一条判断。 */
+  let autoRef = ''
+  if (!opts.voiceRef && voice) {
+    try {
+      autoRef = require('./voicemodels').myVoiceFile(voice) || ''
+    } catch (e) { autoRef = '' }
+  }
+  const effectiveRef = opts.voiceRef || autoRef
   const rate = parseInt(opts.rate || s.voice_rate || 175, 10)
   const outdir = C.custPaths().voice
   P.ensureDir(outdir)
@@ -218,15 +234,20 @@ async function tts(text, opts = {}) {
   if (opts.engine !== 'system' && String(voice || '') !== 'macos-system' && String(opts.voiceModel || '') !== 'macos-system') {
     const m = await mingTts(text, {
       out,
+      task: effectiveRef ? 'clone' : 'tts',
       template: opts.template || (opts.emotion ? 'emotion' : 'tts'),
       language: opts.language || 'zh',
       speed: opts.speed, pitch: opts.pitch, volume: opts.volume,
       emotion: opts.emotion, instruct: opts.instruct, dialect: opts.dialect,
-      voiceRef: opts.voiceRef, referenceText: opts.referenceText,
+      voiceRef: effectiveRef, referenceText: opts.referenceText,
       backend: opts.backend,
     })
     if (m.ok) {
-      return { path: m.path, name: m.name, voice: (opts.voiceName || 'Ming'), rate, duration: m.duration, engine: 'ming', ms: m.ms }
+      return {
+        ok: true, path: m.path, name: m.name,
+        voice: (opts.voiceName || voice || 'Ming'), rate,
+        duration: m.duration, engine: 'ming', ms: m.ms, cloned: !!effectiveRef,
+      }
     }
     // 记下为什么退回，别让「Ming 坏了」这件事静悄悄变成系统音色
     console.error('[audio] Ming 不可用，退回系统配音：' + m.error)
@@ -243,7 +264,7 @@ async function tts(text, opts = {}) {
   try { unlinkSync(aiff) } catch {}
   const p = await E.probe(out)
   C.history('生成配音', `${voice} · ${txt.length} 字`)
-  return { path: out, name: basename(out), voice, rate, duration: p ? p.duration : 0 }
+  return { ok: true, path: out, name: basename(out), voice, rate, duration: p ? p.duration : 0, engine: 'system' }
 }
 
 /** 配乐情绪 → 现场合成的参数（根音、三和弦比例、速度）。 */
