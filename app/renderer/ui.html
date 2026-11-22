@@ -10300,12 +10300,16 @@ body.rws-dragging *{cursor:col-resize !important}
     }
     h+='</div>';
 
+    /* ★ can_clone / can_import 与 is_tts 一样，后端放在 v.model 这一层
+       （app/lib/voicemodels.js 的 model 对象里）。以前这里写 v.can_clone →
+       永远 undefined → 「录制我的音色」「导入音色样本」两个按钮恒灰，
+       用户以为软件不能录音色（2026-11-22 用户截图报的就是这个）。 */
     h+='<div class="vm-actions">'+
-      '<button class="u-btn'+(v.can_clone?'':' off')+'" data-act="record"'+(v.can_clone?'':' data-off="1"')+'>'+
+      '<button class="u-btn'+(m.can_clone?'':' off')+'" data-act="record"'+(m.can_clone?'':' data-off="1"')+'>'+
         '<svg class="ic"><use href="#i-mic"/></svg>录制我的音色</button>'+
-      '<button class="u-btn'+(v.can_import?'':' off')+'" data-act="import"'+(v.can_import?'':' data-off="1"')+'>'+
+      '<button class="u-btn'+(m.can_import?'':' off')+'" data-act="import"'+(m.can_import?'':' data-off="1"')+'>'+
         '<svg class="ic"><use href="#i-upload"/></svg>导入音色样本</button></div>';
-    if(!v.can_clone)h+='<div class="vm-hint warn">'+esc(v.clone_hint)+'</div>';
+    if(!m.can_clone)h+='<div class="vm-hint warn">'+esc(v.clone_hint||'当前模型不支持声音克隆，换一个带「录制我的音色」能力的模型。')+'</div>';
     else h+='<div class="vm-hint ok">当前模型支持声音克隆：录制或导入的样本只登记在这个模型名下，可随时试听（用这个音色念新内容）、删除。</div>';
 
     h+='<div class="u-divider"></div><div class="vm-sec" style="margin-top:12px"><h4>配音控制 '+
@@ -10812,6 +10816,10 @@ body.rws-dragging *{cursor:col-resize !important}
   document.addEventListener('change',function(e){
     if(e.target.id==='vmPipSel'||e.target.id==='vmWeightSel')syncMirror();
     if(e.target.closest&&e.target.closest('#vmFCaps'))syncCaps();
+    /* ★ 授权勾选原本只挂在 input 事件上。checkbox 在 Chromium 里点一下
+       确实会先派 input，但用脚本赋值 / 某些辅助设备只会走 change ——
+       只挂 input 就会出现「勾了但开始录制还是灰的」。两处都接。 */
+    if(e.target.id==='vmRAuth')$('#vmRecordGo').disabled=!e.target.checked;
   });
   document.addEventListener('keydown',function(e){
     if(e.key==='Escape')$$('.vm-modal.open').forEach(function(m){closeM(m.id)});
