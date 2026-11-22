@@ -622,11 +622,15 @@ async function doTts(d = {}) {
      「选了我的音色」和「选默认音色」出来的声音完全一样。 */
   const ref = myVoiceFile(voice)
   const useRef = !!ref
-  const r = await A.mingTts(text, {
-    voiceId: useRef ? '' : voice,
-    task: useRef ? 'clone' : 'tts',
-    voiceRef: useRef ? ref : '',
-    referenceText: useRef ? String(d.reference_text || '') : '',
+  /* ★★ 必须走 A.tts()，不能直接调 A.mingTts()。
+     A.tts() 里才有「预设音色名 → instruct 声音描述」的翻译（Ming 3.0 不认
+     任何音色名字，只有 instruct / voice_ref / voice_id 三条路）。
+     以前这里直连 mingTts 并传 voiceId:中文名，Ming 不认这个键 → 等于没选，
+     所有音色都是同一个默认嗓子。这正是「选了男声放出来还是女声」的根因。 */
+  const r = await A.tts(text, {
+    voice: voice,
+    voiceRef: useRef ? ref : undefined,
+    referenceText: useRef ? String(d.reference_text || '') : undefined,
     speed: d.speed, pitch: d.pitch, volume: d.volume, emotion: d.emotion,
     language: 'zh',
   })
