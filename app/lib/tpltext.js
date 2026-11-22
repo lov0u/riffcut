@@ -245,11 +245,37 @@ function apply(html, edits) {
 }
 
 /** 读源模板 → 覆盖文字 → 写到目的一份副本。 */
+/* ★ 副本落地时必须一起做「离线化」：把模板里写死的 CDN 地址换成工程内的
+   本地副本（详见 vendorize.js 顶部那段）。这一支覆盖「按原文改字」的副本，
+   漏掉它就会出现「原模板离线了、改过字的那份还在联网」这种半离线状态 ——
+   断网时同一时间线里有的片段有动画、有的没有，最难查。 */
 function writeCopy(srcFile, dstFile, edits) {
   const html = readFileSync(srcFile, 'utf8')
   const next = apply(html, edits)
-  writeFileSync(dstFile, next, 'utf8')
+  let out = next
+  try {
+    const V = require('./vendorize')
+    const projRoot = projectRootOf(dstFile)
+    if (projRoot) out = V.vendorizeText(next, projRoot).html
+  } catch { /* 离线化失败不该让改字整体失败：至少把改字结果写进去 */ }
+  writeFileSync(dstFile, out, 'utf8')
   return next !== html
+}
+
+/* 从 compositions/xxx.html 往上找到工程根。
+   dstFile 可能是 compositions/<名>.html，也可能在更深一层，所以按『compositions』
+   这个目录名往上剥，剥不到就返回 null（调用方当无需离线化处理）。 */
+function projectRootOf(dstFile) {
+  let d = require('node:path').dirname(dstFile)
+  for (let i = 0; i < 6; i++) {
+    if (require('node:path').basename(d) === 'compositions') return require('node:path').dirname(d)
+    const up = require('node:path').dirname(d)
+    if (up === d) break
+    d = up
+  }
+  // 本身就是 compositions 目录下第一层的情况
+  if (require('node:path').basename(d) === 'compositions') return require('node:path').dirname(d)
+  return null
 }
 
 /**
@@ -312,6 +338,12 @@ function writeCopyFull(srcFile, dstFile, edits, dur) {
   const html = readFileSync(srcFile, 'utf8')
   let next = apply(html, edits)
   if (dur != null) next = setDuration(next, dur)
+  /* 同 writeCopy：改时长/改字的副本也要离线化，理由见那边注释。 */
+  try {
+    const V = require('./vendorize')
+    const projRoot = projectRootOf(dstFile)
+    if (projRoot) next = V.vendorizeText(next, projRoot).html
+  } catch { /* 离线化失败不该让副本整体失败 */ }
   writeFileSync(dstFile, next, 'utf8')
   return next !== html
 }

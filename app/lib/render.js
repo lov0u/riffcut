@@ -256,6 +256,27 @@ async function addTemplate(project, name, opts = {}) {
   const dst = join(comps, name + '.html')
   if (!existsSync(dst)) copyFileSync(join(src, name + '.html'), dst)
 
+  /* ★ 离线化：模板 HTML 里写死的 CDN 地址（gsap 命中 564 次 / three 12 次 / d3 5 次…）
+     全部换成本地副本，并把用到的库拷进 compositions/lib/cdn/。
+     不做的后果：渲染时 Chrome 真去外网拉脚本，断网/弱网/CDN 抽风 → GSAP 404
+     → timeline 调用抛 ReferenceError → **动画一帧不动，渲出静止画面且不报错**。
+     放在 copyFileSync 之后、applyFitPatch 之前：补丁改的是画幅，跟脚本引用无关，
+     但两边都要作用在同一份文件上，先换 URL 更稳（补丁会重写整个 HTML）。 */
+  {
+    let host0 = null
+    try { const d0 = T.load(project); if (d0) host0 = { w: d0.width, h: d0.height } } catch (e) {}
+    const vr = require('./vendorize').vendorizeFile(dst, dir)
+    if (vr.unknown && vr.unknown.length) {
+      // 未知 CDN 不动，但要留痕：这条片子仍然依赖外网
+      try {
+        require('node:fs').appendFileSync(
+          join(dir, 'render-notes.log'),
+          `[${new Date().toISOString()}] ${name}: 仍有外网依赖（未离线化）\n  ` +
+          vr.unknown.join('\n  ') + '\n', 'utf8')
+      } catch (e) {}
+    }
+  }
+
   /* 模板自己的 lib/ 和 assets/ 必须一起搬。
      ★ 第一版只拷了 components/ —— 模板正文里引用的 lib/liquid-glass.iife.js、
        assets/xxx.svg 全都不在工程里，预览是黑屏、渲染时资源 404。

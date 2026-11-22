@@ -1,0 +1,9 @@
+/**
+ * Bundled by jsDelivr using Rollup v4.62.2 and esbuild v0.28.1.
+ * Original file: /npm/three@0.184.0/examples/jsm/loaders/FontLoader.js
+ *
+ * Do NOT use SRI with dynamically generated files! More information: https://www.jsdelivr.com/using-sri-with-dynamic-files
+ */
+import{Loader as F,FileLoader as T,ShapePath as k}from"./three.esm.js";class w extends F{constructor(t){super(t)}load(t,e,s,h){const i=this,n=new T(this.manager);n.setPath(this.path),n.setRequestHeader(this.requestHeader),n.setWithCredentials(this.withCredentials),n.load(t,function(c){const a=i.parse(JSON.parse(c));e&&e(a)},s,h)}parse(t){return new x(t)}}class x{constructor(t){this.isFont=!0,this.type="Font",this.data=t}generateShapes(t,e=100,s="ltr"){const h=[],i=q(t,e,this.data,s);for(let n=0,c=i.length;n<c;n++)h.push(...i[n].toShapes());return h}}function q(d,t,e,s){const h=Array.from(d),i=t/e.resolution,n=(e.boundingBox.yMax-e.boundingBox.yMin+e.underlineThickness)*i,c=[];let a=0,p=0;(s=="rtl"||s=="tb")&&h.reverse();for(let u=0;u<h.length;u++){const l=h[u];if(l===`
+`)a=0,p-=n;else{const y=v(l,i,a,p,e);s=="tb"?(a=0,p+=e.ascender*i):a+=y.offsetX,c.push(y.path)}}return c}function v(d,t,e,s,h){const i=h.glyphs[d]||h.glyphs["?"];if(!i){console.error('THREE.Font: character "'+d+'" does not exists in font family '+h.familyName+".");return}const n=new k;let c,a,p,u,l,y,g,b;if(i.o){const r=i._cachedOutline||(i._cachedOutline=i.o.split(" "));for(let o=0,m=r.length;o<m;)switch(r[o++]){case"m":c=r[o++]*t+e,a=r[o++]*t+s,n.moveTo(c,a);break;case"l":c=r[o++]*t+e,a=r[o++]*t+s,n.lineTo(c,a);break;case"q":p=r[o++]*t+e,u=r[o++]*t+s,l=r[o++]*t+e,y=r[o++]*t+s,n.quadraticCurveTo(l,y,p,u);break;case"b":p=r[o++]*t+e,u=r[o++]*t+s,l=r[o++]*t+e,y=r[o++]*t+s,g=r[o++]*t+e,b=r[o++]*t+s,n.bezierCurveTo(l,y,g,b,p,u);break}}return{offsetX:i.ha*t,path:n}}export{x as Font,w as FontLoader};
+//# sourceMappingURL=/sm/14fa3508414e4c14fdadb669970ce3f44f662d4c9d3ea14da481170c14e9b04a.map
