@@ -274,9 +274,9 @@ body.rws-dragging *{cursor:col-resize !important}
 /* ═══ 文档：正文路径可点 + 右侧标签页 ═══ */
 /* 正文里的文件路径 · 做成按钮，一眼看得出能点 */
 .h-docbtn{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;margin:0 1px;
-  border:1px solid #CFE6E1;border-radius:6px;background:#F3FAF8;color:#2563EB;
+  border:1px solid #DDE2E9;border-radius:6px;background:#F5F8FF;color:#2563EB;
   font:inherit;font-size:inherit;cursor:pointer;vertical-align:baseline;max-width:100%}
-.h-docbtn:hover{background:#E8F6F2;border-color:#A9D8CE}
+.h-docbtn:hover{background:#EFF4FF;border-color:#A8C4F8}
 .h-docbtn .ic{width:12px;height:12px;flex:0 0 auto}
 
 /* 右侧文档面板：只在点开文件后出现，高度吃掉右栏，和看板并列 */
@@ -686,7 +686,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-pet:active{transform:translateY(-2px) scale(.99)}
 
 .h-aiinput{position:relative;border-radius:28px;background:#FFFFFF;
-  border:1px solid #CFE6E1;
+  border:1px solid #E4E8EE;
   /* 原来是三层外阴影（1px + 8px + 20px 各带 -6/-18 负扩散），叠起来像一块悬浮的板子，
      边缘发灰、上下都比实际盒子大一圈。改成「一层极近的定位影 + 一层很淡的扩散」，
      靠更圆的 28px 圆角去表达「这是一块可以说话的框」，不是靠阴影厚度。 */
@@ -698,20 +698,20 @@ body.rws-dragging *{cursor:col-resize !important}
      上限 1100px —— 再宽一行字太长，读起来反而累。 */
   width:min(83%,980px);margin-left:auto;margin-right:auto;flex:0 0 auto;
   transition:border-color .18s,box-shadow .18s}
-.h-aiinput:focus-within{border-color:#9FD8CF;
+.h-aiinput:focus-within{border-color:#A8C4F8;
   box-shadow:0 1px 2px rgba(28,38,58,.05),
-             0 10px 28px -6px rgba(46,158,146,.22),
-             0 24px 52px -20px rgba(46,158,146,.26),
+             0 10px 28px -6px rgba(37,99,235,.18),
+             0 24px 52px -20px rgba(37,99,235,.20),
              inset 0 1px 0 rgba(255,255,255,.9)}
 /* 拖入文件夹：整框高亮 + 居中提示 */
 .h-aiinput.drop-in{border-color:#2563EB!important;border-style:dashed;
-  box-shadow:0 0 0 3px rgba(37,99,235,.12),0 10px 28px -6px rgba(46,158,146,.22)!important}
+  box-shadow:0 0 0 3px rgba(37,99,235,.12),0 10px 28px -6px rgba(37,99,235,.18)!important}
 .h-drop-hint{display:none;position:absolute;inset:0;z-index:20;pointer-events:none;
   align-items:center;justify-content:center;gap:9px;border-radius:28px;
-  background:rgba(250,254,253,.93);color:#2563EB;font-size:13px;font-weight:600}
+  background:rgba(252,253,255,.94);color:#2563EB;font-size:13px;font-weight:600}
 .h-aiinput.drop-in .h-drop-hint{display:flex}
 .h-drop-hint svg{width:20px;height:20px}
-/* 外层 .h-aiinput 自己已经是一圈淡绿框，里面再套框就成了「框套框」。
+/* 外层 .h-aiinput 自己已经有一圈边框，里面再套框就成了「框套框」。
    所以容器内部的输入元素一律去框、去阴影、去底色，只留文字。 */
 .h-aiinput input,.h-aiinput textarea{width:100%;
   font-size:12px;line-height:1.6;color:var(--ink);font-family:inherit;padding:0;
@@ -902,7 +902,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .cappanel .cfoot button{flex:1 1 auto;height:26px;border:1px solid #E1E6EE;border-radius:8px;
   background:#F8FAFC;color:#5A6473;font-size:10.5px;cursor:pointer;white-space:nowrap;
   transition:border-color .15s,color .15s,background .15s}
-.cappanel .cfoot button:hover{border-color:#9FD8CF;color:#2563EB;background:#F4FBF9}
+.cappanel .cfoot button:hover{border-color:#A8C4F8;color:#2563EB;background:#EFF4FF}
 .cappanel .cfoot button.pri{background:#2563EB;border-color:#2563EB;color:#fff}
 .cappanel .cfoot button.pri:hover{background:#178073;color:#fff}
 /* 技能条目：名字 + 一句说明两行排，不再把说明挤到右边一列 */
@@ -1514,6 +1514,10 @@ body.rws-dragging *{cursor:col-resize !important}
 .au-mini:hover{border-color:#A8C4F8;color:#1D4ED8}
 .au-mini.on{background:#EFF4FF;border-color:#A8C4F8;color:#33405A;font-weight:600}
 .au-note{font-size:var(--f5);color:var(--ink3);line-height:1.7}
+/* 录音准备弹窗里的授权勾选（移植自语音工作室的 .vm-check） */
+.h-rec-check{display:flex;align-items:flex-start;gap:8px;font-size:var(--f5);color:#4A5262;
+  line-height:1.6;cursor:pointer;margin:10px 0 2px}
+.h-rec-check input{accent-color:#2563EB;margin-top:2px;flex:0 0 auto}
 .au-sec-t{font-size:var(--f4);font-weight:600;display:flex;align-items:center;gap:7px;margin:3px 0;flex-wrap:wrap}
 .au-sec-t .u-tag{margin-left:auto}
 .au-proj{display:flex;flex-wrap:wrap;gap:6px}
@@ -2318,6 +2322,38 @@ body.rws-dragging *{cursor:col-resize !important}
     <div class="v-dft"><span class="au-note" id="muNow" style="flex:1;min-width:0"></span>
       <button class="u-btn" data-close="hMusicModal">取消</button>
       <button class="u-btn gold" id="muSaveBtn">保存</button></div>
+  </div>
+</div>
+
+<!-- ══ 悬浮框：录一段参考音频（先填名字/时长/授权，再进录音卡片） ══
+     移植自「04-AI语音工作室」的 vmRecordModal。首页原来直接调 window.prompt 让用户起名，
+     Electron 里 prompt() 抛 "prompt() is not supported."，异常把后面的录音卡片整个挡掉，
+     用户点了没反应。这里用正经表单替掉 prompt。 -->
+<div class="v-modal" id="hRecModal" role="dialog" aria-modal="true" aria-label="录制我的音色">
+  <div class="v-shade" data-close="hRecModal"></div>
+  <div class="v-dialog">
+    <div class="v-dhd"><b>录制我的音色</b><button class="v-x" data-close="hRecModal">×</button></div>
+    <div class="v-dbd">
+      <div class="v-tip"><b>这是「声音克隆」：录一段你自己的声音，之后配音就用它念。</b><br>
+        录下来的样本只属于当前这个模型，不会串到别的模型里。念得自然一点、别有环境噪音；第一次用会弹系统麦克风授权。</div>
+      <div class="v-row">
+        <div class="v-f"><label>音色名称</label>
+          <div class="u-input"><input id="hRecName" placeholder="我的音色"></div></div>
+        <div class="v-f"><label>录制时长</label>
+          <div class="u-select"><select id="hRecSec">
+            <option value="10">10 秒</option>
+            <option value="8" selected>8 秒</option>
+            <option value="6">6 秒</option>
+            <option value="20">20 秒</option>
+          </select></div></div>
+      </div>
+      <label class="h-rec-check"><input type="checkbox" id="hRecAuth"> 我确认这是本人或已获明确授权的声音样本，仅用于本项目配音。</label>
+      <div class="v-tip" id="hRecWhat">点「开始录制」后会弹一张卡片，上面有要念的句子，倒数 3 秒才开始计时。</div>
+    </div>
+    <div class="v-dft">
+      <button class="u-btn" data-close="hRecModal">取消</button>
+      <button class="u-btn gold" id="hRecGo" disabled>开始录制</button>
+    </div>
   </div>
 </div>
 
@@ -3311,11 +3347,11 @@ body.rws-dragging *{cursor:col-resize !important}
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function openAM(id){var m=$('#'+id);if(m){m.classList.add('open');document.body.classList.add('modal-open')}}
   function closeAM(id){var m=$('#'+id);if(m){m.classList.remove('open');document.body.classList.remove('modal-open')}}
-  $$('#hAudioModal [data-close],#hMusicModal [data-close]').forEach(function(b){
+  $$('#hAudioModal [data-close],#hMusicModal [data-close],#hRecModal [data-close]').forEach(function(b){
     b.addEventListener('click',function(){closeAM(b.getAttribute('data-close'))});
   });
   document.addEventListener('keydown',function(ev){
-    if(ev.key==='Escape'){closeAM('hAudioModal');closeAM('hMusicModal')}
+    if(ev.key==='Escape'){closeAM('hAudioModal');closeAM('hMusicModal');closeAM('hRecModal')}
   });
 
   /* 副标题只放最关键的几个字：半栏 145px 塞不下「系统默认音色 · 语速 175」这种长句，
@@ -3478,29 +3514,44 @@ body.rws-dragging *{cursor:col-resize !important}
   }
   $('#auRecordBtn').addEventListener('click',function(){
     var mid=cloneModel();if(!mid)return;
-    /* 服务端 ffmpeg 没有麦克风输入，录音只能走界面这层：网页话筒录 8 秒再交给本机存。
-       录之前先弹居中卡片给词，点「开始朗读」倒数 3 秒才计时，不然 8 秒不够念。
-       ★ 接口必须是 /api/voicemodels —— /api/audio 里没有 record_audio 这个 action，
-       它会把请求当「还没接」返回 ok:true+note，前端看见 ok 就当成功、音频直接丢，
-       用户看到的是「已录制」但音色列表里什么都没有。 */
+    /* ★ 这里不能用 window.prompt 让用户起名：Electron 的 prompt 直接抛
+       "prompt() is not supported."，异常一抛后面弹录音卡片的代码根本走不到，
+       用户点了像没反应。改成先开一个正经表单弹窗（名字 / 时长 / 授权），
+       表单确定后再调 window.riffcutRecGuide 出录音卡片。 */
     if(!window.riffcutRecGuide){window.say('这台机器打不开麦克风，可改用「导入样本」');return}
-    var myName=(window.prompt&&window.prompt('给这个音色起个名字（之后配音时按名字选）','我的音色'))||'我的音色';
-    myName=String(myName).trim(); if(!myName) myName='我的音色';
-    window.riffcutRecGuide({seconds:8,title:'录一段参考音频',
-      text:window.RiffCut_SAMPLE_TEXT||'在影创的镜头下，每一个瞬间都值得被定格，让创意，成为影像。'
-    }).then(function(r){
-      if(!r)return;
-      return window.api('/api/voicemodels',{action:'record_audio',id:mid,name:myName,audio:r.b64})
-        .then(function(res){
-          r.close();
-          if(!res||res.ok===false){window.say((res&&(res.error||res.note))||'录制失败');return}
-          window.say('已录好音色「'+(res.name||myName)+'」，配音时在音色列表最上面就能选到它');
-          /* 重载音色列表，让「我的音色」立刻出现在最前面 */
-          if(window.loadVoiceModels) try{window.loadVoiceModels()}catch(e){}
-          loadAudio(true);
-        }).catch(function(e){r.close();window.say(e.message)});
-    }).catch(function(e){window.say(e.message)});
+    AUD.recModel=mid;
+    var nameEl=$('#hRecName'),authEl=$('#hRecAuth'),goEl=$('#hRecGo');
+    if(nameEl&&!nameEl.value)nameEl.value='我的音色';
+    if(authEl)authEl.checked=false;
+    if(goEl)goEl.disabled=true;
+    openAM('hRecModal');
+    if(nameEl)setTimeout(function(){try{nameEl.focus();nameEl.select()}catch(e){}},60);
   });
+  /* 勾了授权才允许开始：声音克隆是要用户明确确认的 */
+  (function(){
+    var authEl=$('#hRecAuth'),goEl=$('#hRecGo');
+    if(authEl&&goEl)authEl.addEventListener('change',function(){goEl.disabled=!authEl.checked});
+    if(!goEl)return;
+    goEl.addEventListener('click',function(){
+      var mid=AUD.recModel;if(!mid)return;
+      var sec=+($('#hRecSec')||{}).value||8;
+      var myName=String((($('#hRecName')||{}).value||'')).trim()||('我的音色-'+new Date().toISOString().slice(0,10));
+      closeAM('hRecModal');
+      window.riffcutRecGuide({seconds:sec,title:'录一段参考音频',
+        text:window.RiffCut_SAMPLE_TEXT||'在影创的镜头下，每一个瞬间都值得被定格，让创意，成为影像。'
+      }).then(function(r){
+        if(!r)return;                                  /* 用户自己取消的，不提示 */
+        return window.api('/api/voicemodels',{action:'record_audio',id:mid,name:myName,audio:r.b64})
+          .then(function(res){
+            r.close();
+            if(!res||res.ok===false){window.say((res&&(res.error||res.note))||'录制失败');return}
+            window.say('已录好音色「'+(res.name||myName)+'」，配音时在音色列表最上面就能选到它');
+            if(window.loadVoiceModels) try{window.loadVoiceModels()}catch(e){}
+            loadAudio(true);
+          }).catch(function(e){r.close();window.say(e.message)});
+      }).catch(function(e){window.say(e.message)});
+    });
+  })();
   $('#auImportBtn').addEventListener('click',function(){
     var mid=cloneModel();if(!mid)return;
     /* 和录音同一个坑：/api/audio 里没有 import_sample，走 /api/voicemodels。
