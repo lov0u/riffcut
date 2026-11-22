@@ -169,9 +169,12 @@ async function mingTts(text, opts) {
   }
   if (tpl === 'emotion') opt('emotion', opts.emotion)
   if (tpl === 'ip') {
-    const VID = ['US_Emma', 'US_James', 'UK_George', 'UK_Charlotte']
-    const v = String(opts.voiceId || '')
-    if (VID.includes(v)) opt('voice_id', v)
+    /* ★ 原来这里有个白名单只放 4 个英文音色（US_Emma/UK_George/UK_Charlotte/US_James），
+       中文音色名一律被丢掉 —— 这就是「选了灵楷出来还是女声」的第三个断点：
+       即使上层把 voice_id 传下来了，这一层也会静默过滤掉，而且不报错。
+       模型的内置音色表远不止那 4 个英文名，voice_id 原样传即可（不认识的名字
+       引擎会自己回落到默认嗓子，不会崩）。 */
+    opt('voice_id', opts.voiceId)
   }
   if (tpl === 'dialect') opt('dialect', opts.dialect)
   opt('instruct', opts.instruct)
@@ -252,6 +255,9 @@ async function tts(text, opts = {}) {
       /* 有 instruct 描述 → 走 freeform（自由文字描述声音）；
          英文内置音色 → 走 ip 模板配 voice_id；
          用户自带 emotion → 走 emotion 模板；都没有 → 普通 tts。 */
+      /* 有内置音色（autoTemplate='ip'）时优先走它 —— 这是模型自带的音色表；
+         emotion 是调用方显式要的情绪模板，优先级更高；
+         都没有才退回 freeform（靠 instruct 描述）/ 普通 tts。 */
       template: opts.template
         || (opts.emotion ? 'emotion' : '')
         || autoTemplate
