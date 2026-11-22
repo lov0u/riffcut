@@ -69,7 +69,7 @@ async function kernel() {
   _prof = Pr.buildProfile({ homeDir: kernelHome, workDir: workDir, profile: 'velora' })
   const k = new Kernel({ homeDir: kernelHome, profile: 'velora' })
   k.on('event', () => {})            // 事件在这一层按 stepId 分发，见 chat()
-  await k.start({ provider: _prof.provider, model: _prof.model, cwd: workDir, env: _prof.env })
+  await k.start({ provider: _prof.provider, model: _prof.model, reasoningEffort: _prof.reasoningEffort, cwd: workDir, env: _prof.env })
   _k = k
   return k
 }
@@ -111,6 +111,8 @@ function bookUsage(modelName, usage, ms) {
 const TOOL_CN = {
   web_search: '上网找资料', stock_search: '找免费素材', stock_fetch: '下载素材',
   templates: '翻模板库', template_vars: '看模板可改的字', capabilities: '看这台机器能干什么',
+  template_recipe: '拆模板动画配方', template_family: '找同族模板', text_style: '翻文字样式',
+  design_with_template: '拆模板语法给长片排版',
   deps: '体检环境', skills: '查技能手册', kb_search: '查知识库',
   storyboard: '列分镜方案', edit_timeline: '改时间线', timeline: '读时间线',
   generate: '出片', render_clip: '出片', make_slideshow: '多图成片',
@@ -123,6 +125,10 @@ const TOOL_CN = {
   list_mcp_resource_templates: '列出能力模板', read_mcp_resource: '读能力说明',
   models: '看模型', render_status: '检查渲染环境', script: '写脚本',
   gate: '过审', gate_check: '过审检查', plan_check: '查方案', film_check: '查成片',
+  /* 2026-11-21 新增：文字样式表 + 扫文件夹看图。没这两条时，用户屏幕上会
+     直接显示英文工具名「text_style / look_folder」，看着像报错。 */
+  text_style: '翻文字样式', look_folder: '扫文件夹看图', review: '看成片', read_video: '逐个镜头看片',
+  film_match: '对画面和台词', study: '量参考片', rhythm: '量节拍',
 }
 
 /** 从工具参数里挑一句"他在干什么"，比 JSON 好读。 */
@@ -175,10 +181,24 @@ async function chat(body) {
   const messages = Array.isArray(body.messages) ? body.messages : []
   const last = messages.filter((m) => m && m.role === 'user').slice(-1)[0]
   const text = String((last && (last.content || last.text)) || body.text || '').trim()
-  if (!text) return { ok: false, error: '没说话' }
+  /* ★ 2026-11-22 图片多模态（照 DSH）：前端把图片读成 base64 传过来。
+     形状 [{data:'<base64 裸串>', mimeType:'image/png', name:'x.png'}]。
+     后端兜底剥掉 data URL 前缀（data:image/png;base64,xxxxx），
+     因为内核 durable 层认的是裸 base64 + mimeType（不是 mediaType）。 */
+  const images = (Array.isArray(body.images) ? body.images : []).map((im) => {
+    if (!im || typeof im !== 'object') return null
+    let data = String(im.data || '')
+    const comma = data.indexOf(',')
+    const mimeType = String(im.mimeType || (comma > 0 ? (data.slice(0, comma).match(/^data:([^;]+)/) || [])[1] : '') || 'image/png')
+    if (comma > 0 && /^data:/i.test(data)) data = data.slice(comma + 1)
+    if (!data) return null
+    return { type: 'image', data, mimeType, ...(im.name ? { name: String(im.name) } : {}) }
+  }).filter(Boolean)
+  /* 只发图片、一个字都不写也允许（DSH 支持纯图片提问） */
+  if (!text && !images.length) return { ok: false, error: '没说话' }
 
   const stepId = String(body.step_id || ('s' + (++_seq)))
-  const rec = { seq: 0, steps: [], done: false, text: '', started: Date.now(), storyboardProjects: [], editProjects: [], error: '', pending: true, usage: { in: 0, out: 0, cached: 0 } }
+  const rec = { seq: 0, steps: [], done: false, text: '', thinking: '', started: Date.now(), turnStart: 0, turnEnd: 0, storyboardProjects: [], editProjects: [], error: '', pending: true, usage: { in: 0, out: 0, cached: 0 } }
   BUS.set(stepId, rec)
 
   /* 会话 id 必须每次启动唯一。
@@ -190,10 +210,49 @@ async function chat(body) {
   const k = await kernel()
   const t0 = Date.now()
 
-  // 把这一轮所有文本事件收起来；reasoning 一律丢掉（英文思考过程给用户看是噪音）
+  /* 把这一轮的文本与思考分别收起来。
+     2026-11-22：以前这里把 reasoning 一律丢掉，理由是"英文思考是噪音"。
+     但模型现在输出的是有内容的中文思考（DSH 里显示为「^ 思考」那一大段），
+     丢掉后软件只剩工具动作、没有判断过程 —— 用户明确要求跟 DSH 一样能看到思考。
+     现在分开收：texts 仍是"给用户听的话"，reasoning 单独走 steps() 的 thinking 字段，
+     按 DSH 的方式渲染成可折叠块，不混进回答正文。 */
   const texts = []
+  const reasonings = []
+  /* ★ 逐字节流的临时累积（DSH 的 assistant/live-chunk）：SDK server 现在会把
+     agent/assistant-stream 的 chunk 合成 session.event 转过来。这里按到达顺序
+     把 text-delta / reasoning-delta 拼起来，让前端 700ms 轮询看到文字一个个冒出来。
+     durable assistant/message 定稿时清空这两个数组，用内核的完整版覆盖，避免重复。 */
+  const liveTexts = []
+  const liveReasonings = []
   const onEv = (sessionId, ev) => {
     if (sessionId && sid && sessionId !== sid) return
+    /* ★ 用时的真实数据源（严格照 DSH）：turn/start 与 turn/end 事件顶层的 .time
+       是内核打的 epoch 毫秒，差值才是模型这一轮真正花的墙钟时间。
+       以前前端用 Date.now() 从发送那刻自己掐表，包含了排队、界面轮询等
+       跟模型无关的等待，所以「用时」总是偏大且定格不动。DSH 的
+       TurnProcessNodeView 就是拿 turn.end.time - turn.start.time。 */
+    if (ev && ev.type === 'turn/start' && !rec.turnStart && ev.time) rec.turnStart = Number(ev.time) || 0
+    if (ev && ev.type === 'turn/end' && ev.time) rec.turnEnd = Number(ev.time) || 0
+    /* ★ 逐字流式：合成的 assistant/live-chunk 事件。chunk.type 只认文本/思考增量，
+       其它（block-start / usage / finish / tool-call-delta）忽略 —— 工具和正文
+       仍走各自正规的 durable 事件，这里只负责让文字「一个个冒出来」。 */
+    if (ev && ev.type === 'assistant/live-chunk') {
+      const c = (ev.data && ev.data.chunk) || {}
+      if (c.type === 'text-delta' && c.text) {
+        liveTexts.push(String(c.text))
+        /* 把已经定稿的前几段一起带上，避免多步场景第二轮流式时正文短暂回退 */
+        const done = texts.join('\n')
+        rec.text = done ? done + '\n' + liveTexts.join('') : liveTexts.join('')
+        /* 不 ++seq：逐字文本靠前端每帧直接读 r.text / r.thinking（都在 seq 门控外），
+           seq 只留给 durable 的步骤/思考事件。否则一个 chunk 一次 ++ 会让 seq
+           飙到上千，flowRender 每帧重建整张过程组、展开的详情也会闪掉。 */
+      } else if (c.type === 'reasoning-delta' && c.text) {
+        liveReasonings.push(String(c.text))
+        const doneR = reasonings.join('\n\n')
+        rec.thinking = doneR ? doneR + '\n\n' + liveReasonings.join('') : liveReasonings.join('')
+      }
+      return
+    }
     /* 真实 token：内核每步都会带 data.usage，一轮里多步要累加
        （agent 跑几轮工具就是几趟模型，只取最后一步会严重少算）。 */
     const u = usageOf(ev)
@@ -271,6 +330,19 @@ async function chat(body) {
       }
     }
     if (ev && ev.type === 'assistant/message') {
+      /* ★ durable 定稿来了：清掉逐字临时累积，用内核的完整版覆盖。
+         流式 chunk 只在正文出来前让文字「冒出来」，最终以完整消息为准，
+         否则重试（llm/retry）时旧文本会残留（DSH resetForRetry 同款处理）。 */
+      liveTexts.length = 0
+      liveReasonings.length = 0
+      /* 思考过程：DSH 显示为可折叠的「思考」块。累积到 rec.thinking，
+         前端 700ms 轮询就能边跑边看。和正文完全分开，不污染 rec.text。 */
+      const rs = Turn.reasoningOf(ev.data && ev.data.message)
+      if (rs) {
+        reasonings.push(rs)
+        rec.thinking = reasonings.join('\n\n').trim()
+        rec.seq++                       // 让前端轮询知道有新内容（思考也要实时刷）
+      }
       const t = Turn.textOf(ev.data && ev.data.message)
       if (t) { texts.push(t); rec.text = texts.join('\n').trim() }   // 边跑边可读 —— 前端轮询就能看到字在长
       /* ★ 这里原来还会从 message.content 里再解析一遍 toolCalls 并 push 进 rec.steps：
@@ -321,11 +393,20 @@ async function chat(body) {
           + '\n\n【用户刚才说】\n' + text
       }
     }
+    /* ★ 2026-11-22 用户 m07482：「跟 DSH 一样就行，不需要你给他指定，不要限制他」。
+       删掉原先按 mode 注入的强制纪律（提问档必须 kb_search、只回答不动手）。
+       DSH 没有提问/干活开关，也不在发送时硬塞流程 —— 判断「这话是话还是活」
+       靠 AGENTS.md 里的软纪律让模型自己决定。这里不再指定、不再限制。 */
     /* ★ 用 promptSafely 而不是 prompt：会话 id 在 home/sessions 里已经存在时
        （用户重开软件、或切回旧对话），裸 prompt 会走 agents.create() 抛
        `session "conv-xxx" already exists`，界面显示「这一轮收尾不完整」且每句都失败。
        promptSafely 先 resume 再发，旧对话能正常接着聊。 */
-    await k.promptSafely(sid, full)
+    /* ★ 图片多模态（照 DSH 的 content = [...attachments, {type:'text',text}]）：
+       图片 block 放前面，文字（含前文）放最后。没有文字时省掉 text block。
+       promptSafely → prompt 现在会原样透传 contentBlocks 数组给内核的
+       session/prompt，内核 durablePromptContent 把 base64 存成 attachment。 */
+    const contentBlocks = images.concat(full ? [{ type: 'text', text: full }] : [])
+    await k.promptSafely(sid, contentBlocks.length ? contentBlocks : full)
     await k.wait(sid, 30 * 60 * 1000)
     // 等 idle 之后管道里可能还压着收尾文本，给它一点时间落地
     await new Promise((r) => setTimeout(r, 600))
@@ -364,7 +445,8 @@ async function chat(body) {
     return {
       ok: true,
       data: {
-        text: rec.text, steps: rec.steps, ms: Date.now() - t0,
+        text: rec.text, thinking: rec.thinking || '', steps: rec.steps, ms: Date.now() - t0,
+        turn_start: rec.turnStart || 0, turn_end: rec.turnEnd || 0,
         model: (_prof && _prof.model) || '', step_id: stepId,
         storyboard_projects: rec.storyboardProjects,
         edit_projects: rec.editProjects,
@@ -383,18 +465,20 @@ async function chat(body) {
 /** 轮询进度（界面每 700ms 一次）。也是「边跑边出字」的唯一通道。 */
 function steps(id) {
   const r = BUS.get(String(id))
-  if (!r) return { seq: -1, steps: [], done: true, text: '', workers: { running: 0, items: [] } }
+  if (!r) return { seq: -1, steps: [], done: true, text: '', thinking: '', workers: { running: 0, items: [] } }
   let wk = { running: 0, items: [] }
   try { wk = require('./workers').snapshot() } catch (e) {}
   return {
     seq: r.seq, steps: r.steps, done: r.done, pending: !!r.pending,
-    text: r.text, error: r.error || '',
+    text: r.text, thinking: r.thinking || '', error: r.error || '',
     storyboard_projects: r.storyboardProjects || [],
     edit_projects: r.editProjects || [],
     workers: wk,
     usage: r.usage || { in: 0, out: 0, cached: 0 },
     model: (_prof && _prof.model) || '',
     ms: Date.now() - r.started,
+    turn_start: r.turnStart || 0,
+    turn_end: r.turnEnd || 0,
   }
 }
 

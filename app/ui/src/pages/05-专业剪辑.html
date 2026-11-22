@@ -4,9 +4,16 @@
    · 不嵌任何第三方剪辑界面。渲染能力由引擎提供，界面、数据、品牌全是影创自己的。
    · 三栏：左素材池 / 中预览 / 右属性；底部多轨时间线横跨整宽。
    · 时间线用「秒 → 像素」单一口径换算，缩放只改一个变量，拖拽裁剪都跟着走。 */
-.ed{flex:1;min-height:0;display:flex;flex-direction:column;gap:9px}
+/* 一张纸 + 分隔线，不是一堆卡片。
+   之前是「间隙 9px + 每块自带边框 + 底色差」三重分隔叠加，所以看着一块一块。
+   现在：整屏纯白连成一片，面板之间只靠 1px 线分隔，间隙归零。 */
+.ed{flex:1;min-height:0;display:flex;flex-direction:column;gap:0;
+  background:#FFFFFF;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .ed-main{flex:1 1 auto;min-height:170px;display:grid;
-  grid-template-columns:clamp(170px,17%,230px) minmax(0,1fr) clamp(190px,19%,250px);gap:9px}
+  grid-template-columns:clamp(170px,17%,230px) minmax(0,1fr) clamp(190px,19%,250px);gap:0}
+/* 面板之间只留一条线，不再各画一圈框 */
+.ed-main>*{border-radius:0!important}
+.ed-main>*+*{border-left:1px solid var(--line)}
 
 /* 打开成片浮层：列出导出过的 mp4，点一下就导进当前工程 */
 .ed-wk-modal{position:fixed;inset:0;z-index:370;display:none;
@@ -40,20 +47,24 @@
 
 /* 素材池 */
 .ed-pool{display:flex;flex-direction:column;min-height:0;background:#fff;
-  border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+  border-radius:var(--r-md);overflow:hidden}
 .ed-pool-h{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:8px 10px;
   border-bottom:1px solid var(--line);font-size:var(--f5);font-weight:600;color:var(--ink)}
 .ed-pool-h .u-btn{margin-left:auto;height:23px;padding:0 8px;font-size:10.5px}
 .ed-pool-b{flex:1 1 auto;min-height:0;overflow-y:auto;padding:7px;display:flex;
   flex-direction:column;gap:6px;scrollbar-width:thin}
-.ed-as{display:flex;align-items:center;gap:7px;padding:6px 7px;border:1px solid var(--line);
-  border-radius:8px;cursor:grab;background:#FCFDFE;font-size:12px;line-height:1.3}
-.ed-as:hover{border-color:#BFE4DC;background:#F4FBF9}
+/* 素材列表是一列行，不是一列卡片：每项自带一圈框，八项就是八个盒子。
+   改成行：无框、无圆角、只留行间一条淡线；hover 用极淡底提示。 */
+.ed-as{display:flex;align-items:center;gap:7px;padding:7px 8px;border:0;
+  border-bottom:1px solid var(--line-w);border-radius:0;cursor:grab;
+  background:transparent;font-size:12px;line-height:1.3}
+.ed-as:hover{background:#F5F7FA}
+.ed-as:last-child{border-bottom:0}
 .ed-as:active{cursor:grabbing}
 .ed-as .ic{width:14px;height:14px;flex:0 0 auto;color:#8A92A2}
 .ed-as .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ed-as .du{flex:0 0 auto;font-size:10.5px;color:var(--ink3)}
-.ed-as.video .ic{color:#2E9E76}.ed-as.audio .ic{color:#1B8B7E}
+.ed-as.video .ic{color:#2E9E76}.ed-as.audio .ic{color:#2563EB}
 .ed-as.image .ic{color:#5A8FD6}
 .ed-pool-e{color:var(--ink3);font-size:10.5px;text-align:center;padding:16px 8px;line-height:1.7}
 
@@ -80,17 +91,17 @@
 .ed-bar button:hover{background:rgba(255,255,255,.1)}
 .ed-bar .tm{font-variant-numeric:tabular-nums;letter-spacing:.4px}
 .ed-bar .u-btn{margin-left:auto;height:26px;padding:0 10px;font-size:10.5px;
-  background:#1B8B7E;border-color:#1B8B7E;color:#fff}
+  background:#2563EB;border-color:#2563EB;color:#fff}
 .ed-bar .u-btn:hover{background:#16786C}
 /* 预览缩放三件套：适应 / 缩小 / 放大。跟时间线的「缩放」（只管 pps）是两回事。 */
 .ed-bar .pvbtn{width:auto;min-width:26px;height:26px;padding:0 7px;border-radius:8px;
   font-size:10.5px;color:#D6DCE6;background:rgba(255,255,255,.06);
   border:1px solid rgba(255,255,255,.12);cursor:pointer}
-.ed-bar .pvbtn:hover{background:rgba(27,139,126,.3);border-color:rgba(27,139,126,.5)}
+.ed-bar .pvbtn:hover{background:rgba(37,99,235,.3);border-color:rgba(37,99,235,.5)}
 
 /* 属性 */
 .ed-insp{display:flex;flex-direction:column;min-height:0;background:#fff;
-  border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+  border-radius:var(--r-md);overflow:hidden}
 .ed-insp-h{flex:0 0 auto;padding:8px 10px;border-bottom:1px solid var(--line);
   font-size:var(--f5);font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px}
 .ed-insp-b{flex:1 1 auto;min-height:0;overflow-y:auto;padding:9px 10px;
@@ -98,9 +109,9 @@
 .ed-insp .row{display:flex;flex-direction:column;gap:3px}
 .ed-insp label{font-size:10.5px;color:var(--ink3)}
 .ed-insp input[type=text],.ed-insp input[type=number],.ed-insp select{
-  height:26px;border:1px solid var(--line);border-radius:8px;padding:0 7px;
-  font-size:12px;color:var(--ink);background:#fff;width:100%}
-.ed-insp input[type=color]{height:26px;padding:1px;border:1px solid var(--line);
+  height:26px;padding:0 7px;
+  font-size:12px;color:var(--ink);width:100%}
+.ed-insp input[type=color]{height:26px;padding:1px;border:1px solid var(--line-c);
   border-radius:8px;background:#fff;width:100%}
 .ed-insp input[type=range]{width:100%}
 .ed-insp .two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
@@ -111,64 +122,62 @@
 
 /* 时间线 */
 .ed-tl{flex:0 0 auto;min-height:0;display:flex;flex-direction:column;
-  background:#fff;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+  background:#fff;border-top:1px solid var(--line)}
 .ed-tl-h{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:6px 10px;
   border-bottom:1px solid var(--line);font-size:var(--f5);color:var(--ink)}
 .ed-tl-h .u-btn{height:23px;padding:0 8px;font-size:10.5px}
-.ed-tl-h .u-btn.primary{background:#1B8B7E;color:#fff;border-color:#1B8B7E;font-weight:600}
-.ed-tl-h .u-btn.primary:hover{background:#147365;color:#fff}
+.ed-tl-h .u-btn.primary{background:#2563EB;color:#fff;border-color:#2563EB;font-weight:600}
+.ed-tl-h .u-btn.primary:hover{background:#1D4ED8;color:#fff}
 .ed-tl-h .sp{flex:1 1 auto}
 .ed-tl-h .zoom{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink3)}
 .ed-tl-h input[type=range]{width:80px}
 .ed-scroll{flex:0 1 auto;overflow:auto;position:relative;scrollbar-width:thin;
   /* 轨道名列宽：拖右边缘的手柄可改，并记进 localStorage，下次打开还是这个宽度。
      JS 的 LANE_W 从存储读取，这里是首次打开（没存过）的默认值：108px。 */
-  --lane-w:108px;
+  --lane-w:128px;
   /* 至少完整显示刻度 + 四条轨（20 + 4×32 = 148），否则音频轨会被切掉一半，
      看着像界面断了。轨道更多时才出现滚动条。 */
   min-height:148px;max-height:min(46vh,360px)}
 .ed-inner{position:relative;min-width:100%}
-.ed-ruler{position:sticky;top:0;z-index:3;height:20px;min-width:100%;background:#FBFCFE;
+.ed-ruler{position:sticky;top:0;z-index:3;height:20px;min-width:100%;background:#FFFFFF;
   border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
 .ed-ruler .tk{position:absolute;top:0;height:100%;border-left:1px solid #E8ECF3;
   font-size:10.5px;color:#9AA2B1;padding-left:3px;line-height:20px;white-space:nowrap}
 .ed-lane{display:flex;align-items:stretch;border-bottom:1px solid #F1F4F8;min-height:32px}
 /* 轨道名列默认 108px、可拖动调宽窄并记忆：把「加片段 / 锁 / 静音 / 删除」都集成在这一栏，
    不用再跑到上面工具栏找。原来 62px 塞不下，红叉 hover 时被挤没了。 */
-.ed-lane-lb{flex:0 0 var(--lane-w,108px);position:sticky;left:0;z-index:2;background:#FBFCFE;
+.ed-lane-lb{flex:0 0 var(--lane-w,128px);position:sticky;left:0;z-index:2;background:#FFFFFF;
   border-right:1px solid var(--line);display:flex;align-items:center;gap:3px;
-  padding:0 6px;font-size:10.5px;color:var(--ink3);white-space:nowrap;overflow:hidden}
+  padding:0 4px 0 6px;font-size:10.5px;color:var(--ink3);white-space:nowrap;overflow:hidden}
 /* 轨道名栏右边缘的拖拽手柄：往左拖只留图标、往右拖显示文字。
    每条轨道栏右缘各有一个，视觉上连成一条竖线；拖任意一个都改同一个宽度。 */
 .ed-lane-lb .lb-resize{position:absolute;right:0;top:0;bottom:0;width:7px;
   cursor:col-resize;z-index:6;background:transparent}
-.ed-lane-lb .lb-resize:hover,.ed-lane-lb .lb-resize.on{background:rgba(27,139,126,.4)}
+.ed-lane-lb .lb-resize:hover,.ed-lane-lb .lb-resize.on{background:rgba(37,99,235,.4)}
 /* 窄栏（<100px）时把轨道名藏掉，只留图标和按钮——这样内容区不会被挤没。 */
-.ed-scroll.narrow .ed-lane-lb .lb-nm{display:none}
-.ed-scroll.narrow .ed-lane-lb{gap:2px;padding:0 4px}
 .ed-lane-lb .ic{width:11px;height:11px;flex:0 0 auto}
 .ed-lane-b{flex:1 1 auto;position:relative;min-height:32px}
 .ed-cl{position:absolute;top:3px;height:30px;border-radius:4px;overflow:hidden;
   font-size:10.5px;line-height:1;display:flex;align-items:center;padding:0 6px;
-  cursor:grab;user-select:none;border:1px solid transparent;
+  cursor:grab;user-select:none;border:1px solid var(--line-c);
   white-space:nowrap;text-overflow:ellipsis;box-sizing:border-box}
 .ed-cl:active{cursor:grabbing}
-.ed-cl.video{background:#E4F4EF;border-color:#B7E0D4;color:#12705F}
-.ed-cl.audio{background:#FCF3E2;border-color:#F4F6FA;color:#147567}
+.ed-cl.video{background:#EFF4FF;border-color:#A8C4F8;color:#1D4ED8}
+.ed-cl.audio{background:#FEF6E7;border-color:#EBD9B4;color:#8A5A12}
 .ed-cl.image{background:#E8F0FB;border-color:#C5D9F2;color:#2C5C99}
 .ed-cl.text{background:#F4EFFB;border-color:#DCCDF2;color:#5B3E8E}
-.ed-cl.template{background:#EDF6F4;border-color:#BEE3DA;color:#0F6B60}
-.ed-cl.on{outline:2px solid #1B8B7E;outline-offset:-1px;box-shadow:0 2px 8px rgba(27,139,126,.25)}
+.ed-cl.template{background:#EFF4FF;border-color:#A8C4F8;color:#1D4ED8}
+.ed-cl.on{outline:2px solid #2563EB;outline-offset:-1px;box-shadow:0 2px 8px rgba(37,99,235,.25)}
 .ed-cl .h{position:absolute;top:0;bottom:0;width:6px;cursor:ew-resize;z-index:2}
 .ed-cl .h.l{left:0}.ed-cl .h.r{right:0}
-.ed-cl .h:hover{background:rgba(27,139,126,.35)}
+.ed-cl .h:hover{background:rgba(37,99,235,.35)}
 .ed-play{position:absolute;top:0;bottom:0;width:9px;margin-left:-4px;background:transparent;
   z-index:4;cursor:ew-resize}
 .ed-play::after{content:"";position:absolute;top:0;bottom:0;left:4px;width:1px;background:#C4553F}
 .ed-play::before{content:"";position:absolute;top:0;left:0;width:9px;height:9px;
   background:#C4553F;border-radius:0 0 50% 50%}
 .ed-drop{position:absolute;inset:0;border:2px dashed transparent;pointer-events:none}
-.ed-lane-b.over .ed-drop{border-color:#1B8B7E;background:rgba(27,139,126,.05);border-radius:4px}
+.ed-lane-b.over .ed-drop{border-color:#2563EB;background:rgba(37,99,235,.05);border-radius:4px}
 /* 模板没有官方缩略图时的兜底：渐变底 + 名字，别显示碎图 */
 /* 每个模板卡都先铺一层 16:9 占位底，有图再把图盖上去。
    这样没图的、图挂了，都不会出现碎图或空白塌陷 —— 448 个模板里只有 178 个有官方图。 */
@@ -200,11 +209,11 @@
 .ed-lib-mask.open{display:block;opacity:1}
 .ed-lib-h{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:13px 16px;
   border-bottom:1px solid var(--line);font-size:var(--f4);font-weight:600;
-  border-radius:14px 14px 0 0;background:#FCFDFE}
+  border-radius:14px 14px 0 0;background:#FFFFFF}
 .ed-lib-h .u-btn{margin-left:0}
 .ed-lib-h .u-btn{margin-left:auto;height:25px;padding:0 9px;font-size:10.5px}
 .ed-lib-s{flex:0 0 auto;display:flex;gap:6px;padding:8px 12px 6px}
-.ed-lib-s input{flex:1 1 auto;height:30px;border:1px solid var(--line);border-radius:9px;
+.ed-lib-s input{flex:1 1 auto;height:30px;
   padding:0 10px;font-size:12.5px}
 /* 分类单行横滚：11 个分类折两行要占 70px，横滚只占 26px。
    滚动条压到看不见（触控板和 shift 滚轮都能滚），不留一道灰杠破坏观感。 */
@@ -225,34 +234,34 @@
   white-space:nowrap;line-height:1.3}
 .ed-tp .row{display:flex;gap:4px}
 .ed-tp .row button{flex:1 1 0;min-width:0}
-.ed-tp button{height:24px;border-radius:7px;border:1px solid var(--line);background:#FBFCFE;
+.ed-tp button{height:24px;border-radius:7px;border:1px solid var(--line);background:#FFFFFF;
   font-size:11px;color:#4A5262;cursor:pointer;padding:0 4px}
-.ed-tp button:hover{background:#EAF6F3;border-color:#BFE4DC;color:#0F6B60}
+.ed-tp button:hover{background:#EAF6F3;border-color:#A8C4F8;color:#0F6B60}
 .ed-tp button[data-n]{background:#fff;border-color:#D8E2DC;color:#1B7A6E;font-weight:600}
-.ed-tp button[data-n]:hover{background:#1B8B7E;border-color:#1B8B7E;color:#fff}
+.ed-tp button[data-n]:hover{background:#2563EB;border-color:#2563EB;color:#fff}
 /* 缩略图整块可点，等一下就有反应，鼠标要给出这个暗示 */
 .ed-tp .thumb{cursor:pointer;position:relative}
 .ed-tp .thumb:hover::after{content:"";position:absolute;inset:0;
-  box-shadow:inset 0 0 0 2px #1B8B7E;border-radius:0;pointer-events:none}
+  box-shadow:inset 0 0 0 2px #2563EB;border-radius:0;pointer-events:none}
 /* 有官方预览片的角上带个播放标：用户一眼分得清哪些能立刻看 */
 .ed-tp .thumb .pv{position:absolute;right:6px;bottom:6px;width:20px;height:20px;
   border-radius:50%;background:rgba(20,28,42,.62);display:flex;align-items:center;
   justify-content:center;backdrop-filter:blur(1px)}
 .ed-tp .thumb .pv .ic{width:11px;height:11px;color:#fff}
 .ed-lib-tip{flex:0 0 auto;padding:8px 13px 10px;border-top:1px solid var(--line);
-  background:#FBFCFE;font-size:10.5px;color:var(--ink3);line-height:1.65}
+  background:#FFFFFF;font-size:10.5px;color:var(--ink3);line-height:1.65}
 
 /* 模板卡片上的「先看看」按钮 + 试用弹窗 */
 .ed-tp .bd .peek{width:100%;height:26px;margin-bottom:5px;border-radius:8px;
   border:1px solid var(--line);background:#fff;color:var(--ink2);font-size:12px;
   cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px}
-.ed-tp .bd .peek:hover{border-color:#1B8B7E;color:#1B8B7E;background:#F6FBFA}
+.ed-tp .bd .peek:hover{border-color:#2563EB;color:#2563EB;background:#F6FBFA}
 .ed-tp .bd .peek .ic{width:12px;height:12px}
 .ed-lib-cats button{height:26px;padding:0 10px;border:1px solid #E3E9F1;background:#FFF;
   border-radius:12px;font-size:12px;color:#5A6473;cursor:pointer;line-height:1;
   display:inline-flex;align-items:center;gap:4px;transition:.14s}
-.ed-lib-cats button:hover{border-color:#BFD8D2;color:#1B8B7E}
-.ed-lib-cats button.on{background:#1B8B7E;border-color:#1B8B7E;color:#FFF;font-weight:600}
+.ed-lib-cats button:hover{border-color:#BFD8D2;color:#2563EB}
+.ed-lib-cats button.on{background:#2563EB;border-color:#2563EB;color:#FFF;font-weight:600}
 .ed-lib-cats button em{font-style:normal;font-size:10.5px;opacity:.62}
 .ed-lib-cats button.on em{opacity:.8}
 
@@ -265,14 +274,14 @@
   padding:5px 10px;border-radius:8px;background:#F7FAFC;border:1px solid #E8EEF5;
   font-size:11px;color:#5A6473;min-height:28px}
 .ed-lib-state .dot{width:6px;height:6px;border-radius:50%;background:#C9D2DE;flex:0 0 auto}
-.ed-lib-state.ok .dot{background:#1B8B7E}
+.ed-lib-state.ok .dot{background:#2563EB}
 .ed-lib-state.ok{background:#F4FAF8;border-color:#CDE7E0;color:#2E6B62}
 .ed-lib-state .tx{flex:1 1 auto;line-height:1.4;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis}
 .ed-lib-state .u-btn{height:22px;padding:0 8px;font-size:10.5px;flex:0 0 auto}
 .ed-lib-state .bc{display:flex;align-items:center;gap:4px;cursor:pointer;flex:0 0 auto;
   padding-left:7px;border-left:1px solid #E2E8F0}
-.ed-lib-state .bc input{margin:0;cursor:pointer;accent-color:#1B8B7E;width:12px;height:12px}
+.ed-lib-state .bc input{margin:0;cursor:pointer;accent-color:#2563EB;width:12px;height:12px}
 .ed-lib-state .lc{width:11px;height:11px;border-radius:3px;border:1px solid #DDE3EC;
   background:#EEE;flex:0 0 auto}
 .ed-try{position:fixed;inset:0;z-index:120;background:rgba(12,18,28,.62);
@@ -300,11 +309,11 @@
   border:0;background:#0B1119;transform-origin:center center}
 .ed-try-v .ed-tip{color:#7A8494;font-size:12px}
 .ed-try-f{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:11px 16px;
-  border-top:1px solid var(--line);background:#FBFCFE}
+  border-top:1px solid var(--line);background:#FFFFFF}
 .ed-try-d{flex:1 1 auto;font-size:12px;color:var(--ink3);line-height:1.7}
 .ed-try-a{flex:0 0 auto}
 .ed-try-a button{height:30px;padding:0 16px;border-radius:8px;border:0;cursor:pointer;
-  background:#1B8B7E;color:#fff;font-size:12px}
+  background:#2563EB;color:#fff;font-size:12px}
 .ed-try-a button:hover{background:#157568}
 .ed-try-a button:disabled{background:#9AB8B3;cursor:default}
 
@@ -321,12 +330,33 @@
 .ed-layer .ed-tpl{position:absolute;left:0;top:0}
 /* 文字层：跟导出端 .vl-tx 同一套排版口径（居中、可换行、深色底衬、描边阴影）。
    width/height 交给 edApplyXform 设成 auto，靠 translate(-50%,-50%) 定位到 x/y。 */
-.ed-layer.text{overflow:visible}
+.ed-layer.text{overflow:visible;pointer-events:auto;cursor:move}
+/* ★ 模板层必须能吃到指针事件，否则「在画面上直接点文字改」永远是死的。
+   默认 .ed-layer 是 pointer-events:none（纯展示，不挡时间线操作），
+   结果就是模板 iframe 里注入的点选脚本拿不到真实鼠标 —— 合成事件能触发、
+   真人点一点反应都没有，这种 bug 在 CDP 里派事件是查不出来的。
+   模板层给 auto、光标给 text，用户一看就知道这儿能改。
+   多个模板叠在同一时刻时只有最上层能点，这与「看到的就是最上面那个」一致。 */
+.ed-layer.template{pointer-events:auto;cursor:text}
+.ed-layer.text .ed-text{cursor:move}
+/* 逐字动效拆出来的单字：必须是 inline-block 才吃得下 transform，
+   否则 translateY/scale 对行内元素无效，一个都不会动。 */
+.ed-layer .ed-ch{display:inline-block;white-space:pre}
+/* 拖动预览里的文字时给个细框，让人知道抓住了哪一层 */
+.ed-layer.text.drag{outline:1px dashed rgba(37,99,235,.55);outline-offset:4px}
+/* 逐字动效拆出来的单字。inline-block 才能吃 transform；white-space:pre 保住
+   字与字之间的空白（拆 span 后普通空格会塌掉）。 */
+.ed-layer.text .ed-ch{display:inline-block;white-space:pre}
+.ed-layer.text .ed-ch[style*="visibility:hidden"]{visibility:hidden}
 .ed-layer .ed-text{display:block;padding:10px 24px;border-radius:12px;
   background:rgba(10,16,24,.58);box-shadow:0 6px 26px rgba(0,0,0,.22);
   text-shadow:0 2px 12px rgba(0,0,0,.45);backdrop-filter:blur(2px);
   white-space:pre-wrap;word-break:break-word;text-align:center;line-height:1.35;
   font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.ed-cl .ed-inline{position:absolute;left:2px;right:2px;top:2px;bottom:2px;
+  border:1px solid #1D4ED8;border-radius:4px;background:#fff;color:#1B2A2E;
+  font-size:11px;padding:0 6px;outline:none;box-shadow:0 2px 8px rgba(20,60,55,.18);
+  box-sizing:border-box;z-index:5;cursor:text;user-select:text}
 /* 关键帧菱形：落在片段内部，按 at(0~1) 定位；点一下播放头跳到那一帧。 */
 .ed-kf{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;
   background:#C4553F;border:1px solid #fff;border-radius:2px;transform:rotate(45deg);
@@ -334,25 +364,36 @@
 .ed-kf:hover{background:#8E3524;transform:rotate(45deg) scale(1.25)}
 .ed-cl .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 /* 轨道名那一列：锁 / 静音 / 删除，默认藏起来，hover 轨道才出现，省地方。 */
-.ed-lane-lb .lb-nm{flex:1;overflow:hidden;text-overflow:ellipsis}
-.ed-lane-lb .lb-t{width:18px;height:18px;flex:0 0 auto;border:0;border-radius:4px;
-  padding:0;display:grid;place-items:center;cursor:pointer;color:var(--ink3);
-  background:transparent;font-size:12px;line-height:1}
-.ed-lane-lb .lb-t:hover{background:rgba(27,139,126,.16);color:#12705F}
-/* 加片段按钮：常显，绿底，靠它给这条轨放素材/字幕/声音 */
-.ed-lane-lb .lb-add{color:#12705F;background:rgba(27,139,126,.10);font-size:14px;font-weight:600}
-.ed-lane-lb .lb-add:hover{background:rgba(27,139,126,.24)}
+/* 轨道名：等宽数字 + 居中 + 固定宽，四条轨名字视觉等长 */
+.ed-lane-lb .lb-nm{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:clip;
+  white-space:nowrap;text-align:left;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+/* 图标按钮质感：统一 SVG 线性图标 + 微描边 + 悬浮浮起 + 按压回落 */
+.ed-lane-lb .lb-t{width:21px;height:21px;flex:0 0 auto;border:1px solid var(--line-c);
+  border-radius:6px;padding:0;display:grid;place-items:center;cursor:pointer;
+  color:var(--ink3);background:transparent;line-height:1;
+  transition:background .16s,color .16s,border-color .16s,box-shadow .16s,transform .1s}
+.ed-lane-lb .lb-t .ic{width:13px;height:13px}
+.ed-lane-lb .lb-t:hover{background:#fff;border-color:rgba(37,99,235,.28);
+  color:#1D4ED8;box-shadow:0 2px 5px rgba(20,60,55,.13);transform:translateY(-1px)}
+.ed-lane-lb .lb-t:active{transform:translateY(0);box-shadow:none}
+.ed-lane-lb .lb-t.on{color:#1D4ED8;border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.1)}
+/* 加片段按钮：常显，绿底 */
+.ed-lane-lb .lb-add{color:#1D4ED8;background:rgba(37,99,235,.1);border-color:rgba(37,99,235,.2)}
+.ed-lane-lb .lb-add:hover{background:rgba(37,99,235,.22)}
 .ed-lane.locked .ed-lane-lb .lb-add{opacity:.35;pointer-events:none}
-/* 删除常显但颜色压低，不抢轨道名 */
+/* 静音：红调 */
+.ed-lane-lb .lb-mute.on{color:#A8634F;border-color:rgba(168,99,79,.3);background:rgba(168,99,79,.1)}
+/* 删除：红色，悬浮更实 */
 .ed-lane-lb .lb-del{color:#A8634F}
-.ed-lane-lb .lb-del:hover{background:rgba(168,99,79,.18);color:#8E3524}
+.ed-lane-lb .lb-del:hover{background:#fff;border-color:rgba(168,99,79,.38);
+  color:#8E3524;box-shadow:0 2px 5px rgba(90,30,20,.13)}
 .ed-lane.locked .ed-lane-b{opacity:.55}
 .ed-lane.locked .ed-cl{cursor:not-allowed}
 /* 时间线工具条分组 */
 .ed-tl-h .tlsep{width:1px;height:15px;background:var(--line);margin:0 1px}
 /* 属性面板：变换分区 + 关键帧列表 */
 .ed-insp .vsec{border:1px solid var(--line);border-radius:8px;padding:7px;display:flex;
-  flex-direction:column;gap:6px;background:#FCFDFE}
+  flex-direction:column;gap:6px;background:#FFFFFF}
 .ed-insp .vsec .vh{font-size:10.5px;font-weight:600;color:var(--ink);display:flex;
   align-items:center;gap:5px}
 .ed-insp .vsec .vh .sp{flex:1}
@@ -365,8 +406,42 @@
   display:grid;place-items:center;padding:0;transform:none}
 .ed-insp .kfbtn:hover{border-color:#C4553F;color:#C4553F}
 .ed-insp .kfbtn.on{background:#C4553F;border-color:#C4553F;color:#fff}
-.ed-insp .kflist{display:flex;flex-direction:column;gap:3px;max-height:118px;overflow:auto;
-  scrollbar-width:thin}
+.ed-insp .kflist{display:flex;flex-direction:column;gap:3px;max-height:118px;overflow:auto;scrollbar-width:thin}
+/* 模板可改项面板：文字清单（点画面改，这里只做「有哪些、改成什么了」的账） */
+.ed-insp .tsHint{font-size:11px;line-height:1.55;color:#5B6672;padding:7px 8px;
+  background:#F1F5F7;border-radius:7px;margin-bottom:6px}
+.ed-insp .tsHint b{color:#2563EB;font-weight:600}
+.ed-insp .tsList{max-height:150px;overflow:auto;border:1px solid var(--line);border-radius:7px;
+  background:#FBFCFD;padding:3px}
+.ed-insp .tsItem{display:flex;align-items:center;gap:5px;font-size:11px;line-height:1.5;
+  color:#39424C;padding:3px 5px;border-radius:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ed-insp .tsItem:hover{background:#EFF4FF}
+.ed-insp .tsDot{width:4px;height:4px;border-radius:50%;background:#B9C4CC;flex:0 0 auto}
+.ed-insp .tsItem.changed{color:#2563EB;font-weight:500}
+.ed-insp .tsItem.changed .tsDot{background:#2563EB}
+.ed-insp .tsFoot{display:flex;align-items:center;justify-content:space-between;gap:6px;
+  font-size:10.5px;color:#8A959F;padding:5px 2px 0}
+.ed-insp .tsReset{font-size:10.5px;color:#8A959F;background:none;border:1px solid var(--line);
+  border-radius:5px;padding:2px 7px;cursor:pointer}
+.ed-insp .tsReset:hover{color:#C0392B;border-color:#E8C4BE;background:#FDF4F3}
+.ed-insp .tsStyleHead{font-size:10.5px;color:#8A959F;padding:9px 2px 4px;
+  border-top:1px dashed var(--line);margin-top:7px}
+.ed-insp .tsgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;
+  max-height:196px;overflow:auto;padding:1px}
+.ed-insp .tschip{display:flex;align-items:center;justify-content:center;min-height:30px;overflow:hidden;
+  padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:#171C23;
+  cursor:pointer;transition:border-color .12s,box-shadow .12s,transform .12s}
+.ed-insp .tschip:hover{border-color:#1D4ED8;box-shadow:0 2px 10px rgba(29,78,216,.22);transform:translateY(-1px)}
+.ed-insp .tschip.on{border-color:#1D4ED8;box-shadow:inset 0 0 0 2px #1D4ED8}
+.ed-insp .tschip.lit{background:#F3F5F8}
+.ed-insp .tschip .tssm{font-size:11px;line-height:1.2;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+  text-align:center;pointer-events:none}
+.ed-insp .tsrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.ed-insp .tsbtn{padding:5px 2px;font-size:10px;border:1px solid var(--line);border-radius:6px;
+  background:#FBFCFD;color:var(--ink2);cursor:pointer;white-space:nowrap;overflow:hidden;
+  transition:border-color .12s,color .12s,background .12s}
+.ed-insp .tsbtn:hover{border-color:#1D4ED8;color:#1D4ED8}
+.ed-insp .tsbtn.on{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
 .ed-insp .kfi{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink3);
   padding:3px 5px;border-radius:6px;background:#fff;border:1px solid var(--line)}
 .ed-insp .kfi.cur{border-color:#C4553F;background:#FFF6F4;color:#8E3524}
@@ -379,7 +454,7 @@
 .ed-insp .kfops{display:flex;gap:6px}
 .ed-insp .kfops button{flex:1;height:25px;border-radius:7px;border:1px solid var(--line);
   background:#fff;color:var(--ink);font-size:10.5px;cursor:pointer}
-.ed-insp .kfops button:hover{border-color:#1B8B7E;color:#12705F;background:#F4FBF9}
+.ed-insp .kfops button:hover{border-color:#2563EB;color:#1D4ED8;background:#F4FBF9}
 .ed-insp .kfops button.hot{background:#C4553F;border-color:#C4553F;color:#fff}
 </style>
 
@@ -623,7 +698,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
      ★ 拖过的宽度记进 localStorage，下次打开还是用户调的；没存过默认 108px。 */
   var LANE_KEY='riffcut.edit.laneWidth';
   function laneStored(){try{var v=parseInt(localStorage.getItem(LANE_KEY)||'',10);
-      return v>=56&&v<=200?v:108}catch(e){return 108}}
+      return v>=100&&v<=128?v:128}catch(e){return 128}}
   var LANE_W=laneStored();
   var ED={proj:null,data:null,assets:[],sel:null,pps:60,zoom:1,t:0,playing:false,dirty:false,
           compose:null,layers:{},kf:{track:null,i:null,prop:'x'},pvScale:1};
@@ -698,6 +773,70 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     });
     return out;
   }
+  /* ── 预览端动效 ──
+     用户原话：「现在文字的动效没有生效」。
+     根因：导出端 timeline.js 的 tweens() 一直在算 ANIM_PRESETS，但 edPreview() 从头到尾
+     没读过 c.anim —— 面板上点「淡入淡出/上滑入」只写进了 clip 对象，预览画面一动不动。
+     这里把 ANIM_PRESETS 的同一套口径（进场 DUR_IN=0.5 / 出场 DUR_OUT=0.35 / 位移量与缩放
+     终值）复刻到预览端，两边才不会「编辑器里看着是下滑淡入、成片出去是硬切」。
+     ★ 有 c.keys 关键帧时不能再叠预设位移：两套都在动 x/y，会互相顶掉（导出端同样处理）。 */
+  var ED_ANIM={
+    fade:      {in:{},           out:{}},
+    slideUp:   {in:{y:40},       out:{y:-40}},
+    slideDown: {in:{y:-40},      out:{y:40}},
+    slideLeft: {in:{x:60},       out:{x:-60}},
+    slideRight:{in:{x:-60},      out:{x:60}},
+    zoomIn:    {in:{s:1.18},     out:null},
+    zoomOut:   {in:{s:0.86},     out:null},
+    kenburns:  {in:null,         out:null},
+    charIn:    {in:null,         out:null},
+    typewriter:{in:null,         out:null}
+  };
+  var ED_DUR_IN=0.5,ED_DUR_OUT=0.35;
+  function edOut3(q){return 1-Math.pow(1-Math.max(0,Math.min(1,q)),3)}
+  function edIn2(q){return Math.pow(Math.max(0,Math.min(1,q)),2)}
+  /* 返回 {a: 透明度乘数, dx, dy: 像素偏移, s: 缩放乘数} */
+  function edAnimState(c,t){
+    var st={a:1,dx:0,dy:0,s:1};
+    if(!c)return st;
+    var lt=Math.max(0,t-(+c.start||0));
+    var len=Math.max(0.2,edClipLen(c));
+    var p=String(c.anim||'').trim();
+    var P=ED_ANIM[p]||null;
+    var hasKeys=Array.isArray(c.keys)&&c.keys.length;
+    var fi=edNum(c.fadeIn,0),fo=edNum(c.fadeOut,0);
+    var pin=hasKeys?null:(P?P.in:null),pout=hasKeys?null:(P?P.out:null);
+    var dIn=fi>0?fi:(pin?ED_DUR_IN:0);
+    var dOut=fo>0?fo:(pout?ED_DUR_OUT:0);
+    /* 进场：导出端 dIn>0 时 from 的 opacity 一律兜成 0，所以只要 dIn>0 就一定有淡入 */
+    if(dIn>0&&lt<dIn){
+      var q=lt/dIn,e=edOut3(q);
+      st.a*=e;
+      if(pin){
+        if(pin.x)st.dx+=pin.x*(1-e);
+        if(pin.y)st.dy+=pin.y*(1-e);
+        if(pin.s)st.s*=1+(pin.s-1)*(1-e);
+      }
+    }
+    /* 出场：退场比进场短，收尾才不拖（与导出端 EASE_OUT=power2.in 一致） */
+    if(dOut>0&&lt>len-dOut){
+      var q2=Math.min(1,(lt-(len-dOut))/dOut),e2=edIn2(q2);
+      st.a*=(1-e2);
+      if(pout){
+        if(pout.x)st.dx+=pout.x*e2;
+        if(pout.y)st.dy+=pout.y*e2;
+        if(pout.s)st.s*=1+(pout.s-1)*e2;
+      }
+    }
+    /* 缓慢推镜：ANIM_PRESETS 里 kenburns 是 [null,null]，导出端原来什么都不做 ——
+       那是死档位。这里和 timeline.js 一起改成「全段线性推到 1.08 倍」。 */
+    if(p==='kenburns'&&!hasKeys&&len>0.4){
+      var z=edNum(c.zoom,0)||1.08;
+      st.s*=1+(z-1)*(lt/len);
+    }
+    return st;
+  }
+
   function edApplyXform(el,c,t){
     var v=edEvalKF(c,t),txt=c.type==='text';
     el.style.left=(v.x*100).toFixed(3)+'%';
@@ -705,9 +844,13 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     el.style.width=txt?'auto':(v.w*100).toFixed(3)+'%';
     el.style.height=txt?'auto':(v.h*100).toFixed(3)+'%';
     el.style.maxWidth=txt?'86%':'';
-    el.style.opacity=Math.max(0,Math.min(1,v.opacity)).toFixed(3);
+    var an=edAnimState(c,t);
+    el.style.opacity=(Math.max(0,Math.min(1,v.opacity))*an.a).toFixed(3);
     if(!txt)el.style.borderRadius=(v.radius>0?(+v.radius).toFixed(1)+'px':'0');
-    el.style.transform='translate(-50%,-50%) rotate('+v.rotate.toFixed(2)+'deg) scale('+Math.max(.01,v.scale).toFixed(4)+')';
+    /* 偏移放在 scale 之前，dx/dy 才是真正的屏幕像素量（放后面会被 scale 放大缩小） */
+    el.style.transform='translate(-50%,-50%)'
+      +(an.dx||an.dy?' translate('+an.dx.toFixed(2)+'px,'+an.dy.toFixed(2)+'px)':'')
+      +' rotate('+v.rotate.toFixed(2)+'deg) scale('+(Math.max(.01,v.scale)*an.s).toFixed(4)+')';
     /* 模板 iframe 固定 1920x1080 内部坐标系，按这一层在工程里的实际像素尺寸
        等比 contain 缩放，跟导出端 fitPatchBlock 的 contain 口径一致 —— 内容完整居中，
        不会再溢出到右下角。layer 像素 = 工程画幅 × 该层 w/h 比例。 */
@@ -782,6 +925,15 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   }
 
   /* ── 时间线 ── */
+  /* 轨道名一律按「类型 + 同类序号」重算，忽略数据源给的 tr.name。
+     结果统一是「视频1/图形1/字幕1/音频1」这种 2 汉字 + 1 数字，长度永远一致。 */
+  var TN={video:'视频',graphics:'图形',text:'字幕',audio:'音频'};
+  function edTrackName(tr,all){
+    var base=TN[tr.kind]||'轨道';
+    var same=(all||[]).filter(function(x){return x.kind===tr.kind});
+    var i=same.indexOf(tr);
+    return base+((i<0?0:i)+1);
+  }
   function edLanes(){
     var lanes=$('#edLanes'),ruler=$('#edRuler');
     if(!lanes)return;
@@ -793,7 +945,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     var sc=$('#edScroll');
     /* 轨道名栏宽窄同步到 CSS：拖手柄改了 LANE_W 后，这里让每栏跟上；
        窄于 104px 收起轨道名只留图标+按钮，时间线内容就不会被挤没。 */
-    if(sc){sc.style.setProperty('--lane-w',LANE_W+'px');sc.classList.toggle('narrow',LANE_W<104)}
+    if(sc){sc.style.setProperty('--lane-w',LANE_W+'px');}
     var visW=Math.max(400,((sc&&sc.clientWidth)||600)-LANE_W);
     var base=visW/dur;                       /* 铺满所需的 pps */
     ED.pps=Math.max(4, base*(ED.zoom||1));
@@ -829,19 +981,53 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
           '<span class="h l"></span><span class="nm">'+esc(label)+'</span>'+kfs+'<span class="h r"></span></div>';
       }).join('');
       var lb=(tr.locked?' lk':'')+(tr.mute?' mu':'');
+      var tn=edTrackName(tr,ED.data.tracks);
       return '<div class="ed-lane'+lb+'" data-tr="'+esc(tr.id)+'">'+
         '<div class="ed-lane-lb"><svg class="ic"><use href="'+(laneIc[tr.kind]||'#i-list')+'"/></svg>'+
-        '<span class="lb-nm" title="'+esc(tr.name||tr.id)+'">'+esc(tr.name||tr.id)+'</span>'+
-        '<button class="lb-t lb-add" data-track-act="add" title="'+(tr.kind==='text'?'在这条轨加一段文字':tr.kind==='audio'?'导入音频到这条轨':'导入素材到这条轨')+'">＋</button>'+
-        '<button class="lb-t'+(tr.locked?' on':'')+'" data-track-act="lock" title="锁定 / 解锁这条轨道">'+(tr.locked?'🔒':'🔓')+'</button>'+
-        (tr.kind==='audio'?'<button class="lb-t'+(tr.mute?' on':'')+'" data-track-act="mute" title="静音 / 取消静音">'+(tr.mute?'🔇':'♪')+'</button>':'')+
-        '<button class="lb-t lb-del" data-track-act="del" title="删除这条轨道">×</button>'+
+        '<span class="lb-nm" title="'+esc(tn)+'">'+esc(tn)+'</span>'+
+        '<button class="lb-t lb-add" data-track-act="add" title="'+(tr.kind==='text'?'在这条轨加一段文字':tr.kind==='audio'?'导入音频到这条轨':'导入素材到这条轨')+'"><svg class="ic"><use href="#i-plus"/></svg></button>'+
+        '<button class="lb-t'+(tr.locked?' on':'')+'" data-track-act="lock" title="锁定 / 解锁这条轨道"><svg class="ic"><use href="#i-lock"/></svg></button>'+
+        '<button class="lb-t lb-del" data-track-act="del" title="删除这条轨道"><svg class="ic"><use href="#i-trash"/></svg></button>'+
         '<span class="lb-resize" title="拖动改这一栏宽窄"></span>'+
         '</div>'+
         '<div class="ed-lane-b" data-tr="'+esc(tr.id)+'" data-kind="'+esc(tr.kind)+'">'+
         '<div class="ed-drop"></div>'+clips+'</div></div>';
     }).join('');
     edTime();
+  }
+
+  /* 双击文字片段 = 就地在那一格上改字，不跳到右侧属性面板。
+     用户原话：「双击字幕轨道可以直接从轨道上来修改文字内容」。
+     Enter 存盘 / Esc 放弃 / 点别处也存盘；输入框存在期间时间线不重排。 */
+  function edInlineText(trId,i){
+    var cl=document.querySelector('.ed-cl[data-tr="'+trId+'"][data-i="'+i+'"]');
+    var c=edClipAt(trId,i);
+    if(!cl||!c||cl.querySelector('.ed-inline'))return;
+    var nm=cl.querySelector('.nm');
+    if(nm)nm.style.visibility='hidden';
+    var inp=document.createElement('input');
+    inp.className='ed-inline';inp.type='text';inp.value=c.text||'';
+    inp.style.width=Math.max(70,cl.clientWidth-10)+'px';
+    cl.appendChild(inp);
+    inp.focus();inp.select();
+    var done=false;
+    function fin(save){
+      if(done)return;done=true;
+      if(save&&inp.value!==(c.text||'')){c.text=inp.value;edDirty()}
+      inp.remove();
+      if(nm)nm.style.visibility='';
+      edLanes();edInsp();edPreview();
+      if(save)edSave(true);
+    }
+    inp.addEventListener('keydown',function(ev){
+      ev.stopPropagation();
+      if(ev.key==='Enter'){ev.preventDefault();fin(true)}
+      else if(ev.key==='Escape'){ev.preventDefault();fin(false)}
+    });
+    inp.addEventListener('blur',function(){fin(true)});
+    ['mousedown','click','mousemove','mouseup'].forEach(function(t){
+      inp.addEventListener(t,function(ev){ev.stopPropagation()});
+    });
   }
 
   function edClipLen(c){
@@ -857,6 +1043,106 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   }
 
   /* ── 属性面板 ── */
+  /* ══════════ 文字样式库 ══════════
+     剪映「文字 → 样式」那一栏的等价物：不是给你调六个数字，是给你几十种
+     已经排好的成品。点一下整段文字换皮，颜色框改的是主色（{C} 会被替换）。
+     ★ 样式一律存成**解析后的 CSS 声明串**（c.tcss），导出端 timeline.js 直接
+       套在 style 上，不需要认识这张表 —— 两端同一份视觉，不会各写一套跑偏。 */
+  /* 样式表从 src/textstyles.js 来（构建时内联成 window.RC_TEXTSTYLES）。
+     ★ 以前这 46 款直接写死在这个页面里，导出端 timeline.js 与 AI 工具层
+       都摸不到 —— AI 只能给动效名，设不了样式。现在三边共用一份。 */
+  var TSL=window.RC_TEXTSTYLES||{TS:[],ANIM:[['','无']],list:function(){return []}};
+  var TS=TSL.TS;
+  var TS_ANIM=TSL.ANIM;
+  /* 逐字类动效按「字符」算相位，跟整块动效不是一回事：
+     charIn 每个字错开 45ms 弹上来，typewriter 每 55ms 蹦一个字。
+     这两个常量在导出端 timeline.js 里必须一模一样，否则编辑器里看着 45ms、
+     出去变 90ms，节奏就散了。 */
+  var CH_STEP=TSL.CH_STEP,CH_DUR=TSL.CH_DUR,TW_STEP=TSL.TW_STEP;
+  /* 默认 .ed-text / .vl-tx 自带「深色底衬 + 大内边距」。
+     成品样式里没写 background 的（渐变字、中空字、发光字…）不该挂这块黑底，
+     否则渐变字后面一块黑板，全是脏的。所以没写 background 就显式清掉。 */
+  function tsBare(st){return !!st&&!/background/i.test(st.css)}
+  function tsById(id){for(var i=0;i<TS.length;i++)if(TS[i].id===id)return TS[i];return null}
+  /* 主色/副色替换：样式里 {C} 填主色，{C2} 填副色（渐变款的第二档颜色）。
+     以前只有 {C}，金渐变永远是固定的金→白，用户改颜色只动得了第一档 ——
+     现在每个渐变款都带自己的 c2 默认值，片段没设过就用它。 */
+  function tsCss(st,color,color2){
+    if(!st)return '';
+    return String(st.css)
+      .replace(/\{C2\}/g,color2||st.c2||'#F472B6')
+      .replace(/\{C\}/g,color||'#FFFFFF')
+  }
+
+  /* 面板上那一格只有 11px 高，不能直接套整串样式：
+     黑底衬的白字、竖排、斜带、边框一旦全套上去，格子被撑破、几行字叠成一团。
+     这里只借「字形本身」的观感 —— 颜色/描边/阴影/字体/字重/字距，其余全丢。 */
+  function tsChipCss(st,color){
+    if(!st)return '';
+    var keep=/^(color|font-family|font-weight|font-style|text-shadow|-webkit-text-stroke|-webkit-text-stroke-color|-webkit-text-stroke-width|letter-spacing|text-transform)$/;
+    return String(st.css)
+      .replace(/\{C2\}/g,st.c2||'#F472B6')
+      .replace(/\{C\}/g,color||'#FFFFFF').split(';').map(function(d){
+      var i=d.indexOf(':');if(i<0)return '';
+      var k=d.slice(0,i).trim().toLowerCase(),v=d.slice(i+1).trim();
+      if(!keep.test(k))return '';
+      /* 宽字距那几款一个字符能拉开半格，标签里必须收回去，否则四个字显示不全 */
+      if(k==='letter-spacing'){var n=parseFloat(v);if(!isFinite(n)||Math.abs(n)>0.1)v='0';}
+      /* 字体名带双引号（"SF Mono" / "Songti SC"），直接拼进 style="..." 会把属性截断，
+         后面所有声明跟着丢 —— 等宽终端、宋体标题、手写体、引文这几格就成了纯继承色。
+         CSS 认单引号，统一换成单引号。 */
+      return k+':'+v.replace(/"/g,"'");
+    }).filter(Boolean).join(';');
+  }
+
+  /* 「默认底衬」这类样式 css 是空串，取不到颜色就完全继承了面板的深灰字，
+     放在深底格子上等于隐形。没有颜色声明的一律补白字。 */
+  function tsChipText(st,color){
+    var d=tsChipCss(st,color);
+    /* 渐变字（金渐变/霓虹/冰蓝那一批）是 background-clip:text + color:transparent，
+       缩略格里没有那层渐变背景，字就是全透明的 —— 一整格看着是空的。
+       这里把渐变里的第一个色抠出来当实色用，只求「看得出是什么色系」。 */
+    if(/(^|;)color:transparent/i.test(d)&&st){
+      var g=String(st.css).replace(/\{C\}/g,color||'#FFFFFF')
+        .match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]*\))/);
+      d=d.replace(/color:transparent/i,'color:'+(g?g[1]:'#FFFFFF'));
+    }
+    if(!/(^|;)color:/.test(d))d='color:#FFFFFF;'+(tsChipDark(st,color)?'':';color:#101418;')+d;
+    return d;
+  }
+
+  /* 缩略格底色要反向取：白字的样式用深底，黑字的样式（黑中空/荧光笔/黑底衬）
+     用浅底，否则那一格就是「一片同色」，什么都看不见。
+     中空字的 color 是 transparent，真正的笔画色在 -webkit-text-stroke 里，要换过去算。 */
+  function tsChipDark(st,color){
+    if(!st)return true;
+    var css=String(st.css).replace(/\{C\}/g,color||'#FFFFFF');
+    var col='',stroke='';
+    css.split(';').forEach(function(d){
+      var i=d.indexOf(':');if(i<0)return;
+      var k=d.slice(0,i).trim().toLowerCase(),v=d.slice(i+1).trim();
+      if(k==='color')col=v;
+      if(k==='-webkit-text-stroke')stroke=v;
+      if(k==='-webkit-text-stroke-color')stroke=v;
+    });
+    var src=(!col||/transparent|rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/i.test(col))?(stroke||'#FFFFFF'):col;
+    /* -webkit-text-stroke 的值是「2px #101418」这种带宽度前缀的简写，
+       不把颜色抠出来，正则就认不出它是黑 —— 于是黑中空被判成亮笔画、配了深底，
+       整格变成一片深色，字全糊掉。 */
+    var cm=src.match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]*\))/);
+    if(cm)src=cm[1];
+    var m=src.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    var r=255,g=255,b=255;
+    if(m){
+      var h=m[1].length===3?m[1].split('').map(function(x){return x+x}).join(''):m[1];
+      r=parseInt(h.slice(0,2),16);g=parseInt(h.slice(2,4),16);b=parseInt(h.slice(4,6),16);
+    }else{
+      var mm=src.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+      if(mm){r=+mm[1];g=+mm[2];b=+mm[3]}
+    }
+    return (0.299*r+0.587*g+0.114*b)>140;   // 笔画偏亮 → 用深底
+  }
+
   function edInsp(){
     var box=$('#edInsp'),title=$('#edInspTitle');
     if(!box)return;
@@ -873,6 +1159,12 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       h+='<div class="row"><label>文字</label><input type="text" id="fText" value="'+esc(c.text||'')+'"></div>';
       h+='<div class="two"><div class="row"><label>字号(px)</label><input type="number" id="fSize" value="'+(c.size||64)+'"></div>'+
          '<div class="row"><label>颜色</label><input type="color" id="fColor" value="'+(c.color||'#FFFFFF')+'"></div></div>';
+      /* 副色只在「两色款」上出现：纯色/中空/发光那些换副色没意义，
+         摆出来反而让人以为坏了。渐变款没设过副色就直接显示它自己的默认第二档。 */
+      var stNow=tsById(c.tstyle||'');
+      if(stNow&&stNow.c2){
+        h+='<div class="row"><label>副色（渐变第二档）</label><input type="color" id="fColor2" value="'+(c.c2||stNow.c2)+'"></div>';
+      }
       h+='<div class="two"><div class="row"><label>开始(秒)</label><input type="number" id="fStart" step="0.1" value="'+(+c.start||0)+'"></div>'+
          '<div class="row"><label>时长(秒)</label><input type="number" id="fDur" step="0.1" value="'+(+c.duration||3)+'"></div></div>';
     }else if(kind==='template'){
@@ -888,10 +1180,28 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       if(kind!=='image')
         h+='<div class="row"><label>音量 '+(Math.round((c.volume!=null?c.volume:1)*100))+'%</label><input type="range" id="fVol" min="0" max="100" value="'+Math.round((c.volume!=null?c.volume:1)*100)+'"></div>';
     }
-    /* 画面变换：剪映里「画面 → 基础」那一组。视频/图片/文字/模板都能改，
-       每个属性右边的 ◆ 就是在当前播放头位置打关键帧。
-       有关键帧时输入框改的是那一帧的值，不是整段的基础值 —— 跟剪映一致。 */
-    if(kind!=='audio'){
+    /* 文字片段不摆数字面板：位置在画面上直接拖，字号颜色在上面两个框，
+       这里给的是几十种排好的成品样式 —— 点一下整段换皮（剪映「样式」那栏）。 */
+    if(kind==='text'){
+      h+='<div class="vsec"><div class="vh">文字样式<span class="sp"></span>'+
+         '<span style="font-size:9.5px;color:#9AA2B1">'+TS.length+' 种</span></div>'+
+         '<div class="tsgrid" id="tsGrid">';
+      TS.forEach(function(st){
+        h+='<button class="tschip'+(tsChipDark(st,c.color)?'':' lit')+((c.tstyle||'')===st.id?' on':'')+'" data-ts="'+st.id+'" title="'+esc(st.nm)+'">'+
+           '<span class="tssm" style="'+tsChipText(st,c.color)+'">'+esc(st.nm)+'</span></button>';
+      });
+      h+='</div></div>';
+      h+='<div class="vsec"><div class="vh">文字动效<span class="sp"></span>'+
+         '<span style="font-size:9.5px;color:#9AA2B1">整段进出</span></div>'+
+         '<div class="tsrow" id="tsAnim">';
+      TS_ANIM.forEach(function(x){
+        h+='<button class="tsbtn'+((c.anim||'')===x[0]?' on':'')+'" data-tsa="'+x[0]+'">'+x[1]+'</button>';
+      });
+      h+='</div></div>';
+    }else if(kind!=='audio'){
+      /* 画面变换：剪映里「画面 → 基础」那一组。视频/图片/模板能改，
+         每个属性右边的 ◆ 就是在当前播放头位置打关键帧。
+         有关键帧时输入框改的是那一帧的值，不是整段的基础值 —— 跟剪映一致。 */
       var v=edEvalKF(c,ED.t);
       var XF=[['x','横向 %',100,0],['y','纵向 %',100,0],['scale','缩放 %',100,0],
               ['rotate','旋转 °',1,0],['opacity','不透明度 %',100,0],['radius','圆角 px',1,0]];
@@ -1001,40 +1311,167 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
 
   /* 把一个模板片段能改的项列出来。声明来自模板源码里的
      data-composition-variables，值来自片段自己的 vars。 */
+  /* 模板可改项面板。
+     ★ 文字不再从面板改 —— 用户要求「直接从视频上面点击就可以更改」。
+       画面点改的实现见 uiserver 注入的 edit 脚本 + 这里的 message 监听。
+       这个面板现在只做三件事：
+         1) 告诉用户「点画面上的字就能改」，这是主入口；
+         2) 列出这篇模板里扫到的全部文字和当前值，让用户知道能改哪些、改成了什么；
+         3) 保留**颜色/形状/枚举/数值**这几类变量 —— 这些在画面上点不出来，只能靠面板。 */
   function edFillVars(clip){
     var box=$('#fVarList'); if(!box)return;
     var cid=clip.id||'';
     if(!cid){box.innerHTML='<div class="hint">这个片段还没存过，先拖一下时间线</div>';return}
-    window.api('/api/edit?action=template_vars&project='+encodeURIComponent(ED.proj)+
-               '&clip_id='+encodeURIComponent(cid)).then(function(d){
+    window.api('/api/edit',{action:'template_vars',project:ED.proj,clip_id:cid}).then(function(d){
       var it=((d&&d.items)||[])[0];
       var decl=(it&&it.decl)||[], vals=(it&&it.values)||clip.vars||{};
-      if(!decl.length){
-        box.innerHTML='<div class="hint">这个模板没有可改项，内容是写死的。<br>'+
-                      '要换字得改源码（工程 compositions 目录里的 html）。</div>';
-        return}
-      box.innerHTML=decl.map(function(v){
-        var val=vals[v.id]!=null?vals[v.id]:(v.default!=null?v.default:'');
-        var lbl=esc(v.label||v.id), hint=v.desc?' title="'+esc(v.desc)+'"':'';
-        if(v.type==='color'){
-          return '<div class="vrow"><label'+hint+'>'+lbl+'</label>'+
-                 '<input type="color" data-var="'+esc(v.id)+'" value="'+esc(String(val))+'"></div>';
-        }
-        if(v.type==='enum'&&v.options){
-          var op=v.options.map(function(o){
-            return '<option value="'+esc(String(o.value))+'"'+
-                   (String(val)===String(o.value)?' selected':'')+'>'+esc(String(o.label||o.value))+'</option>';
-          }).join('');
-          return '<div class="vrow"><label'+hint+'>'+lbl+'</label>'+
-                 '<select data-var="'+esc(v.id)+'">'+op+'</select></div>';
-        }
-        var long=String(v.default||'').length>34;
-        return '<div class="vrow'+(long?' col':'')+'"><label'+hint+'>'+lbl+'</label>'+
-               (long?'<textarea data-var="'+esc(v.id)+'" rows="2">'+esc(String(val))+'</textarea>'
-                    :'<input type="text" data-var="'+esc(v.id)+'" value="'+esc(String(val))+'">')+
-               '</div>';
-      }).join('');
+      var tl=(it&&it.text)||[], tev=(it&&it.edits)||{};
+      /* 只留画面上点不出来的变量类型（颜色/枚举/数字）。
+         字符串类（headline/subline/text…）一律走点画面改，不再重复给输入框。 */
+      var styleDecl=decl.filter(function(v){
+        return v.type==='color'||v.type==='enum'||v.type==='number'||v.type==='range';
+      });
+      var h='';
+      if(tl.length){
+        h+='<div class="tsHint">在预览画面上<b>直接点文字</b>就能改，改完按回车。'+
+           '改的是这个片段自己的副本，模板特效一个字不动。</div>';
+        h+='<div class="tsList">'+tl.map(function(t){
+          var cur=tev[t.key]!=null?tev[t.key]:t.text;
+          var ch=tev[t.key]!=null?' changed':'';
+          return '<div class="tsItem'+ch+'" title="原文：'+esc(t.text)+'">'+
+                 '<span class="tsDot"></span>'+esc(cur)+'</div>';
+        }).join('')+'</div>';
+        h+='<div class="tsFoot">共 '+tl.length+' 条文字'+
+           (Object.keys(tev).length?('，已改 '+Object.keys(tev).length+' 条'):'')+
+           '<button class="tsReset" id="fResetEdits">全部还原</button></div>';
+      }else{
+        h+='<div class="hint">这个模板里没有文字（纯画面/图形模板），没什么可改的。</div>';
+      }
+      if(styleDecl.length){
+        h+='<div class="tsStyleHead">这些只能在面板改（画面上点不到）</div>'+
+           styleDecl.map(function(v){
+             var val=vals[v.id]!=null?vals[v.id]:(v.default!=null?v.default:'');
+             var lbl=esc(v.label||v.id), hint=v.desc?' title="'+esc(v.desc)+'"':'';
+             if(v.type==='color'){
+               return '<div class="vrow"><label'+hint+'>'+lbl+'</label>'+
+                      '<input type="color" data-var="'+esc(v.id)+'" value="'+esc(String(val))+'"></div>';
+             }
+             if(v.type==='enum'&&v.options){
+               var op=v.options.map(function(o){
+                 return '<option value="'+esc(String(o.value))+'"'+
+                        (String(val)===String(o.value)?' selected':'')+'>'+esc(String(o.label||o.value))+'</option>';
+               }).join('');
+               return '<div class="vrow"><label'+hint+'>'+lbl+'</label>'+
+                      '<select data-var="'+esc(v.id)+'">'+op+'</select></div>';
+             }
+             var step=v.step!=null?v.step:'any';
+             return '<div class="vrow"><label'+hint+'>'+lbl+'</label>'+
+                    '<input type="number" step="'+esc(String(step))+'" data-var="'+esc(v.id)+'" value="'+esc(String(val))+'"></div>';
+           }).join('');
+      }
+      box.innerHTML=h;
+      edWireVars(clip);
+      var rs=$('#fResetEdits');
+      if(rs) rs.addEventListener('click',function(){
+        if(!Object.keys(tev).length){say('还没有改过');return}
+        window.api('/api/edit',{action:'set_template_vars',project:ED.proj,clip_id:cid,edits:{}})
+          .then(function(r){
+            if(!r||!r.ok){say((r&&r.error)||'还原失败');return}
+            if(r&&r.src)clip.src=r.src;
+            delete clip.edits;
+            edDirty(); edSave(true).then(function(){edPreview();edFillVars(clip)});
+            say('已全部还原成模板原文');
+          }).catch(function(){say('还原失败')});
+      });
     }).catch(function(){ box.innerHTML='<div class="hint">读不到这个模板的参数</div>' });
+  }
+
+  /* 模板变量面板的接线。
+     改动落在**片段**的 vars 上，不动模板源文件 —— 同一个模板在这条时间线上
+     装两次，各填各的，互不影响。这是「只换字不换特效」的实现基础：
+     特效用的是模板自己的 HTML/GSAP，我们只替换它声明出来的那几个值。
+     写法与 edWire() 里其它接线一样：input 实时预览，change（失焦/回车）才落盘，
+     否则打一行字就把工程 JSON 写十几遍。 */
+  function edWireVars(clip){
+    var box=$('#fVarList'); if(!box||!clip)return;
+    var cid=clip.id||'';
+
+    function commit(){
+      /* ★ 只写内存里的 clip.vars，落盘交给 edSave() —— 不让界面和接口各写一遍盘。
+         之前的写法是「界面调接口写盘、edSave 又写一次整份工程」，
+         两个写者抢同一个文件：接口写完、编辑器下一次自动保存用内存里的旧数据
+         把刚写进去的值盖掉，表现就是「字改了一下，过会儿自己变回去」。
+         编辑器的 ED.data 是唯一内存真身，edSave 是唯一写盘者。 */
+      var all={};
+      box.querySelectorAll('[data-var]').forEach(function(e){
+        var k=e.getAttribute('data-var');
+        var v=(e.value==null?'':String(e.value));
+        if(v!=='')all[k]=v;
+      });
+      if(Object.keys(all).length)clip.vars=all;
+      else delete clip.vars;
+      edDirty();
+      /* ★ 顺序不能反：预览 iframe 的变量是**服务端按 clip_id 从磁盘 timeline.json 读**的
+         （见 uiserver.js 的 templatePage）。先 edPreview() 再 edSave()，
+         iframe 拿到的仍是上一次落盘的旧值 —— 表现就是「面板上的字改了，
+         画面上的字一点没变」，用户会判定这个功能没做。
+         所以先落盘，落完再让 iframe 重建。 */
+      edSave(true).then(function(){edPreview()});
+    }
+    /* 打字时不能每敲一个键就重建一次 iframe：模板里是 THREE.js 场景，
+       重建一次要重新编译着色器、重排队列，字还没打完画面一直在闪。
+       这里只把值写进内存 clip.vars，停手 450ms 后再统一落盘 + 刷新预览。 */
+    var tId=0;
+    function later(){
+      clearTimeout(tId);
+      tId=setTimeout(commit,450);
+    }
+    /* 正文文字覆盖：跟 vars 一样先在内存里攒，停手 450ms 再一次性落盘 + 重建预览。
+       走的是 set_template_vars 的 edits 分支 —— 后端负责写模板副本、把 src 指过去。 */
+    function commitEdits(){
+      var all={};
+      box.querySelectorAll('[data-edit]').forEach(function(e){
+        var k=e.getAttribute('data-edit');
+        var v=(e.value==null?'':String(e.value));
+        if(v!=='')all[k]=v;
+      });
+      window.api('/api/edit',{action:'set_template_vars',project:ED.proj,clip_id:cid,edits:all})
+        .then(function(d){
+          if(d&&d.src)clip.src=d.src;
+          if(d&&d.edits&&Object.keys(d.edits).length)clip.edits=d.edits; else delete clip.edits;
+          edDirty();edPreview();edSave(true).then(function(){edPreview()});
+        }).catch(function(){});
+    }
+    var eId=0;
+    function laterEdits(){
+      clearTimeout(eId);
+      eId=setTimeout(commitEdits,450);
+    }
+    box.addEventListener('input',function(e){
+      var t=e.target;
+      if(!t||!t.getAttribute||t.getAttribute('data-edit')==null)return;
+      laterEdits();
+    });
+    box.addEventListener('change',function(e){
+      var t=e.target;
+      if(!t||!t.getAttribute||t.getAttribute('data-edit')==null)return;
+      clearTimeout(eId);commitEdits();
+    });
+    box.addEventListener('input',function(e){
+      var t=e.target;
+      if(!t||!t.getAttribute||t.getAttribute('data-var')==null)return;
+      clip.vars=clip.vars||{};
+      var v=String(t.value==null?'':t.value);
+      if(v==='')delete clip.vars[t.getAttribute('data-var')];
+      else clip.vars[t.getAttribute('data-var')]=v;
+      later();
+    });
+    box.addEventListener('change',function(e){
+      var t=e.target;
+      if(!t||!t.getAttribute||t.getAttribute('data-var')==null)return;
+      clearTimeout(tId);
+      commit();
+    });
   }
 
   function edWire(){
@@ -1047,7 +1484,15 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     var ft=$('#fText');
     if(ft)ft.addEventListener('change',function(){edSave(true);say('文字已更新')});
     num('#fSize',function(v){c.size=v;edPreview()});
-    str('#fColor',function(v){c.color=v;edPreview()});
+    /* 改颜色要顺带重算样式串：主色是 {C} 占位，不重算的话渐变/中空那几款跟不动。 */
+    str('#fColor',function(v){c.color=v;
+      var st=tsById(c.tstyle||'');if(st)c.tcss=tsCss(st,v,c.c2);
+      edPreview()});
+    /* 副色：只有渐变款有第二档色标，改它要重算 tcss，否则界面颜色变了画面不变。 */
+    str('#fColor2',function(v){
+      c.c2=v;
+      var st=tsById(c.tstyle||'');if(st)c.tcss=tsCss(st,c.color,v);
+      edPreview()});
     num('#fStart',function(v){c.start=Math.max(0,v);edLanes()});
     num('#fDur',function(v){c.duration=Math.max(0.2,v);edLanes()});
     num('#fIn',function(v){c.in=Math.max(0,v);edLanes()});
@@ -1064,9 +1509,45 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
         var v=+inp.value/mul;if(!isFinite(v))return;
         if(k==='scale')v=Math.max(0.01,v);
         if(k==='opacity')v=Math.max(0,Math.min(1,v));
-        if(k==='anim'){c.anim=v;edDirty();return}
+        if(k==='anim'){c.anim=v;edDirty();edPreview();return}
         if(k==='z'){c.z=v;edDirty();edPreview();return}
         edSetXf(c,k,v);
+      });
+    });
+    /* 文字样式：点一下整段换皮。颜色框改的是主色，样式里的 {C} 会跟着变，
+       所以选完样式再改颜色，两者不打架。 */
+    Array.prototype.forEach.call(document.querySelectorAll('#edInsp [data-ts]'),function(b){
+      b.addEventListener('click',function(){
+        var id=b.getAttribute('data-ts');
+        c.tstyle=id;
+        var st=tsById(id);
+        /* 换款时副色要重新决定：新款没有第二档就把上一款留下的 c.c2 清掉，
+           否则「彩边分离」的红会跟到「薄荷」上，颜色对不上却说不出原因。 */
+        if(!st.c2)c.c2='';
+        c.tcss=tsCss(st,c.color,c.c2);
+        /* 副色框跟着换：新款没有第二档就整块重画面板把它收掉 */
+        edInsp();
+        Array.prototype.forEach.call(document.querySelectorAll('#tsGrid .tschip'),function(x){
+          x.classList.toggle('on',x.getAttribute('data-ts')===id);
+        });
+        edDirty();edPreview();edSave(true);
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#edInsp [data-tsa]'),function(b){
+      b.addEventListener('click',function(){
+        var v=b.getAttribute('data-tsa');
+        c.anim=v;
+        Array.prototype.forEach.call(document.querySelectorAll('#tsAnim .tsbtn'),function(x){
+          x.classList.toggle('on',x.getAttribute('data-tsa')===v);
+        });
+        edDirty();edSave(true);
+        /* 点了动效只写字段不够 —— 动效是「时间上的变化」，播放头停在中间
+           等于看见静止的一帧，用户会以为又没生效。这里把播放头拉回片段起点
+           并开始播放，让它当场跑一遍。 */
+        var cs=+c.start||0;
+        ED.t=cs;
+        edTime();edPreview();
+        if(v&&!ED.playing)edPlayToggle();
       });
     });
     Array.prototype.forEach.call(document.querySelectorAll('#edInsp [data-kfprop]'),function(b){
@@ -1141,7 +1622,17 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     ED.data.duration=tail>0?tail:Math.max(1,+ED.data.duration||10);
     return window.api('/api/edit',{action:'save',project:ED.proj,project_data:ED.data})
       .then(function(d){
-        if(d&&d.project)ED.data=d.project;
+        /* ★ 2026-11-21：不能整块换成 d.project。
+           服务端 save 返回的是 {...data} 的新对象，换掉 ED.data 之后，
+           edWire() 闭包里握着的还是旧 clips 的引用 —— 于是面板上改字号、
+           点文字样式、拖关键帧，全都改在一个没人引用的死对象上：
+           界面看着点了，预览和磁盘一动不动。只回填标量，tracks 保持原对象。 */
+        if(d&&d.project){
+          var np=d.project;
+          ['name','width','height','fps','duration'].forEach(function(k){
+            if(np[k]!==undefined)ED.data[k]=np[k];
+          });
+        }
         ED.dirty=false;
         if(!quiet)say('工程已保存');
         edLanes();
@@ -1168,7 +1659,14 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
 
   /* ── 拖拽 ── */
   var drag=null;
+  /* 时间线上正在原地改字（.ed-inline 输入框）时，所有 mousedown 都放过：
+     一点就重建时间线 DOM，输入框会被连根拔掉，字就存不上了。 */
+  function edInInline(e){
+    var t=e.target;
+    return !!(t&&t.closest&&t.closest('.ed-inline'));
+  }
   document.addEventListener('mousedown',function(e){
+    if(edInInline(e))return;
     /* 拖轨道名栏右缘的手柄 = 改这一栏宽窄。往左拖到 <100px 只留图标，
        往右拖宽了显示轨道名。宽窄只影响界面，不改工程数据。 */
     var rz=e.target.closest&&e.target.closest('.lb-resize');
@@ -1206,7 +1704,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
        用户说的「带着双击编辑但没用」。改用 mousedown 的 detail>=2 判定，
        并且这次不 preventDefault、不进拖拽，焦点才能落到输入框。 */
     if(e.detail>=2&&c.type==='text'){
-      var ft=$('#fText');if(ft){ft.focus();ft.select();say('直接改文字，改完点别处就存上了')}
+      edInlineText(tr,i);
       return;
     }
     var mode='move';
@@ -1220,9 +1718,9 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     if(drag.mode==='lanew'){
       /* 拖轨道名栏宽窄：56~200px。同步 CSS 变量 + JS 常量，再重画刻度/播放头。
          这里不调 edLanes()（会连手柄一起重建、丢掉 drag.el），只更新宽度并重画时间线。 */
-      LANE_W=Math.max(56,Math.min(200,Math.round(drag.w0+(e.clientX-drag.x0))));
+      LANE_W=Math.max(100,Math.min(128,Math.round(drag.w0+(e.clientX-drag.x0))));
       var scx=$('#edScroll');
-      if(scx){scx.style.setProperty('--lane-w',LANE_W+'px');scx.classList.toggle('narrow',LANE_W<104)}
+      if(scx){scx.style.setProperty('--lane-w',LANE_W+'px');}
       edLanes();
       return;
     }
@@ -1252,6 +1750,8 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     /* 拖轨道栏宽结束时写回存储，下次打开还是这个宽度 */
     if(drag.mode==='lanew'){try{localStorage.setItem(LANE_KEY,String(LANE_W))}catch(e){}}
     drag=null;edInsp();
+    /* 拖完立刻落盘：只改内存不存，用户切工程/重启就白拖了 */
+    if(ED.dirty)edSave(true);
   });
 
   function edClipAt(tr,i){
@@ -1359,8 +1859,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
         edDirty();edLanes();edInsp();edPreview();
         say('轨道已删除');
       };
-      if(n)edConfirm('这条轨道上有 '+n+' 个片段，删轨会一起删掉。确定？',go);
-      else go();
+      edConfirm('确定删除「'+edTrackName(tr,ED.data.tracks)+'」轨？'+(n?'\n轨道上 '+n+' 个片段会一起删掉。':''),go);
       return;
     }
     edDirty();edLanes();edInsp();edPreview();
@@ -1526,6 +2025,15 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       try{new ResizeObserver(function(){edComposeFit()}).observe(st)}catch(e){}
     }
   })();
+  /* 短哈希：只用来做「这个片段的内容变了没有」的指纹，不参与任何渲染。
+     用 JSON.stringify 当键会让 URL 长得离谱（模板变量能带整句中文），
+     这里只要碰撞概率低到「改一个字一定变」就够。 */
+  function edHash(str){
+    var h=0,s=String(str||'');
+    for(var i=0;i<s.length;i++){h=((h<<5)-h+s.charCodeAt(i))|0}
+    return (h>>>0).toString(36);
+  }
+
   function edPreviewURL(c){
     return '/ed/'+encodeURIComponent(ED.proj)+'/'+encodeURIComponent((c.src||'').split('/').pop());
   }
@@ -1534,6 +2042,55 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
      字幕永远看不到，关键帧变换也完全没应用，所以怎么看都不像剪映。
      现在：当前时刻所有命中的片段按「视频→图形/模板→文字、再按 z」叠成一张画面，
      每层都跑 edApplyXform() 把关键帧插值出来的位置/缩放/旋转/透明度写上去。 */
+  /* 逐字动效：把文字拆成 <span>，按字符序号算它「该在第几秒出现」。
+     纯文本节点没法按字错开时间，所以只在勾了逐字动效的片段上拆。
+     ★ 空格不能丢：用 &nbsp;，直接给空格在 inline-block 里会塌掉。 */
+  function edPaintChars(tx,c,mode){
+    var txt=String(c.text||'');
+    /* ★ 播放时 edPreview() 是每帧调一次的，这里绝不能每帧重建 innerHTML ——
+       重建会让浏览器每帧重排整段文字，字多的片段直接掉帧，而且正在做的
+       transform 会被下一帧清掉（观感是「动画闪一下就没了」）。
+       所以：文本/模式没变就只改每个 span 的 style，变了才重建节点。 */
+    var sig=mode+'\u0001'+txt;
+    if(tx.__sig!==sig){
+      var frag=document.createDocumentFragment();
+      tx.textContent='';
+      for(var k=0;k<txt.length;k++){
+        var sp=document.createElement('span');
+        sp.className='ed-ch';
+        sp.textContent=txt.charAt(k)===' '?'\u00a0':txt.charAt(k);
+        frag.appendChild(sp);
+      }
+      tx.appendChild(frag);
+      tx.__sig=sig;
+      tx.__chs=tx.querySelectorAll('.ed-ch');
+    }
+    var chs=tx.__chs||tx.querySelectorAll('.ed-ch');
+    if(!chs.length)return;
+    var lt=Math.max(0,ED.t-(+c.start||0));
+    var step=mode==='typewriter'?TW_STEP:CH_STEP;
+    for(var i=0;i<chs.length;i++){
+      var el=chs[i];
+      if(mode==='typewriter'){
+        /* 打字机：到点才现身，现身之后不再动。没到点的留在原位（visibility）
+           而不是从文档里拿掉 —— 拿掉会让整段宽度随字数变化，边打边左右跳。 */
+        if(lt>=i*step){el.style.visibility='visible';el.style.opacity='1';el.style.transform='none'}
+        else{el.style.visibility='hidden'}
+      }else{
+        var q=(lt-i*CH_STEP)/CH_DUR;
+        if(q<=0){el.style.visibility='hidden'}
+        else if(q<1){
+          var e=edOut3(q);
+          el.style.visibility='visible';
+          el.style.opacity=e.toFixed(3);
+          el.style.transform='translateY('+(14*(1-e)).toFixed(2)+'px) scale('+(0.86+0.14*e).toFixed(3)+')';
+        }else{
+          el.style.visibility='visible';el.style.opacity='1';el.style.transform='none';
+        }
+      }
+    }
+  }
+
   function edPreview(){
     var st=$('#edStage');if(!st||!ED.data)return;
     var box=ED.compose;
@@ -1579,7 +2136,21 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
       var tu='';
       if(typ==='template'){
         var nm=(c.src||'').split('/').pop().replace(/\.html$/,'');
-        tu='/edt/'+encodeURIComponent(ED.proj)+'/'+encodeURIComponent(nm);
+        /* ★ 变量指纹要进 URL，否则改了模板变量的字，iframe 的 src 没变，
+           edPreview 判定「同一个模板、复用旧节点」，画面停在旧字上 ——
+           用户看到的是「改字功能完全没反应」。指纹只用于触发重建。 */
+        var vv=c.vars||{},vks=Object.keys(vv).sort(),vsig='';
+        for(var vi=0;vi<vks.length;vi++)vsig+=vks[vi]+'='+vv[vks[vi]]+'\u0001';
+        /* 正文文字覆盖也要进指纹：副本文件名带着片段 id，同一模板的两只片段
+           文字不同，靠 src 本身分不开，只有把 edits 算进来才会各自重建。 */
+        var ee=c.edits||{},eks=Object.keys(ee).sort();
+        for(var ei=0;ei<eks.length;ei++)vsig+='e'+eks[ei]+'='+ee[eks[ei]]+'\u0001';
+        /* edit=1：让预览页注入「点文字就地改」的交互。
+           没这个参数就是纯展示（模板库试看、导出的成片页面都不该能编辑）。 */
+        tu='/edt/'+encodeURIComponent(ED.proj)+'/'+encodeURIComponent(nm)
+          +'?c='+encodeURIComponent(String(c.id||''))
+          +'&edit=1'
+          +'&v='+edHash(vsig);
         if(L&&L.dataset.src!==tu)needRebuild=true;
       }
       if(needRebuild){
@@ -1599,17 +2170,43 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
           L.innerHTML='<video muted playsinline></video>';
         }
         ED.layers[key]=L;
+        /* ★ 重建过节点就必须强制重排一次。
+           下面那句 `if(sig!==ED.layerSig)` 是按「这一刻有哪几个图层」的键序比对的，
+           重建前后键序完全一样 → sig 相等 → 整段 appendChild 被跳过，
+           新建的 iframe/img/video 从头到尾没进过 DOM：画面直接变空白。
+           变量一改就在这里重建，用户看到的是「改完字画面没了」。 */
+        ED.layerSig='';
       }
       var url=edPreviewURL(c);
       if(typ==='text'){
         var tx=L.querySelector('.ed-text');
         if(tx){
-          tx.textContent=c.text||'';
-          tx.style.fontSize=(+c.size||64)+'px';
-          tx.style.color=c.color||'#FFFFFF';
-          tx.style.fontWeight=(c.weight||700);
-          if(String(c.plate)==='0'){
-            tx.style.background='none';tx.style.boxShadow='none';tx.style.textShadow='none';
+          /* ★ 样式串里带着 padding/border/text-shadow，用 setAttribute 整体覆盖，
+             再补上字号这个「样式不管、由片段控制」的字段。
+             先清空再拼，避免上一套样式的残留属性叠在上面。 */
+          var tst=tsById(c.tstyle||'')
+          var decl='font-size:'+(+c.size||64)+'px;color:'+(c.color||'#FFFFFF')+';'
+                   +'font-weight:'+(c.weight||700)+';'
+                   +(tst?tsCss(tst,c.color,c.c2):'')
+          /* 样式没写 background 就是「裸字」类（中空/渐变/发光），
+             必须把 .ed-text 默认那块黑底衬清掉，否则字后面挂一块黑板。
+             阴影同理：默认那层黑色柔影套在中空字上是一团脏雾，
+             只有样式自己写了 text-shadow（发光/描边那几款）才留。 */
+          if(tsBare(tst)||String(c.plate)==='0')
+            decl+='background:none;box-shadow:none;backdrop-filter:none;'
+                 +'padding:0;border-radius:0;'
+                 +(tst&&/text-shadow/i.test(tst.css)?'':'text-shadow:none;')
+          tx.setAttribute('style',decl)
+          /* 逐字类动效（逐字弹入 / 打字机）必须把文字拆成一个个 <span>，
+             否则整块只有一个节点，没有任何「第几个字」可以错开时间。
+             同步给每字写 --i（序号），相位由 CSS/下面的内联计算。
+             非逐字动效一律走纯文本，不走 span —— 拆字会让文字的排版
+             （尤其是 letter-spacing 和中文标点压缩）跟导出端不一致。 */
+          var anm=String(c.anim||'').trim();
+          if(anm==='charIn'||anm==='typewriter'){
+            edPaintChars(tx,c,anm);
+          }else{
+            tx.textContent=c.text||''
           }
         }
       }else if(typ==='template'){
@@ -1630,6 +2227,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
           }
         }
       }
+      L.__clip=c;
       edApplyXform(L,c,ED.t);
       ordered.push({key:key,el:L});
       live[key]=1;
@@ -1646,6 +2244,41 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     });
     edAudioPreview(audio);
   }
+
+  /* ── 预览里直接拖动文字改位置 ──
+     用户原话：「屏幕这个黑色的屏幕上边要改成可以直接拖动，拖动文字的位置」。
+     文字层的 x/y 是 0~1 的百分比（导出端同一口径），所以拖动只是把
+     鼠标位移换算成百分比写回 c.x/c.y，导出结果跟拖动一致。
+     拖动期间打 .drag 细框；松手写盘并刷新属性面板。 */
+  var pvDrag=null;
+  (function bindStageDrag(){
+    var st=$('#edStage');if(!st)return;
+    st.addEventListener('mousedown',function(e){
+      var L=e.target.closest&&e.target.closest('.ed-layer.text');
+      if(!L)return;
+      var c=L.__clip;if(!c)return;
+      var box=ED.compose;if(!box)return;
+      var br=box.getBoundingClientRect();
+      if(!br.width||!br.height)return;
+      e.preventDefault();
+      pvDrag={c:c,el:L,x0:e.clientX,y0:e.clientY,
+        cx:edNum(c.x,0.5),cy:edNum(c.y,0.5),bw:br.width,bh:br.height};
+      L.classList.add('drag');
+    });
+    document.addEventListener('mousemove',function(e){
+      if(!pvDrag)return;
+      var dx=(e.clientX-pvDrag.x0)/pvDrag.bw;
+      var dy=(e.clientY-pvDrag.y0)/pvDrag.bh;
+      pvDrag.c.x=Math.max(0,Math.min(1,Math.round((pvDrag.cx+dx)*10000)/10000));
+      pvDrag.c.y=Math.max(0,Math.min(1,Math.round((pvDrag.cy+dy)*10000)/10000));
+      edApplyXform(pvDrag.el,pvDrag.c,ED.t);
+    });
+    document.addEventListener('mouseup',function(){
+      if(!pvDrag)return;
+      pvDrag.el.classList.remove('drag');
+      pvDrag=null;edDirty();edInsp();edPreview();edSave(true);
+    });
+  })();
 
   /* 音频预览：当前时刻命中的音频片段各自 seek，播放时一起走。
      用缓存的 <audio> 元素，不塞进画面容器，避免每帧重建导致断音。 */
@@ -1672,6 +2305,32 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
   }
   window.addEventListener('resize',function(){
     edComposeFit();
+  });
+
+  /* ★ 在预览画面上直接点文字改（iframe 里注入的脚本 postMessage 过来）。
+     用户要求「直接从视频上面点击就可以更改，不要从右侧面板改」。
+     这里只做两件事：找到发消息的那个片段、把「原文 → 新文字」交给后端。
+     后端按原文匹配到 t-key，写模板副本、把 clip.src 指过去，再重建预览。
+     为什么不在 iframe 里直接改 DOM：模板会重新执行时间轴，直接改 DOM 下次
+     seek 就被覆盖；走 edits 这条路预览和成片吃同一份字节。 */
+  window.addEventListener('message',function(e){
+    var d=e&&e.data;if(!d||d.__rc!==1||d.kind!=='text-edit')return;
+    if(!ED.data)return;
+    var cid=String(d.clip||''),from=d.from||'',to=d.to||'';
+    if(!cid||!from||!to||from===to)return;
+    var hit=null;
+    (ED.data.tracks||[]).forEach(function(tr){
+      (tr.clips||[]).forEach(function(c){if(!hit&&String(c.id||'')===cid)hit={c:c,tr:tr}});
+    });
+    if(!hit)return;
+    var c=hit.c;
+    window.api('/api/edit',{action:'set_template_vars',project:ED.proj,clip_id:cid,
+      text_edits:[{from:from,to:to}]}).then(function(r){
+      if(r&&r.src)c.src=r.src;
+      if(r&&r.edits&&Object.keys(r.edits).length)c.edits=r.edits;else delete c.edits;
+      edDirty();edSave(true).then(function(){edPreview();edFillVars(c)});
+      say('已改：「'+from+'」→「'+to+'」');
+    }).catch(function(){});
   });
 
   /* 把预览里的模板 iframe 拖到正确的时间点。
@@ -1704,6 +2363,7 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     ED.zoom=z;
     if(zm)zm.value=Math.round(z*100);
     edLanes();edTime();
+    /* 缩放不改滚动位置：00:00 永远贴着轨道名栏右缘，视频起点不会被顶出视野。 */
   }
   if(zm)zm.addEventListener('input',function(){
     edZoomSet((+this.value)/100);    /* 1.0 = 正好铺满；往右放大看细节 */
@@ -1718,16 +2378,12 @@ $('#edPreset') && $('#edPreset').addEventListener('change',function(){
     if(!ED.data)return;
     var r=$('#edRuler');if(!r)return;
     var box=r.getBoundingClientRect();
-    var mouseSec=(e.clientX-box.left-LANE_W)/ED.pps;      /* 鼠标下的秒数 */
     var old=ED.zoom;
     var next=old*(e.deltaY<0?1.12:0.89);              /* 上滚放大、下滚缩小 */
     next=Math.max(0.5,Math.min(4,next));
     if(Math.abs(next-old)<0.001)return;
     e.preventDefault();
-    var viewX=e.clientX-sc.getBoundingClientRect().left;  /* 鼠标在滚动容器里的视口位置 */
-    edZoomSet(next);
-    /* 缩放后让鼠标下那一点保持在原来的屏幕位置 */
-    sc.scrollLeft=Math.max(0,LANE_W+mouseSec*ED.pps-viewX);
+    edZoomSet(next);   /* 缩放不动滚动位置：0 点始终贴轨道边 */
   },{passive:false});
   if(sc)sc.addEventListener('click',function(e){
     var r=$('#edRuler');if(!r||!r.contains(e.target))return;

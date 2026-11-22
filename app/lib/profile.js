@@ -42,42 +42,37 @@ function q(s) { return JSON.stringify(String(s)) }
 
      这就是这类问题的通用教训：**提示词里每写一句「你要说 X」，它就会到处说 X。**
      想让它自然，就把事实放在那儿（你叫什么），把什么时候用交给它判断。 */
+/* ★ 2026-11-22：整段从英文改成中文 —— 用户实测英文 system prompt 会让模型连思考链
+   也用英文（截图里满屏 "The user is asking me to..."），而他自己用的 DSH 是中文
+   AGENTS.md、中文思考。严格照 DSH 对齐，只换语言，不改任何规则和能力。 */
 const PERSONA_PREFIX = [
-  'You are the assistant inside RiffCut (影创), a Chinese short-video production app.',
-  'You are not a coding agent and not a general assistant; you help people make short videos.',
-  'Your name is RiffCut. If someone asks who you are, that is the answer — a name, not a title.',
-  'Only say it when asked. Do not open replies with it, and do not introduce yourself unprompted.',
-  'You are not a Harness, a kernel, an MCP client, or a model name; people here do not know those',
-  'words and hearing them makes them think the wrong app opened.',
-  'Answer in Chinese.',
-  'Match the length to what was actually asked: a greeting gets a greeting, a real brief gets a plan.',
-  'Judge for yourself whether a message is conversation or a work order; nobody hands you a script.',
-  'Mistaking one for the other is not symmetrical: treating talk as work makes people wait half a minute',
-  'for a reply to "hi", while treating work as talk only costs one extra question — so when unsure,',
-  'reply as conversation and let them say more.',
-  'Conversation gets words. A work order gets tools, and then a finished cut.',
-  'A cut worth watching is planned before it is assembled: for anything beyond a trivial',
-  'rearrange, write the shot list first and let the person see it before building. Piling',
-  'templates onto a timeline with no plan gives them black frames, cropped letters, and a',
-  'film they never approved — then they ask if this is really a video. Match the template',
-  'aspect ratio to the project: a 1920x1080 title dropped into a 1080x1920 project loses',
-  'its sides ("Cyanweb" becomes "yanwe"). Build the project in the template\'s aspect ratio,',
-  'not the other way round. For end cards use an animated 片头片尾 block with Chinese-safe',
-  'DOM text (glass-hero, logo-outro). Templates are tagged with a ⚠️ "有中文勿用" warning:',
-  '3D-extruded titles (extruded-logo, glass-shard-title, frost) route text through a Latin-only',
-  'Geist font, so Chinese renders as ?? or blanks — never pick one when the content is Chinese.',
-  'Static CTA components (cta-close, cta-lockup, logo-brand-close) render Chinese fine but hold',
-  'perfectly still, and the delivery gate rejects them as a still image. Edit a template\'s own',
-  'variables via template_vars + addtemplate vars; stacking addtext over English defaults gives',
-  'two layers of words.',
-  'Describing a tool call in your message is not making one. Writing "→ run edit_timeline",',
-  'pasting a JSON parameter block, or saying "I have created the project" / "now doing step 1"',
-  'produces no project and no workflow step — the editor will be empty and the user stops',
-  'believing you. A real tool call shows up on its own in the interface; you do not narrate it.',
-  'When someone says "do not make it yet, just explain the design", that is conversation:',
-  'give the thinking and the options, then wait for the word to actually start.',
-  'Your working directory is already clean and its layout is described in the workspace instructions,',
-  'so there is nothing to discover by listing directories first.',
+  '你是 RiffCut（影创）里的助手，这是一个中文短视频创作软件。',
+  '你不是编程助手，也不是通用助手；你帮人做短视频。',
+  '你叫 RiffCut。有人问你是谁，就答这个名字——是名字，不是头衔。',
+  '只在被问到时才说。不要用它开场，也不要主动自我介绍。',
+  '你不是 Harness、不是内核、不是 MCP 客户端，也不是模型名；这里的人不懂这些词，',
+  '听到会以为开错了软件。',
+  '全程用中文，包括你的思考过程也用中文。',
+  '回答长度跟问题相称：打招呼就回打招呼，真正的需求才给方案。',
+  '自己判断一条消息是闲聊还是派活；没有人会给你剧本。',
+  '把两者搞混的代价不对等：把闲聊当派活，会让人为一句「你好」等上半分钟；',
+  '把派活当闲聊，最多多问一句——所以拿不准时，先当闲聊回，让对方多说。',
+  '闲聊就给文字。派活就调工具，然后交付一条成片。',
+  '值得看的片子是先在脑子里排好、再动手拼的：除了简单的重排，先写分镜给对方看过再搭。',
+  '没有计划就把一堆模板摞到时间线上，得到的是黑帧、被裁的字、和一条他从没点头认可的片子——',
+  '然后他会问这到底是不是视频。模板画幅要和工程一致：1920x1080 的标题丢进 1080x1920 的工程，',
+  '两边会被裁掉（「Cyanweb」变成「yanwe」）。按模板的画幅建工程，不是反过来。',
+  '片尾用带动画的片头片尾块，配中文安全的 DOM 文字（glass-hero、logo-outro）。',
+  '带 ⚠️「有中文勿用」标记的模板：3D 立体标题（extruded-logo、glass-shard-title、frost）',
+  '会走只支持拉丁字母的 Geist 字体，中文会渲染成 ?? 或空白——内容是中文时绝不选它们。',
+  '静态 CTA 组件（cta-close、cta-lockup、logo-brand-close）中文显示正常，但完全静止，',
+  '交付检测会把它们当静帧拒掉。改模板自己的变量用 template_vars + addtemplate 的 vars；',
+  '在英文默认文字上再叠 addtext，会出现两层字。',
+  '在回复里描述工具调用不等于真的调了。写「→ 运行 edit_timeline」、贴一段 JSON 参数、',
+  '或者嘴上说「项目已经建好了」「现在做第 1 步」，都不会产生工程和工作流步骤——',
+  '编辑器会是空的，用户就不再信你。真正的工具调用会自己在界面上显示，不用你旁白。',
+  '当对方说「先别做，讲讲思路」，那是闲聊：给出想法和选项，然后等他真说开始再做。',
+  '你的工作目录已经干净、布局也在工作区说明里写了，不用先列一遍目录去「探查」。',
 ].join(' ')
 
 function ensureDir(p) { if (!existsSync(p)) mkdirSync(p, { recursive: true }); return p }
@@ -139,6 +134,16 @@ function patchYaml({ models, env, homeDir, workDir }) {
       lines.push(`          - id: ${q(m.model)}`)
       lines.push(`            name: ${q(m.name || m.model)}`)
       lines.push('            input: [text, image]')
+      /* ★ 2026-11-22 照抄 DSH 主 profile（~/.dsh/profiles/web/cordis.patch.yml：
+         bailu-auto 等模型都声明了 reasoningEfforts）：声明后 pi-ai 才知道这个
+         模型支持哪些思考档位，initialize 才能传 reasoningEffort:'high'。
+         不声明的话模型被当成非推理模型（只支持 off），强传 high 会报
+         UNSUPPORTED_REASONING_EFFORT。DSH 每个 agent 都是 high，所以每轮都有思考。 */
+      lines.push('            reasoningEfforts:')
+      lines.push('              off: null')
+      lines.push('              low: low')
+      lines.push('              medium: medium')
+      lines.push('              high: high')
     })
   } else {
     /* ★ 2026-11-20 改：这里以前会偷偷读 ~/.dsh/.credentials.yaml 里的 AGNES_API_KEY 顶上，
@@ -339,6 +344,113 @@ function patchYaml({ models, env, homeDir, workDir }) {
   lines.push('    headChars: 4096')
   lines.push('    tailChars: 1024')
 
+  /* ★ 把 DSH 原生工具放行到 host 面（用户 m06273「权限要跟 DSH 一样，能读整台电脑」）。
+     dsh-web-app/cordis.patch.yml 在 465 行后把 host 面的原生工具全设成 disabled:true，
+     本意是让每个会话挂 preset 才拿工具；但 SDK 会话（我们这种）不挂 preset，
+     结果一个原生工具都没有 —— 会话日志 header.config 只有 provider/model，
+     tools 全是 mcp__velora-video__*，bash/read/write/glob/grep 一个都没有。
+     patch 在所有 bundle patch 之后应用，这里 disabled:false 覆盖那里的 true。
+     注意：不要靠挂 preset 解决 —— standard/cordis preset 自带「You are a coding
+     agent」人设，会盖掉我们设的短视频助手人设。 */
+  /* host 面已有行、只是被 web-app 设成 disabled:true 的工具 —— 直接放行。
+     这份清单 = standard/cordis preset 里全部工具 与 web-app 465~585 行禁用项的并集。 */
+  const NATIVE_TOOLS = [
+    'tool-bash',                 // 任意命令 —— 真正「能读整台电脑」的核心
+    'tool-pwsh',
+    'tool-fs',                   // read / write / edit
+    'tool-fs-search',            // glob / grep
+    'tool-web',                  // web_fetch / web_search
+    'tool-jobs',                 // 后台任务
+    'tool-todo',                 // todo_write
+    'tool-goal',                 // goal
+    'command-goal',
+    'skill-filesystem',          // 技能发现（tool-skill 的依赖）
+    'tool-skill',                // skill —— 加载技能
+    'tool-subagent-control',
+    'tool-subagent-list-agents',
+    'tool-subagent',
+    'tool-subagent-fork',
+    'tool-workflow',
+    'workflow-ptc',
+    'plan-mode',                 // exit_plan_mode
+    'agent-instructions',
+    'command-compact',
+    'tool-plugin-manager',
+  ]
+  lines.push('# ── 放行 DSH 原生工具到 host 面：SDK 会话不挂 preset，必须在这里开 ──')
+  for (const id of NATIVE_TOOLS) {
+    lines.push('- id: ' + id)
+    lines.push('  disabled: false')
+    /* ★ 2026-11-22：内核原生 web_search 走 deepseek-official，需要 DEEPSEEK_API_KEY，
+       本机没配 → 每次联网都报「no API key configured」，模型白试两次才转用我方
+       自带的 mcp web_search（DuckDuckGo HTML，无 key、已验证可用）。用户要求照 DSH，
+       但软件内核没有 DSH 那套 ddg provider 包，照抄 provider 配置走不通；所以直接把
+       原生 search 关掉、保留匿名可用的 web_fetch，让模型一上来就用我方搜索工具。
+       config 是整体替换，这里只写要保留的两项。 */
+    if (id === 'tool-web') {
+      lines.push('  config:')
+      lines.push('    search: false')
+      lines.push('    fetch: true')
+    }
+  }
+
+  /* 只在 preset 里声明、host 面完全没有行的工具插件 —— 必须 insert 新增。
+     ★ 这些包都在内核 node_modules/@deepseek-ai/ 里，只是 bundle patch 没在 host 面挂。
+     ★ 不要 insert persona / time-context —— 那是 prompt 插件不是工具，persona 还会盖人设。 */
+  lines.push('# ── insert 只在 preset 里、host 面缺失的 DSH 工具插件 ──')
+  lines.push('- insert:')
+  const INSERT_TOOLS = [
+    ['tool-schedule', '@deepseek-ai/dsh-tool-schedule'],       // schedule_create/list/delete/update
+    ['present', '@deepseek-ai/dsh-tool-present'],              // present 交付卡片
+    ['tool-ask-user', '@deepseek-ai/dsh-tool-ask-user'],       // ask_user_question
+    ['tool-ralph', '@deepseek-ai/dsh-tool-ralph'],             // ralph 迭代循环
+    ['tool-cordis', '@deepseek-ai/dsh-tool-cordis'],           // cordis_inspect_*
+  ]
+  for (const [id, name] of INSERT_TOOLS) {
+    lines.push('    - id: ' + id)
+    lines.push('      name: ' + q(name))
+  }
+
+  /* ★ Agent Teams：工具包 inject 了 agentTeams/agents 服务，服务包必须一起插，
+     否则 spawn_teammate/team_task_*  quietly 缺席（我第一版只插工具包就是这样）。
+     照抄 dsh-experimental-agent-team-profile/cordis.patch.yml 的 insert 三条，
+     但**不禁用 subagent** —— 两套共存，用户已经习惯用 subagent。
+     ui-agent-team 不插：无头内核里没界面，插了只会多一个报错点。 */
+  lines.push('    - id: agent-team')
+  lines.push('      name: ' + q('@deepseek-ai/dsh-experimental-agent-team'))
+  lines.push('      config:')
+  lines.push('        maxMembers: 8')
+  lines.push('        maxTasks: 256')
+  lines.push('        maxMessageBytes: 65536')
+  lines.push('        disposalTimeoutMs: 5000')
+  lines.push('    - id: tool-agent-team')
+  lines.push('      name: ' + q('@deepseek-ai/dsh-experimental-tool-agent-team'))
+  lines.push('      config:')
+  lines.push('        freshProvider: spawn')
+  lines.push('        forkProvider: fork')
+
+  /* ★ 持久终端：tool-terminal inject `terminals` 服务，必须套 cordis:group 组，
+     单独插工具包没用（第二版就是这样）。照抄 dsh-experimental-terminal-bundle
+     /cordis.patch.yml 的 group 原文，平台开关保留 !!js 标签。 */
+  lines.push('    - id: optional-persistent-terminals')
+  lines.push('      name: cordis:group')
+  lines.push('      group: true')
+  lines.push('      isolate:')
+  lines.push('        terminals: true')
+  lines.push('      config:')
+  lines.push('        - id: optional-terminal-registry')
+  lines.push('          name: ' + q('@deepseek-ai/dsh-terminal'))
+  lines.push('        - id: optional-terminal-bash')
+  lines.push('          name: ' + q('@deepseek-ai/dsh-terminal-bash'))
+  lines.push("          disabled: !!js process.platform === 'win32'")
+  lines.push('        - id: optional-terminal-pwsh')
+  lines.push('          name: ' + q('@deepseek-ai/dsh-terminal-bash'))
+  lines.push("          disabled: !!js process.platform !== 'win32'")
+  lines.push('          config:')
+  lines.push('            shellDialect: pwsh')
+  lines.push('        - id: optional-tool-terminal')
+  lines.push('          name: ' + q('@deepseek-ai/dsh-tool-terminal'))
+
   return lines.join('\n') + '\n'
 }
 
@@ -411,6 +523,9 @@ function buildProfile({ kernelDir, homeDir, workDir, profile }) {
   return {
     provider: models.length ? 'velora-m0' : 'velora-m0',
     model: models.length ? models[0].model : 'agnes-2.5-flash',
+    /* 照 DSH 主 profile 的 agent-default-model.reasoningEffort: high：
+       让每轮都走高推理、都吐思考链，而不是模型偶尔高兴才吐。 */
+    reasoningEffort: 'high',
     env,
     patchPath: join(dir, 'cordis.patch.yml'),
     profileDir: dir,

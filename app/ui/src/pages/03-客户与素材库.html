@@ -5,14 +5,14 @@
 .a-cust{position:relative;padding:9px 28px 9px 10px;border-radius:var(--r-md);border:1px solid var(--line);
   margin-bottom:7px;cursor:pointer;box-shadow:var(--sh-btn)}
 .a-cust:hover{background:#FAFBFD}
-.a-cust.on{background:#EAF5F3;border-color:#BFE0DA}
+.a-cust.on{background:#EFF4FF;border-color:#A8C4F8}
 .a-cust b{font-size:var(--f4);display:flex;align-items:center;gap:6px;padding-right:2px}
 .a-cust b .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .a-cust b .u-dot{margin-left:auto;flex:0 0 auto}
 .a-cust span.sub{font-size:var(--f5);color:var(--ink3);display:block;margin-top:3px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .a-cust-del{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:20px;height:20px;
-  border:1px solid transparent;border-radius:8px;background:transparent;color:#A8AFBC;font-size:15px;
+  border:1px solid var(--line-c);border-radius:8px;background:transparent;color:#A8AFBC;font-size:15px;
   line-height:1;display:grid;place-items:center;cursor:pointer}
 .a-cust-del:hover{border-color:#E4C7C7;background:#FFF1F1;color:#B45B5B}
 .a-note{font-size:var(--f5);color:var(--ink3);margin-top:10px;line-height:1.7}
@@ -32,22 +32,26 @@
   border:1px solid #F4F6FA;background:#FDF7EA;border-radius:var(--r-md)}
 .a-busy.on{display:flex}
 .a-spin{width:15px;height:15px;flex:0 0 auto;border-radius:50%;
-  border:2px solid #EAF5F3;border-top-color:#1B8B7E;animation:aSpin .8s linear infinite}
+  border:2px solid #EFF4FF;border-top-color:#2563EB;animation:aSpin .8s linear infinite}
 @keyframes aSpin{to{transform:rotate(360deg)}}
 .a-busy-t{display:flex;flex-direction:column;gap:2px;min-width:0}
-.a-busy-t b{font-size:var(--f4);color:#147567}
-.a-busy-t span{font-size:var(--f5);color:#1B8B7E;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.a-busy-time{margin-left:auto;font-size:var(--f5);color:#1B8B7E;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.a-busy-t b{font-size:var(--f4);color:#1D4ED8}
+.a-busy-t span{font-size:var(--f5);color:#2563EB;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.a-busy-time{margin-left:auto;font-size:var(--f5);color:#2563EB;font-variant-numeric:tabular-nums;flex:0 0 auto}
 .a-busy-bar{height:3px;border-radius:4px;background:#F4F6FA;overflow:hidden;margin-top:8px}
-.a-busy-bar i{display:block;height:100%;width:35%;background:#1B8B7E;border-radius:4px;
+.a-busy-bar i{display:block;height:100%;width:35%;background:#2563EB;border-radius:4px;
   animation:aSlide 1.15s ease-in-out infinite}
 @keyframes aSlide{0%{margin-left:-35%}100%{margin-left:100%}}
 /* 扫描中：按钮只是「看起来在跑」，仍然可点（点了给提示），不禁用 */
-.u-btn.working{position:relative;border-color:#F4F6FA;background:#FDF7EA;color:#147567;
+.u-btn.working{position:relative;border-color:#F4F6FA;background:#FDF7EA;color:#1D4ED8;
   animation:aBreath 1.5s ease-in-out infinite}
 @keyframes aBreath{0%,100%{box-shadow:0 0 0 0 rgba(185,138,46,.22)}50%{box-shadow:0 0 0 4px rgba(185,138,46,0)}}
-.a-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;flex:0 0 auto}
-.a-stats .u-card{padding:12px 14px}
+/* 五个数字本来各是一张带框的卡片，五圈框并排就成了表格。
+   改成一组：外框一圈，内部只用竖线分隔，间隙归零。 */
+.a-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;flex:0 0 auto;
+  border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:#FFF}
+.a-stats .u-card{padding:12px 14px;border:0;border-radius:0;box-shadow:none;background:transparent}
+.a-stats .u-card+.u-card{border-left:1px solid var(--line)}
 .a-stats b{font-size:20px;font-weight:700;display:block}
 .a-stats span{font-size:var(--f5);color:var(--ink3)}
 .a-scan{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
@@ -60,7 +64,7 @@
 .a-filters{display:flex;gap:6px;flex-wrap:wrap}
 .a-filter{height:26px;padding:0 10px;border:1px solid var(--line);border-radius:12px;font-size:var(--f5);
   color:#5A6272;background:#FFFFFF;box-shadow:var(--sh-btn);cursor:pointer}
-.a-filter.on{background:#EAF5F3;border-color:#BFE0DA;color:#33405A}
+.a-filter.on{background:#EFF4FF;border-color:#A8C4F8;color:#33405A}
 /* 素材网格：卡片式、统一比例、信息不超过两行。
    以前每个格子只有「缩略图 + 文件名 + 宽×高 + 标签」四段散装文字，
    标签长短不一导致高度参差、@2x 缩略图也挤在一起，看着很乱。 */
@@ -327,9 +331,12 @@
   }
   function doDelCustomer(name,purge){
     A('/api/customers',{action:'delete',name:name,purge:!!purge}).then(function(r){
-      V().customer=r.customer;LIB=r.library||{};V().library=LIB;
+      /* ★ 不能写 V().customer=r.customer —— 后端只删记录时不带这个字段，
+         会把当前客户清成 undefined，整页跟着空掉。有才写。 */
+      if(r&&r.customer)V().customer=r.customer;
+      if(r&&r.library){LIB=r.library;V().library=LIB}
       say(purge
-        ? '已删除客户「'+name+'」，并清空其文件夹（释放 '+fmtSize(r.freed)+'）'
+        ? '已删除客户「'+name+'」，文件夹已移入备份（'+((r&&r.backup)||'')+'）'
         : '已删除客户「'+name+'」，磁盘文件已保留');
       loadCustomers();renderInfo();renderLib();renderStats();loadIndex();
     }).catch(function(e){say('删除失败：'+e.message)});

@@ -8,8 +8,8 @@
 .h-plat{height:29px;padding:0 11px;border:1px solid var(--line);border-radius:12px;background:#FFF;
   font-size:var(--f5);color:#5A6272;box-shadow:var(--sh-btn);cursor:pointer;display:inline-flex;
   align-items:center;gap:5px;transition:all .16s;white-space:nowrap}
-.h-plat:hover{border-color:#BFE0DA}
-.h-plat.on{background:#EAF5F3;border-color:#BFE0DA;color:#33405A;font-weight:600}
+.h-plat:hover{border-color:#A8C4F8}
+.h-plat.on{background:#EFF4FF;border-color:#A8C4F8;color:#33405A;font-weight:600}
 .h-plat .dot{width:5px;height:5px;border-radius:50%;background:#35B26B}
 .h-plat .dot.off{background:#C9CED8}
 .h-plat.dead{opacity:.62}
@@ -18,7 +18,7 @@
 .h-plat.on .n{color:var(--accent-ink)}
 .h-search{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:1px solid var(--line);
   border-radius:var(--r-sm);background:#FFF;box-shadow:var(--sh-in);min-width:190px}
-.h-search input{border:0;outline:none;background:none;font-size:var(--f4);color:#333B49;width:100%;min-width:0}
+.h-search input{;font-size:var(--f4);color:#333B49;width:100%;min-width:0}
 .h-search .ic{width:13px;height:13px;color:#9AA2B1;flex:0 0 auto}
 .h-body{flex:1;min-height:0;display:grid;
   grid-template-columns:minmax(0,1fr) clamp(280px,23vw,340px);
@@ -29,9 +29,9 @@
 .h-list-head .u-tag{margin-left:auto}
 .h-rows{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:6px 12px 12px}
 .h-rows::-webkit-scrollbar{display:none}
-.h-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid transparent;
+.h-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line-c);
   border-radius:var(--r-md);cursor:pointer;transition:background .14s,border-color .14s}
-.h-row:hover{background:#FBFCFE;border-color:var(--line)}
+.h-row:hover{background:#FFFFFF;border-color:var(--line)}
 .h-row .rk{width:22px;flex:0 0 auto;text-align:center;font-size:var(--f5);font-weight:700;color:#A6ADBB}
 .h-row.top1 .rk{color:#D0553E}.h-row.top2 .rk{color:#D89A2E}.h-row.top3 .rk{color:#8A93A6}
 .h-row .tt{flex:1;min-width:0;font-size:var(--f4);color:#333B49;overflow:hidden;

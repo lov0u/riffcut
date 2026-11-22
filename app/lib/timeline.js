@@ -17,9 +17,19 @@ const E = require('./exec')
 
 const W_DEFAULT = 1920, H_DEFAULT = 1080, FPS_DEFAULT = 30
 const md5 = s => createHash('md5').update(String(s)).digest('hex')
+/* 46 款文字样式的唯一一份数据在 app/ui/src/textstyles.js（界面也用同一个文件）。
+   这里只用来解析样式 id → CSS 声明串，AI 或界面给的 tstyle 都能落地。 */
+let TS_LIB = null
+function tsLib() {
+  if (TS_LIB) return TS_LIB
+  try { TS_LIB = require('../ui/src/textstyles.js') } catch (e) { TS_LIB = null }
+  return TS_LIB
+}
 
 // 美学默认值：进场慢、退场快。两个一样长时收尾显得拖沓。
 const EASE_IN = 'power3.out', EASE_OUT = 'power2.in', DUR_IN = 0.5, DUR_OUT = 0.35
+/* 逐字动效节奏（秒）。跟界面 05-专业剪辑.html 里的 CH_STEP/CH_DUR/TW_STEP 必须逐位相同。 */
+const CH_STEP = 0.045, CH_DUR = 0.32, TW_STEP = 0.055
 
 const ANIM_PRESETS = {
   fade: [{ opacity: 0 }, { opacity: 0 }],
@@ -29,6 +39,9 @@ const ANIM_PRESETS = {
   slideRight: [{ opacity: 0, x: -60 }, { opacity: 0, x: 60 }],
   zoomIn: [{ opacity: 0, scale: 1.18 }, null],
   zoomOut: [{ opacity: 0, scale: 0.86 }, null],
+  /* ★ kenburns 原来是 [null,null] —— 等于选了什么都不发生，是个死档位。
+     用户点了「缓慢推镜」画面纹丝不动，还以为是没生效。
+     现在文字/画面在 tweens() 里按 c.zoom（默认 1.08）全段线性推，见下面的 kenburns 分支。 */
   kenburns: [null, null],
 }
 
@@ -111,7 +124,60 @@ function save(name, data) {
   // 时长永远不短于最后一个片段的尾巴，否则渲出来会被截断
   d.duration = Math.round(Math.max(1.0, Number(d.duration || 1.0), tail(d)) * 1000) / 1000
   writeFileSync(f, JSON.stringify(d, null, 2), 'utf8')
+  syncTemplateDurations(name, d)
   return d
+}
+
+/**
+ * 把每个模板片段现在的 duration 同步进它自己那份模板 HTML 的 data-duration。
+ *
+ * ★ 为什么必须在保存这一层做
+ *   HyperFrames 定子合成时长用的是「模板自己的 data-duration 优先」
+ *   （hyperframes/dist/chunk-JGKI7FHX.js:14391），不是父文档 div 上那个。
+ *   用户在时间线上把片段从 5 秒拖到 30 秒，只在 timeline.json 里改了 duration，
+ *   模板内部完全不知道 —— 演完 5 秒就停在最后一帧，剩下 25 秒是死的。
+ *   在保存时统一对齐，用户和 AI 两种改时长的方式都能覆盖到。
+ *
+ * ★ 每个片段一份副本（<name>--<clipId>.html），不共用一个文件。
+ *   否则同一模板在一段时间线上装两次、一次 5 秒一次 30 秒，会互相把对方的时长改掉。
+ * ★ 已有副本就原地改时长；片段 src 还指着共用模板时，才生成自己的副本。
+ */
+function syncTemplateDurations(name, d) {
+  let TT
+  try { TT = require('./tpltext') } catch { return }
+  const dir = projDir(name)
+  let changed = false
+  for (const tr of (d && d.tracks) || []) {
+    for (const c of (tr && tr.clips) || []) {
+      if (!c || c.type !== 'template') continue
+      const want = Number(c.duration)
+      if (!(want > 0.05)) continue
+      const srcRel = String(c.src || '').trim()
+      if (!srcRel) continue
+      const srcAbs = join(dir, srcRel)
+      if (!existsSync(srcAbs)) continue
+      const perClip = 'compositions/' + String(c.name || basename(srcRel, extname(srcRel))) +
+        '--' + String(c.id || '').replace(/[^\w-]/g, '') + '.html'
+      const perAbs = join(dir, perClip)
+      try {
+        if (srcRel === perClip) {
+          if (TT.patchDuration(perAbs, want)) changed = true
+        } else {
+          /* 还指着共用模板：只有「要的时长 ≠ 模板原时长」时才拆出副本，
+             否则手动拖一下时长就把所有人都拆散了，目录里全是副本。 */
+          const html = readFileSync(srcAbs, 'utf8')
+          const cur = (html.match(/data-composition-id[^>]*?data-duration\s*=\s*["']([^"']*)["']/) || [])[1]
+          const curSec = Number(cur)
+          if (!(Math.abs((Number.isFinite(curSec) ? curSec : 0) - want) < 0.01)) {
+            if (TT.writeCopyFull(srcAbs, perAbs, c.edits || null, want)) changed = true
+            c.src = perClip
+            changed = true
+          }
+        }
+      } catch { /* 单个片段失败不该让保存整体失败 */ }
+    }
+  }
+  if (changed) writeFileSync(fileOf(name), JSON.stringify(d, null, 2), 'utf8')
 }
 
 const INTERNAL_NAMES = new Set(['_模板试用'])
@@ -365,8 +431,12 @@ function tweens(c, start, length, W = 0, H = 0) {
   const tw = []
   const fi = num(c.fadeIn, 0), fo = num(c.fadeOut, 0)
   const preset = String(c.anim || '').trim()
+  /* 逐字类动效（逐字弹入 / 打字机）自己管每个字的相位（见 toComposition 里拆 span），
+     整块再叠一层淡入就把「一个字一个字蹦出来」糊成「整块淡进来」，观感完全不是一回事。
+     所以这两款不走预设分支。 */
+  const charMode = preset === 'charIn' || preset === 'typewriter'
   // 有 keyframes 时不再叠预设位移：两套都在动 x/y，会互相覆盖
-  const [pIn, pOut] = (Array.isArray(c.keys) && c.keys.length)
+  const [pIn, pOut] = (charMode || (Array.isArray(c.keys) && c.keys.length))
     ? [null, null]
     : (ANIM_PRESETS[preset] || [null, null])
   const frm = (c.from && typeof c.from === 'object') ? c.from : pIn
@@ -390,7 +460,10 @@ function tweens(c, start, length, W = 0, H = 0) {
   }
 
   // 整段缓推（Ken Burns）
-  const zm = num(c.zoom, 0)
+  /* ★ 原来只认 c.zoom > 0。而 ANIM_PRESETS.kenburns 是 [null,null]，
+     也就是说面板上选「缓慢推镜」时 c.zoom 从来没被写过 → 这段判断永远不成立，
+     选与不选一模一样。现在：选了 kenburns 但没给 zoom 时用 1.08 兜底。 */
+  const zm = num(c.zoom, 0) || (preset === 'kenburns' ? 1.08 : 0)
   if (zm > 0 && length > 0.4) tw.push({ at: start, d: length, ease: 'none', to: { scale: zm } })
 
   // 退场必须比进场短：两个一样长时收尾显得拖沓
@@ -519,6 +592,25 @@ __BODY__
     /* 音量包络：补的不是 el.volume —— gsap 对 DOM 目标默认按 CSS 属性处理，
        volume 是 HTMLMediaElement 的属性不是样式，直接写会被当无效样式丢掉。
        所以补一个 {v:...} 代理对象，onUpdate 时再写回 el.volume。 */
+    /* 逐字类动效。charIn：每个字从「隐形 + 下移 14px + 0.86 倍」弹到位；
+       typewriter：一个字一个字蹦出来，出来就不动。
+       两条都用 gsap.set 打初始态 + stagger 排时间，不走 _tl.to 循环 —— 
+       一段 40 字就是 40 次 to()，长片子上百段直接卡。 */
+    if (a.chars) {
+      var chs = el.querySelectorAll(".vl-ch");
+      if (chs.length) {
+        var _step = a.chars.mode === "typewriter" ? __TW_STEP__ : __CH_STEP__;
+        gsap.set(chs, {display: "inline-block", whiteSpace: "pre"});
+        if (a.chars.mode === "typewriter") {
+          gsap.set(chs, {opacity: 0});
+          _tl.to(chs, {opacity: 1, duration: 0.01, stagger: _step, ease: "none"}, a.chars.at);
+        } else {
+          gsap.set(chs, {opacity: 0, y: 14, scale: 0.86, transformOrigin: "50% 60%"});
+          _tl.to(chs, {opacity: 1, y: 0, scale: 1, duration: __CH_DUR__, stagger: _step, ease: "power3.out"}, a.chars.at);
+        }
+      }
+      return;
+    }
     if (a.vol && a.vol.length) {
       var _p = {v: (a.vol0 === undefined ? 1 : a.vol0)};
       var _apply = function () { try { el.volume = Math.max(0, Math.min(1, _p.v)); } catch (e) {} };
@@ -612,8 +704,24 @@ async function toComposition(data, projDirPath) {
         const y = (c.y !== undefined && c.y !== null ? Number(c.y) : 0.86) * 100
         let extra = c.bold ? 'font-weight:700;' : ''
         // plate="0" → 裸字，不加底衬（PPT 式整页文字必须裸，白底上加半透明黑衬会显脏）
-        const bare = ['0', 'false', 'no'].includes(String(c.plate === undefined ? '1' : c.plate).toLowerCase())
-        if (bare) extra += 'background:none;padding:0;box-shadow:none;backdrop-filter:none;text-shadow:none;'
+        /* 字体样式串（界面「文字样式」选的那几十款）先读出来，因为「是不是裸字」
+           要由它决定：渐变/中空/发光那几款自己不带底衬，套上默认黑底就是脏的。 */
+        /* ★ 样式有两种来源，优先用片段上已经解析好的 tcss（界面点样式时写的），
+           没有 tcss 但写了 tstyle 时才回头去样式表里算 —— AI 通过 edit_timeline
+           只给 tstyle 的情况下，光看 tcss 会当成「没样式」，字就退成默认黑底衬。 */
+        let tcssRaw = String(c.tcss || '').trim()
+        if (!tcssRaw && c.tstyle) {
+          const lib = tsLib()
+          if (lib && lib.cssOf) tcssRaw = String(lib.cssOf(c.tstyle, c.color, c.c2) || '').trim()
+        }
+        const styleBare = !!tcssRaw && !/background/i.test(tcssRaw)
+        const bare = styleBare
+          || ['0', 'false', 'no'].includes(String(c.plate === undefined ? '1' : c.plate).toLowerCase())
+        if (bare) {
+          extra += 'background:none;padding:0;box-shadow:none;backdrop-filter:none;'
+          // 样式自带 text-shadow（发光/立体/长投影）必须留着，否则那些款全废
+          if (!/text-shadow/i.test(tcssRaw)) extra += 'text-shadow:none;'
+        }
         // ★ 这几个字段原来存了但渲染层不读 —— align 恒为居中，weight/lineHeight/maxWidth 直接被丢。
         //   症状：写了「左对齐要点」出来还是居中，写了加粗还是细的，看不出报错。
         /* ★ text-align:left 单独写没有用：.vl-tx 是 absolute + translate(-50%,-50%)，
@@ -631,10 +739,36 @@ async function toComposition(data, projDirPath) {
         if (c.weight) extra += `font-weight:${Number(c.weight) || 400};`
         if (c.lineHeight) extra += `line-height:${Number(c.lineHeight)};`
         if (c.maxWidth) extra += `max-width:${Math.round(Number(c.maxWidth))}px;`
+        /* ★ 界面「文字样式」那一栏选的成品样式，落地成 c.tcss（已经解析好的声明串，
+           主色 {C} 在界面侧就替换掉了）。放在最后拼，覆盖上面的基础值 ——
+           40 多个样式各带 padding/border/gradient/text-shadow，逐个字段映射会漏。
+           颜色仍以 c.color 为准：样式串里 color:transparent 的渐变字靠
+           -webkit-text-fill-color 生效，两者不冲突（实测过）。 */
+        if (tcssRaw) extra += tcssRaw.replace(/;?\s*$/, ';')
         const cid = 'vl-' + String(c.id || `t${ti}-${body.length}`)
-        body.push(`<div id="${esc(cid)}" class="clip vl-tx${bare ? ' vl-tx-plain' : ''}" data-start="${sec(start)}" data-duration="${sec(length)}" data-track-index="${ti}" data-track-kind="captions" style="left:${sec(x)}%;top:${sec(y)}%;font-size:${size}px;color:${color};${extra}">${esc(txt)}</div>`)
+        /* 逐字类动效：拆成一个个 span，每个字带 --i（序号），相位交给播放器统一算。
+           ★ 必须在服务端就拆好 —— 客户端再拆的话，gsap 的时间轴要对几百个
+             span 逐个找选择器，一段 20 字的字幕就是 20 次 querySelector，
+             长片子直接卡住。这里生成 .vl-ch-<i> 的类名，播放器一次性批量取。 */
+        const anmName = String(c.anim || '').trim()
+        const charMode = anmName === 'charIn' || anmName === 'typewriter'
+        let inner = esc(txt)
+        if (charMode) {
+          const parts = []
+          for (let i = 0; i < txt.length; i++) {
+            const ch = txt.charAt(i)
+            const show = ch === ' ' ? '\u00a0' : esc(ch)
+            /* 每个字一个 span，类名带序号。空格用 &nbsp;，inline-block 里的空格会塌。 */
+            parts.push(`<span class="vl-ch" data-i="${i}">${show}</span>`)
+          }
+          inner = parts.join('')
+        }
+        body.push(`<div id="${esc(cid)}" class="clip vl-tx${bare ? ' vl-tx-plain' : ''}" data-start="${sec(start)}" data-duration="${sec(length)}" data-track-index="${ti}" data-track-kind="captions" style="left:${sec(x)}%;top:${sec(y)}%;font-size:${size}px;color:${color};${extra}">${inner}</div>`)
         const tw = tweens(c, start, length, w, h)
         if (tw.length) anim.push({ sel: '#' + cid, tweens: tw })
+        /* 逐字相位单独走一条记录，播放器里用 gsap.set + stagger 处理：
+           不用 timeline 里几百个 to()，一段 40 字也就是一次 stagger 调用。 */
+        if (charMode) anim.push({ sel: '#' + cid, chars: { mode: anmName, count: txt.length, at: sec(start) } })
 
       } else if (ctype === 'template') {
         const src = String(c.src || '').trim()
@@ -676,6 +810,11 @@ async function toComposition(data, projDirPath) {
     .replace(/__DUR__/g, sec(dur))
     .replace('__BODY__', body.join('\n'))
     .replace('__ANIM__', animJs)
+    /* 逐字动效的两个节奏常量，必须跟界面侧 CH_STEP/CH_DUR/TW_STEP 完全一致，
+       否则编辑器里看着 45ms、成片变别的数，节奏就散了。 */
+    .replace(/__CH_STEP__/g, String(CH_STEP))
+    .replace(/__CH_DUR__/g, String(CH_DUR))
+    .replace(/__TW_STEP__/g, String(TW_STEP))
 }
 
 async function writeComposition(name) {
@@ -697,6 +836,7 @@ async function writeComposition(name) {
 
 module.exports = {
   W_DEFAULT, H_DEFAULT, FPS_DEFAULT, EASE_IN, EASE_OUT, DUR_IN, DUR_OUT, ANIM_PRESETS,
+  CH_STEP, CH_DUR, TW_STEP,
   root, safeName, projDir, fileOf, blank, load, save, tail,
   isInternal, listProjects, del, assets, assetsWithDuration, importAsset,
   trackOf, ensureTrack, mediaClip, textClip,
@@ -749,7 +889,7 @@ function mediaClip({ src, type, start = 0, dur = 3, fit = 'cover', volume, inPoi
 }
 
 /** 造一个字幕/文字片段。文字用 duration 不是 out。 */
-function textClip({ text, start = 0, dur = 3, size = 64, color = '#FFFFFF', x = 0.5, y = 0.84, align = 'center', anim = 'fade', height = 1920, plate, weight, maxWidth, lineHeight }) {
+function textClip({ text, start = 0, dur = 3, size = 64, color = '#FFFFFF', x = 0.5, y = 0.84, align = 'center', anim = 'fade', height = 1920, plate, weight, maxWidth, lineHeight, tstyle, c2 }) {
   return {
     id: 'tx' + Date.now() + '-' + Math.floor(Math.random() * 99),
     type: 'text',
@@ -775,5 +915,17 @@ function textClip({ text, start = 0, dur = 3, size = 64, color = '#FFFFFF', x = 
     ...(maxWidth ? { maxWidth: Number(maxWidth) } : {}),
     ...(lineHeight ? { lineHeight: Number(lineHeight) } : {}),
     fadeIn: 0.3, fadeOut: 0.3,
+    /* 样式：tstyle 是样式 id（金渐变 gold、白中空 hollowW…），
+       tcss 是当着色/副色确定后解析出来的声明串。
+       ★ 两个都要存：tcss 让渲染端不用再查表（快且不会因为样式表改版漂移），
+         tstyle 让界面回来时能高亮「当前选的是哪一款」。只存 tcss 的话，
+         重新打开工程那 46 个格子里一个都不会亮。 */
+    ...(tstyle ? { tstyle: String(tstyle) } : {}),
+    ...(c2 ? { c2: String(c2) } : {}),
+    ...(tstyle ? (() => {
+      const lib = tsLib()
+      const css = lib && lib.cssOf ? lib.cssOf(tstyle, color, c2) : ''
+      return css ? { tcss: css } : {}
+    })() : {}),
   }
 }

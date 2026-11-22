@@ -8,55 +8,40 @@
 
 ## 选哪个
 
-| 版本 | 下载体积 | 装完占用 | 语音模型 | 适合谁 |
-|---|---|---|---|---|
-| **完整版** | 2.1 GB（2 个分卷） | 3.0 GB | ✅ 内置 Ming-TTS + SenseVoice | 大多数人不折腾，装完就能用 |
-| **轻量版** | 427 MB | 1.2 GB | ❌ 需自己下（约 1.9 GB） | 磁盘紧张 / 只用剪辑不用配音 |
+**只有一个版本：1.2 GB，装完就能用。语音模型在首次启动时按需下载。**
 
-**语音模型是什么**：Ming-TTS 负责「把文字念出来」（配音），SenseVoice 负责「把说的话写成字」（字幕）。两个都不装，软件照样能剪辑、能渲染、能发布，只是没有本地配音和自动字幕。
+| 项目 | 体积 | 说明 |
+|---|---|---|
+| 安装包 | **427 MB** | 不含语音权重 |
+| 装完占用 | **1.2 GB** | 不含语音权重 |
+| 语音模型（可选） | **约 1.9 GB** | 首次启动会问你要不要下，点一下后台下 |
+
+**语音模型是什么**：Ming-TTS 负责「把文字念出来」（配音），SenseVoice 负责「把说的话写成字」（字幕）。两个都不装，软件照样能剪辑、能渲染、能发布，只是没有本地配音和自动字幕（可以先用系统音色）。
+
+**为什么不当场装好**：把 1.9 GB 权重打进安装包，包体从 427 MB 变成 2.1 GB，还得切分卷、教用户合并。现在你点一下，它从国内镜像（魔搭 → hf-mirror → huggingface 三级降级）后台下，下的时候可以正常用软件，关掉窗口也会继续。
 
 ---
 
-## 完整版安装
+## 安装
 
-两个分卷都要下，缺一个解不开。
+只发一个包，不分卷，不用合并。
 
-### 直接点（不熟悉命令行）
+### 直接点
 
-1. 下载 `RiffCut-full.zip.part-aa` 和 `RiffCut-full.zip.part-ab`
-2. 两个文件放**同一个文件夹**
-3. 打开「终端」，输入 `cd ` （注意后面有个空格），把那个文件夹拖进终端窗口，回车
-4. 粘贴下面这行，回车：
-
-```bash
-cat RiffCut-full.zip.part-aa RiffCut-full.zip.part-ab > RiffCut-full.zip
-```
-
-5. 双击 `RiffCut-full.zip` 解压，把 `RiffCut影创.app` 拖进「应用程序」
-6. 首次打开：在「应用程序」里**右键点图标 → 打开 → 再点「打开」**（未签名，直接双击会被系统拦）
+1. 下载 `RiffCut-lite-0.1.0.zip`
+2. 双击解压，把 `RiffCut影创.app` 拖进「应用程序」
+3. 首次打开：在「应用程序」里**右键点图标 → 打开 → 再点「打开」**（未签名，直接双击会被系统拦）
 
 ### 命令行一把梭
 
 ```bash
 cd ~/Downloads
-cat RiffCut-full.zip.part-aa RiffCut-full.zip.part-ab > RiffCut-full.zip
-shasum -a 256 RiffCut-full.zip
-# 应输出 c2c8cbc5fdd4a77f18a76fd1d3abee85195d45a4e19d29061c7b9b5a03111a37
-unzip RiffCut-full.zip
-mv RiffCut影创.app /Applications/
-xattr -cr /Applications/RiffCut影创.app
-open /Applications/RiffCut影创.app
-```
-
----
-
-## 轻量版安装
-
-```bash
-cd ~/Downloads
+shasum -a 256 RiffCut-lite-0.1.0.zip
+# 应输出 f6d081f031cd94686c2a087b6e3ed4d7c2f158afdf494f3244d386ff7ce66bb0
 unzip RiffCut-lite-0.1.0.zip
 mv RiffCut影创.app /Applications/
 xattr -cr /Applications/RiffCut影创.app
+open /Applications/RiffCut影创.app
 ```
 
 装完想补语音模型，见下方「补装语音模型」。
@@ -68,9 +53,6 @@ xattr -cr /Applications/RiffCut影创.app
 | 文件 | 大小 | SHA-256 |
 |---|---|---|
 | `RiffCut-lite-0.1.0.zip` | 448105135 B | `f6d081f031cd94686c2a087b6e3ed4d7c2f158afdf494f3244d386ff7ce66bb0` |
-| `RiffCut-full.zip.part-aa` | 1572864000 B | `f0ab1bd866c81130c5530fbc942cf8ea7928ff1325716d8fa79a0c90b50b0933` |
-| `RiffCut-full.zip.part-ab` | 654862708 B | `69f06fd10457f0cb9633acd18da888793d4d692513eb2dad3d361579f8745d19` |
-| 合并后的 `RiffCut-full.zip` | 2227726708 B | `c2c8cbc5fdd4a77f18a76fd1d3abee85195d45a4e19d29061c7b9b5a03111a37` |
 
 校验方法：
 
@@ -98,7 +80,7 @@ shasum -a 256 文件名
 
 ---
 
-## 补装语音模型（轻量版需要）
+## 补装语音模型
 
 ```bash
 pip install -U "huggingface_hub[cli]"
@@ -136,7 +118,7 @@ xattr -cr /Applications/RiffCut影创.app
 
 **提示缺 ffmpeg**
 
-完整版和轻量版都自带 ffmpeg，正常不会缺。如果出现，装一个系统的：
+软件自带 ffmpeg，正常不会缺。如果出现，装一个系统的：
 
 ```bash
 brew install ffmpeg
@@ -144,7 +126,7 @@ brew install ffmpeg
 
 **配音没声音**
 
-轻量版没装 Ming-TTS 权重。按上面「补装语音模型」下载，或改装完整版。
+语音权重还没下。打开软件，首页会问你要不要下（1.9 GB，后台下，能边用边等）。也可以到「AI 语音工作室」手动点安装。
 
 **能不能自动更新**
 
@@ -158,7 +140,7 @@ v0.1.0 还没有。新版本要手动重新下载。
 |---|---|
 | macOS | 12 Monterey 及以上 |
 | 芯片 | Apple Silicon（M1/M2/M3/M4）。Intel 未测试 |
-| 磁盘 | 完整版 3.0 GB，轻量版 1.2 GB |
+| 磁盘 | 1.2 GB（语音模型另算 1.9 GB，可选） |
 | 内存 | 8 GB 起，16 GB 更顺 |
 | 额外依赖 | 无。Node / Python / FFmpeg 全部打包在内 |
 
@@ -173,11 +155,11 @@ cd riffcut
 # 内核（600MB，不在仓库里）
 ./tools/fetch-kernel.sh
 
-# 打包（完整版）
+# 打包（默认：不含语音权重，427 MB，用户首次启动按需下载）
 ./构建.app.sh
 
-# 打包（轻量版，不含语音权重）
-NO_MODELS=1 ./构建.app.sh
+# 可选：把 1.9 GB 语音权重打进包（离线环境用，包体会变成 2.1 GB）
+WITH_MODELS=1 ./构建.app.sh
 ```
 
 详见 [README.md](README.md) 第四章。

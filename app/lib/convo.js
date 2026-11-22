@@ -219,6 +219,18 @@ function save(d = {}) {
   for (const m of (d.append || [])) {
     if (!m || !String(m.text || '').trim()) continue
     const msg = { who: m.who || '我', text: String(m.text), time: m.time || now() }
+    /* 思考过程单独存（DSH 式可折叠「思考」块）。上限 20KB，避免长推理把存档撑爆。 */
+    if (m.thinking) msg.thinking = String(m.thinking).slice(0, 20000)
+    /* 图片消息（照 DSH image block）：前端已经把图缩成最长边 480 的 JPEG，
+       这里再兜一道上限（单图 240KB、最多 6 张），防止旧数据或异常把存档撑爆。 */
+    if (Array.isArray(m.images) && m.images.length) {
+      const imgs = m.images.slice(0, 6).filter((x) => x && x.src).map((x) => ({
+        name: String(x.name || '').slice(0, 160),
+        mimeType: String(x.mimeType || 'image/jpeg').slice(0, 40),
+        src: String(x.src).slice(0, 340000),
+      }))
+      if (imgs.length) msg.images = imgs
+    }
     if (Array.isArray(m.steps) && m.steps.length) {
       msg.steps = m.steps.slice(0, 12).filter((x) => x && typeof x === 'object').map((x) => ({
         tool: String(x.tool || ''), ok: !!x.ok, args: x.args || {}, out: String(x.out || '').slice(0, 1200),

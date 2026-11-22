@@ -5,7 +5,7 @@
 .g-nav button{display:flex;align-items:center;gap:9px;height:36px;padding:0 11px;border-radius:var(--r-sm);
   font-size:var(--f4);color:#4A5262;text-align:left;width:100%}
 .g-nav button:hover{background:#F7F9FC}
-.g-nav button.on{background:#EAF5F3;color:#33405A;font-weight:600}
+.g-nav button.on{background:#EFF4FF;color:#33405A;font-weight:600}
 .g-nav button .ic{width:15px;height:15px}
 .g-main{display:flex;flex-direction:column;min-height:0;overflow:auto;scrollbar-width:none;padding-right:2px}
 .g-main::-webkit-scrollbar{display:none}
@@ -18,7 +18,7 @@
 .g-row .lab b{font-size:var(--f4);font-weight:600;display:block}
 .g-row .lab span{font-size:var(--f5);color:var(--ink3);display:block;margin-top:2px}
 .g-row .u-input,.g-row .u-select{width:230px;flex:0 0 auto}
-.g-row .u-input input{font-size:var(--f5)}
+.g-row .u-input input{font-size:var(--f5);border:0;box-shadow:none;background:transparent}
 .g-hw{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .g-hw .u-card{padding:12px 14px}
 .g-hw b{font-size:var(--f3);display:block}
@@ -29,7 +29,7 @@
 .g-sw i{position:absolute;inset:0;border-radius:12px;background:#DDE2EA;transition:.15s;cursor:pointer}
 .g-sw i:after{content:'';position:absolute;left:2px;top:2px;width:17px;height:17px;border-radius:50%;
   background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.15s}
-.g-sw input:checked+i{background:#1B8B7E}
+.g-sw input:checked+i{}
 .g-sw input:checked+i:after{transform:translateX(17px)}
 .lg-docs{display:flex;flex-direction:column;gap:6px}
 .lg-doc{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:var(--f5)}
@@ -55,10 +55,10 @@
 .g-doc ul.g-md-ul li{margin:3px 0}
 .g-doc b{color:#262B33}
 .g-doc code{background:#EEF1F7;border-radius:4px;padding:1px 4px;font-size:10.5px}
-.g-doc .g-md-quote{margin:0 0 10px;padding:8px 11px;border-left:3px solid #BFE0DA;
+.g-doc .g-md-quote{margin:0 0 10px;padding:8px 11px;border-left:3px solid #A8C4F8;
   background:#FFFBF2;border-radius:0 6px 6px 0;color:#5A6272;font-size:var(--f5);line-height:1.8}
 .lg-warn{font-size:var(--f5);line-height:1.8;color:#33405A;background:#FFF8E9;
-  border:1px solid #BFE0DA;border-radius:8px;padding:10px 12px}
+  border:1px solid #A8C4F8;border-radius:8px;padding:10px 12px}
 .tiny .g-body{grid-template-columns:1fr}
 .tiny .g-nav{display:none}
 .tiny .g-hw{grid-template-columns:repeat(2,1fr)}
@@ -631,7 +631,7 @@
     var box=$('#gAgentList');if(!box)return;
     box.innerHTML=['只读','建议','可整理','完全托管'].map(function(lv){
       var on=lv===cur;
-      return '<div class="g-row" style="border:1px solid '+(on?'#BFE0DA':'var(--line)')+';'+
+      return '<div class="g-row" style="border:1px solid '+(on?'#A8C4F8':'var(--line)')+';'+
         'background:'+(on?'#FFFBF2':'#fff')+';border-radius:8px;padding:9px 11px;cursor:pointer" data-lv="'+lv+'">'+
         '<div class="lab"><b>'+lv+(lv==='建议'?' · 推荐':'')+'</b><span>'+AGENT_DESC[lv]+'</span></div>'+
         '<span class="u-tag'+(on?' gold':' gray')+'">'+(on?'当前':'选用')+'</span></div>';
@@ -648,7 +648,7 @@
     var box=$('#gScopeList');if(!box)return;
     box.innerHTML=['标准','影创','本机'].map(function(sc){
       var on=sc===cur;
-      return '<div class="g-row" style="border:1px solid '+(on?'#BFE0DA':'var(--line)')+';'+
+      return '<div class="g-row" style="border:1px solid '+(on?'#A8C4F8':'var(--line)')+';'+
         'background:'+(on?'#FFFBF2':'#fff')+';border-radius:8px;padding:9px 11px;cursor:pointer" data-sc="'+sc+'">'+
         '<div class="lab"><b>'+sc+(sc==='影创'?' · 默认':'')+'</b><span>'+SCOPE_DESC[sc]+'</span></div>'+
         '<span class="u-tag'+(on?' gold':' gray')+'">'+(on?'当前':'选用')+'</span></div>';

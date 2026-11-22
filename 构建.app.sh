@@ -77,10 +77,11 @@ rsync -a --no-links "$ROOT/tools/" "$APP/Contents/Resources/tools/" 2>/dev/null 
 #   但对外公开发布（上架、放下载站、随源码分发）就有风险。
 #   NO_FFMPEG=1 打出的包不含 ffmpeg，运行时自动回落到系统装的（brew install ffmpeg）。
 #
-# ★ NO_MODELS=1 打出「轻量版」：不含两个语音权重（约 1.9GB），包体从 3.0G 降到 1.1G。
-#   用户装完自己下权重（README 有命令）。默认不打这个 —— 完整版装完就能用，
-#   新手不会卡在「配音没声音，去翻文档」这一步。
-#   两个版本共用同一份 Info.plist 与签名，只是权重有无的差别。
+# ★ 2026-11-21 起：**默认不带语音权重**（约 1.9GB）。包体从 3.0G 降到 1.1G。
+#   用户首次启动时软件会弹窗问「要不要现在下载」，确认后从国内镜像（modelscope
+#   → hf-mirror → huggingface 三级降级）后台拉，走 lib/localmodels.install。
+#   不打招呼就下 1.6G 不合适，所以是「问一句再下」，且用户可以选以后再说。
+#   要打带模型的完整版（自己用/离线环境）：WITH_MODELS=1 ./构建.app.sh
 if [ "${NO_FFMPEG:-0}" = "1" ]; then
   rm -f "$APP/Contents/Resources/tools/ffmpeg" "$APP/Contents/Resources/tools/ffprobe"
   echo "  ⚠ 按 NO_FFMPEG=1 跳过 FFmpeg，用户需自行 brew install ffmpeg"
@@ -181,12 +182,15 @@ fi
 echo "  ✓ 种子自检通过（无凭据、对话 0 条）"
 # 权重单独暂存（保留相对层级，第 8 步原样放回）
 # NO_MODELS=1 时不暂存也不放回 —— 打出来的就是轻量版。
-if [ "${NO_MODELS:-0}" = "1" ]; then
-  echo "  ⚠ 按 NO_MODELS=1 打包：不含语音权重（用户需自行下载，见 NOTICE.md 3.3）"
+# 默认不带权重；只有显式 WITH_MODELS=1 才打完整版
+NO_MODELS="${NO_MODELS:-1}"
+if [ "${WITH_MODELS:-0}" = "1" ]; then NO_MODELS=0; fi
+if [ "$NO_MODELS" = "1" ]; then
+  echo "  ✓ 默认轻量版：不含语音权重（首次启动会弹窗问用户要不要下）"
   rm -rf "$BIGWEIGHT"
 fi
 for w in ming-tts sense-voice; do
-  [ "${NO_MODELS:-0}" = "1" ] && break
+  [ "$NO_MODELS" = "1" ] && break
   src="$ROOT/home/系统/本地模型/语音/weights/$w"
   [ -d "$src" ] || continue
   dst="$BIGWEIGHT/系统/本地模型/语音/weights/$w"
@@ -226,7 +230,7 @@ xattr -cr "$APP" 2>/dev/null || true
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP" 2>/dev/null || true
 
 echo "── 8/8 把大权重塞回去（签名之后放，才不会被封条纳入校验）"
-if [ "${NO_MODELS:-0}" = "1" ]; then
+if [ "$NO_MODELS" = "1" ]; then
   echo "  轻量版：跳过权重放回"
 elif [ -d "$BIGWEIGHT" ]; then
   rsync -a "$BIGWEIGHT/" "$APP/Contents/Resources/seed-home/"

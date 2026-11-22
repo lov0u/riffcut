@@ -64,9 +64,9 @@ class Kernel extends EventEmitter {
 
   /**
    * 起进程。
-   * @param {{provider:string, model:string, cwd:string, env?:object}} opts 模型路由与工作目录
+   * @param {{provider:string, model:string, cwd:string, reasoningEffort?:string, env?:object}} opts 模型路由与工作目录
    */
-  async start({ provider, model, cwd, env = {} }) {
+  async start({ provider, model, cwd, reasoningEffort, env = {} }) {
     if (this.child) throw new KernelError('内核已经在跑了')
     if (!existsSync(this.entry)) throw new KernelError('内核不在：' + this.entry)
     // ★ homeDir 忘了传会让 DSH_HOME 变成字符串 "undefined"，内核直接 code=1 退出，
@@ -89,7 +89,11 @@ class Kernel extends EventEmitter {
       this.pending.clear()
     })
 
-    const init = await this.call('initialize', { cwd, provider, model }, INIT_TIMEOUT)
+    /* ★ 2026-11-22 照 DSH：initialize 带 reasoningEffort，SDK server 存下来后
+       每个 createSession 都传给 agentOptions，模型才按 high 走思考链。
+       以前只传 {cwd,provider,model}，模型默认 effort 时有时无思考 —— 表现为
+       「带工具调用的轮次有思考、纯回答的轮次没思考」。 */
+    const init = await this.call('initialize', { cwd, provider, model, ...(reasoningEffort ? { reasoningEffort } : {}) }, INIT_TIMEOUT)
     const name = init?.serverInfo?.name
     if (name !== 'deepseek-harness-sdk-runtime') {
       throw new KernelError('握手失败，返回：' + JSON.stringify(init))
@@ -152,12 +156,19 @@ class Kernel extends EventEmitter {
     return p
   }
 
-  /** 提交一句话，返回 {messageId}（消息收据，不阻塞）。 */
-  async prompt(sessionId, text) {
-    return this.call('session/prompt', {
-      sessionId,
-      contentBlocks: [{ type: 'text', text }],
-    })
+  /** 提交一句话，返回 {messageId}（消息收据，不阻塞）。
+   *  ★ 2026-11-22：chat 要发图片给模型看（DSH 的多模态），所以这里除了字符串
+   *  还接受 contentBlocks 数组。字符串仍包成单个 text block —— openapi.js /
+   *  workers.js 那几个老调用点签名不变，不会受影响。
+   *  图片 block 的形状照内核 dsh-sdk-jsonrpc-server 的 encodedImage()：
+   *    { type:'image', data:'<base64 裸串>', mimeType:'image/png' }
+   *  内核会把 data/mimeType 交给 admitEncodedImages 存成 attachment，
+   *  再转成 { type:'image', attachment:ref }。durable 层认的是 mimeType，不是 mediaType。 */
+  async prompt(sessionId, textOrBlocks) {
+    const contentBlocks = Array.isArray(textOrBlocks)
+      ? textOrBlocks
+      : [{ type: 'text', text: String(textOrBlocks || '') }]
+    return this.call('session/prompt', { sessionId, contentBlocks })
   }
 
   /** 恢复一个已经存在的内核会话。
@@ -177,8 +188,9 @@ class Kernel extends EventEmitter {
 
   /** 发话；会话已在盘上就自动 resume 后再发。
    *  只对「already exists / already open」这一类可恢复错误兜底，
-   *  其它错误照样抛给上层 —— 不吞真错。 */
-  async promptSafely(sessionId, text) {
+   *  其它错误照样抛给上层 —— 不吞真错。
+   *  第二个参数原样透传给 prompt —— 可以是字符串，也可以是 contentBlocks 数组（含图片）。 */
+  async promptSafely(sessionId, textOrBlocks) {
     try {
       await this.resume(sessionId)
     } catch (e) {
@@ -189,7 +201,7 @@ class Kernel extends EventEmitter {
         if (this.debug) this.emit('log', '[kernel] resume 失败（继续尝试 prompt）: ' + m)
       }
     }
-    return this.prompt(sessionId, text)
+    return this.prompt(sessionId, textOrBlocks)
   }
 
   /** 阻塞到这一轮彻底 idle（含子智能体）。 */

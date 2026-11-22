@@ -16,7 +16,7 @@
 .vm-mcard{border:1px solid var(--line);border-radius:var(--r-md);padding:10px;margin-bottom:9px;
   box-shadow:var(--sh-btn);cursor:pointer;transition:background .16s,border-color .16s}
 .vm-mcard:hover{background:#FAFBFD}
-.vm-mcard.on{background:#EAF5F3;border-color:#BFE0DA}
+.vm-mcard.on{background:#EFF4FF;border-color:#A8C4F8}
 .vm-mcard .r1{display:flex;align-items:center;gap:7px;font-size:var(--f4);font-weight:600;min-width:0}
 .vm-mcard .r1 .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 .vm-mcard .r1 .chev{flex:0 0 auto;width:12px;height:12px;color:var(--ink3);transition:transform .16s}
@@ -60,17 +60,16 @@
   animation-direction:alternate;animation-delay:1.2s}
 @keyframes vmmq{from{transform:translateX(0)}to{transform:translateX(var(--vmmq-x,0px))}}
 .vm-scriptwrap{flex:0 0 auto;padding:10px 14px 0;position:relative}
-.vm-scriptwrap textarea{width:100%;height:64px;resize:none;border:1px solid var(--line);border-radius:var(--r-sm);
-  background:#FCFDFE;box-shadow:var(--sh-in);padding:9px 58px 9px 10px;font-size:var(--f4);line-height:1.7;
-  color:#3A4252;outline:none}
-.vm-scriptwrap textarea:focus{border-color:#BFE0DA}
+.vm-scriptwrap textarea{width:100%;height:64px;resize:none;padding:9px 58px 9px 10px;font-size:var(--f4);line-height:1.7;
+  color:#3A4252}
+.vm-scriptwrap textarea:focus{}
 /* 稿子带进来后，想换一份得先把字一个个删掉 —— 给一个清除按钮，点了就空。
    空的输入框里不显示它，免得看着像「这儿本来就该有个框」 */
 .vm-sclear{position:absolute;top:17px;right:21px;height:22px;padding:0 8px;display:none;
   border:1px solid var(--line);border-radius:8px;background:#fff;color:#6A7284;
   font-size:var(--f5);line-height:1;cursor:pointer;box-shadow:var(--sh-btn)}
 .vm-sclear.on{display:block}
-.vm-sclear:hover{background:#F4F6FA;border-color:#BFE0DA;color:#5A6272}
+.vm-sclear:hover{background:#F4F6FA;border-color:#A8C4F8;color:#5A6272}
 .vm-slist{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:10px 14px}
 .vm-slist::-webkit-scrollbar{display:none}
 .vm-seg{border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:9px;box-shadow:var(--sh-btn)}
@@ -96,7 +95,7 @@
 .vm-voice{display:flex;align-items:center;gap:9px;padding:9px;border:1px solid var(--line);border-radius:var(--r-md);
   margin-bottom:7px;box-shadow:var(--sh-btn);cursor:pointer}
 .vm-voice:hover{background:#FAFBFD}
-.vm-voice.on{background:#EAF5F3;border-color:#BFE0DA}
+.vm-voice.on{background:#EFF4FF;border-color:#A8C4F8}
 /* 本机读不出声的音色：整项灰掉并禁止点击，不给用户「点了没反应」的机会 */
 .vm-voice.dead{opacity:.55;cursor:not-allowed;background:#FAFBFD;box-shadow:none}
 .vm-voice.dead:hover{background:#FAFBFD}
@@ -109,11 +108,11 @@
 .vm-mini.rescan .ic{width:12px;height:12px}
 /* 头像位改成「锁定」按钮：锁上就不会被换掉，点开锁才能从右侧拿掉 */
 .vm-voice .lockbtn{width:28px;height:28px;border-radius:8px;flex:0 0 auto;
-  border:1px solid transparent;background:#F1F4F9;color:#98A2B3;display:grid;place-items:center;
+  border:1px solid var(--line-c);background:#F1F4F9;color:#98A2B3;display:grid;place-items:center;
   transition:background .12s,color .12s,border-color .12s}
 .vm-voice .lockbtn .ic{width:14px;height:14px}
-.vm-voice .lockbtn:hover{background:#F4F6FA;border-color:#BFE0DA;color:#5A6272}
-.vm-voice .lockbtn.on{background:#EAF5F3;border-color:#BFE0DA;color:#5A6272}
+.vm-voice .lockbtn:hover{background:#F4F6FA;border-color:#A8C4F8;color:#5A6272}
+.vm-voice .lockbtn.on{background:#EFF4FF;border-color:#A8C4F8;color:#5A6272}
 .vm-voice .lockbtn:disabled{cursor:default;opacity:.55}
 .vm-voice.on .lockbtn{background:#F4F6FA}
 .vm-voice .tx{flex:1;min-width:0}
@@ -121,11 +120,11 @@
 .vm-voice span{font-size:var(--f5);color:var(--ink3);display:block;margin-top:2px}
 .vm-mini{width:24px;height:24px;border:1px solid var(--line);border-radius:8px;background:#fff;
   color:#6A7284;display:grid;place-items:center;flex:0 0 auto}
-.vm-mini:hover{background:#F4F6FA;border-color:#BFE0DA;color:#5A6272}
+.vm-mini:hover{background:#F4F6FA;border-color:#A8C4F8;color:#5A6272}
 .vm-mini .ic{width:13px;height:13px}
 .vm-mini.del:hover{background:#FFF1F1;border-color:#E4C7C7;color:#B45B5B}
 /* 锁定 / 已锁定：锁住的那个按钮常亮，一眼看出哪几个受保护 */
-.vm-mini.pin.on,.vm-mini.add.on{background:#EAF5F3;border-color:#BFE0DA;color:#5A6272}
+.vm-mini.pin.on,.vm-mini.add.on{background:#EFF4FF;border-color:#A8C4F8;color:#5A6272}
 /* 右侧的 + / − 是文字，给大一点，和旁边小图标按钮区分开 */
 .vm-mini.add{font-size:15px;line-height:1;font-weight:600;padding-bottom:1px}
 .vm-mini.add:not(.on){color:#4A5670}
@@ -167,8 +166,8 @@
 .vm-chip{font-size:var(--f5);line-height:1;padding:6px 9px;border:1px solid var(--line);
   border-radius:12px;background:#fff;color:#4A5262;cursor:pointer;white-space:nowrap;
   transition:background .14s,border-color .14s,color .14s}
-.vm-chip:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
-.vm-chip.on{background:#EAF5F3;border-color:#BFE0DA;color:#5A6272;font-weight:600}
+.vm-chip:hover{border-color:#A8C4F8;color:#5A6272;background:#FFFFFF}
+.vm-chip.on{background:#EFF4FF;border-color:#A8C4F8;color:#5A6272;font-weight:600}
 .vm-note{font-size:var(--f5);color:var(--ink3);line-height:1.7;background:#F7F9FC;border-radius:var(--r-sm);padding:9px 10px}
 .vm-alert{font-size:var(--f5);line-height:1.7;border-radius:var(--r-sm);padding:9px 10px;
   background:#FFF8EA;color:#5A6272;border:1px solid #F4F6FA}
@@ -192,13 +191,13 @@
 .vm-f{display:flex;flex-direction:column;gap:6px;min-width:0}
 .vm-f label{font-size:var(--f5);color:var(--ink2);font-weight:600}
 .vm-f .u-input,.vm-f .u-select{height:34px}
-.vm-f textarea{width:100%;height:66px;resize:vertical;border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:8px 10px;font-size:var(--f4);line-height:1.6;outline:none}
+.vm-f textarea{width:100%;height:66px;resize:vertical;
+  padding:8px 10px;font-size:var(--f4);line-height:1.6}
 .vm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .vm-capchecks{display:flex;flex-wrap:wrap;gap:6px}
 .vm-capchecks label{display:flex;align-items:center;gap:5px;font-size:var(--f5);color:#4A5262;
   border:1px solid var(--line);border-radius:12px;padding:4px 9px;cursor:pointer}
-.vm-capchecks label.on{background:#EAF5F3;border-color:#BFE0DA;color:#5A6272}
+.vm-capchecks label.on{background:#EFF4FF;border-color:#A8C4F8;color:#5A6272}
 .vm-capchecks input{accent-color:var(--gold-deep)}
 .vm-check{display:flex;align-items:flex-start;gap:8px;font-size:var(--f5);color:#4A5262;line-height:1.6;cursor:pointer}
 .vm-check input{accent-color:var(--gold-deep);margin-top:2px}

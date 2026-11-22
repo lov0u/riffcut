@@ -300,11 +300,35 @@ async function addTemplate(project, name, opts = {}) {
        写死 3 秒的后果：19 秒的动画被切到 3 秒，观众只看到开头就切走了 ——
        而且画面是「一半的动效」，看起来像渲染坏了。 */
     const dur = Math.max(0.2, Number(opts.dur) || Number(meta && meta.duration) || 3)
+    const cid = 'tpl-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1000)
+
+    /* ★ 时长得同步进模板 HTML，不能只写在时间线片段上。
+       HyperFrames 编译子合成时是这样取的（hyperframes/dist/chunk-JGKI7FHX.js:14391）：
+           sceneDuration = sceneRoot.getAttribute("data-duration") ?? host.getAttribute("data-duration")
+       模板自己的 data-duration **优先**。所以片段拉到 60 秒而模板写着 5 秒时，
+       演完 5 秒就停在最后一帧，后面 55 秒是死的 —— 用户要的「4 秒模板铺满 1 分钟」
+       就是这么无声失败的。
+       模板原设计时长（meta.duration）与要的时长不同时，才做一份「带自己时长」的副本：
+       同一模板在一条时间线上装两次、各用不同时长也不会互相打脸。 */
+    const design = Number(meta && meta.duration) || 0
+    let clipSrc = 'compositions/' + name + '.html'
+    if (Math.abs(dur - design) > 0.01) {
+      const perClip = 'compositions/' + name + '--' + cid + '.html'
+      try {
+        require('./tpltext').writeCopyFull(dst, join(dir, perClip), null, dur)
+        // 画幅补丁要重打：副本是新的，不继承原文件的补丁
+        let host2 = null
+        try { const d1 = T.load(project); if (d1) host2 = { w: d1.width, h: d1.height, fit: opts.fit } } catch (e) {}
+        if (host2 && host2.w && host2.h) applyFitPatch(join(dir, perClip), meta, host2, name)
+        clipSrc = perClip
+      } catch (e) { /* 副本失败就退回共用文件，至少片段还在 */ }
+    }
+
     const c = {
-      id: 'tpl-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1000),
+      id: cid,
       type: 'template',
       name,
-      src: 'compositions/' + name + '.html',
+      src: clipSrc,
       start: at,
       duration: dur,
     }

@@ -16,19 +16,28 @@
    ═══════════════════════════════════════════════════════════════ */
 :root{
   --bg:#FFFFFF; --card:#FFFFFF; --panel:#FFFFFF;
-  --ink:#1E2430; --ink2:#5A6272; --ink3:#98A0AF;
-  --line:#E7EAF0; --hover:#F4F6FA;
-  /* 唯一强调色：青绿。全站只允许它和中性灰，不再有金/粉/紫。 */
-  --accent:#1B8B7E; --accent-ink:#147567; --accent-soft:#EAF5F3; --accent-line:#BFE0DA;
-  --gold:#F6F8FB; --gold-soft:#F0F3F8; --gold-deep:#1B8B7E;
+  --ink:#14171C; --ink2:#525862; --ink3:#858C97;
+  /* 三档线，各管一件事。这是第三轮，前两轮都失败过：
+     一档 1.21:1 → 整屏无边界（原状，用户说「白不白灰不灰」）；
+     一档 2.14:1 → 每个控件成硬框，界面被切成一块一块（用户说「太清晰了」）；
+     全去框       → 输入框和纯白底没差别，排版直接塌掉（用户说「乱了」）。
+     结论：线必须分档，而且「区域」比「控件」重。
+       --line   区域级 1.32:1  面板外框、侧栏右缘、标题栏下缘
+       --line-c 控件级 1.23:1  输入框、按钮
+       --line-w 分隔级 1.18:1  卡片内部分隔、列表行之间 */
+  --line:#DDE2E9; --line-c:#E4E8EE; --line-w:#EAEDF2; --hover:#F5F7FA;
+  /* 唯一强调色：工具蓝。绿在纯白上饱和高了发脏、低了像灰，这是换掉它的理由。 */
+  --accent:#2563EB; --accent-ink:#1D4ED8; --accent-soft:#EFF4FF; --accent-line:#A8C4F8;
+  --gold:#F3F5F8; --gold-soft:#EDF0F5; --gold-deep:#2563EB;
   --green:#C6F1D9; --purple:#DDE3EC;
   /* 圆角只留三档：4（小控件）/ 8（按钮、输入）/ 12（卡片、面板） */
   --r-lg:12px; --r-md:8px; --r-sm:4px;
   /* 字号只留四档：20 页面标题 / 15 小标题·重点 / 12 正文 / 10.5 微标签 */
   --f1:20px; --f2:15px; --f3:12px; --f4:12px; --f5:10.5px;
-  --sh-1:0 1px 2px rgba(28,38,58,.06),0 4px 14px rgba(28,38,58,.06);
-  --sh-btn:0 1px 2px rgba(28,38,58,.08),inset 0 1px 0 rgba(255,255,255,.9);
-  --sh-in:inset 0 1px 2px rgba(28,38,58,.07);
+  /* 纯白方案：层级交给线，不交给影。所以静态阴影收到极轻（hover 仍要有反馈）。 */
+  --sh-1:0 1px 2px rgba(20,23,28,.05);
+  --sh-btn:none;
+  --sh-in:none;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);
@@ -39,6 +48,34 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);
   color:var(--ink);-webkit-font-smoothing:antialiased}
 /* 控件不继承字号会出现浏览器默认的 13.3333px 档，把它也压回令牌体系 */
 button,input,select,textarea{font-family:inherit;color:inherit;font-size:inherit}
+
+/* ══ 输入控件的统一外观（全局唯一一处）══════════════════════════════════
+   目标观感：淡绿边 + 一点柔和外晕，就是首页那个大输入框的样子。
+   所以下面这套不是「新发明一个风格」，是把首页 .h-aiinput 的观感抽出来
+   变成全局默认：任何 input/textarea/select 都长这样，各处只改尺寸。
+   要点：
+     · 边框用淡绿 #CFE6E1（对白 1.18:1）—— 只是暗示这里能输入，不是画框；
+     · 阴影两层：1px 极近定位影 + 4px 极淡扩散。不要多层厚影，那会让
+       白底边缘发灰，看着比线还脏；
+     · 聚焦时边框转主色绿、外晕变明显，让人知道光标在哪。 */
+input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]),
+textarea,select{
+  background:#FFFFFF;
+  border:1px solid #CFE6E1;
+  border-radius:10px;
+  box-shadow:0 1px 2px rgba(28,38,58,.04),
+             0 4px 12px -4px rgba(28,38,58,.06);
+  transition:border-color .16s,box-shadow .16s}
+input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]):hover,
+textarea:hover,select:hover{border-color:#A9D8CE}
+input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]):focus,
+textarea:focus,select:focus{
+  outline:none;border-color:#8FD0C4;
+  box-shadow:0 1px 2px rgba(28,38,58,.05),
+             0 8px 22px -6px rgba(46,158,146,.18),
+             0 18px 40px -18px rgba(46,158,146,.20);
+  background:#FFFFFF}
+input::placeholder,textarea::placeholder{color:#98A0AF}
 button{cursor:pointer;border:0;background:none;padding:0}
 .ic{width:20px;height:20px;display:block;flex:0 0 auto}
 .sprite{position:absolute;width:0;height:0;overflow:hidden}
@@ -52,7 +89,7 @@ button{cursor:pointer;border:0;background:none;padding:0}
    点击事件根本不触发（这就是红绿灯点了没反应的一半原因）。 */
 .titlebar{flex:0 0 clamp(48px,6.2%,64px);display:flex;align-items:center;padding:0 20px;
   position:relative;background:#FFFFFF;border-bottom:1px solid var(--line);
-  box-shadow:0 1px 3px rgba(28,38,58,.04);z-index:5;
+  box-shadow:none;z-index:5;
   -webkit-app-region:drag;user-select:none}
 .titlebar button,.titlebar input,.titlebar .lights,.titlebar .tb-actions,
 .titlebar .tb-brand{-webkit-app-region:no-drag}
@@ -138,7 +175,7 @@ body.side-collapsed .workspace{grid-template-columns:64px minmax(0,1fr)}
   transition:background .18s,color .18s,transform .18s}
 .side-toggle .ic{width:18px;height:18px;grid-area:1/1}
 .side-toggle .ic-expand{display:none}
-.side-toggle:hover{color:#1B8B7E;background:rgba(27,139,126,.08)}
+.side-toggle:hover{color:#2563EB;background:rgba(37,99,235,.08)}
 .side-toggle:active{transform:scale(.93)}
 .side-toggle::after{content:attr(data-tip);position:absolute;right:calc(100% + 10px);top:50%;
   white-space:nowrap;pointer-events:none;padding:5px 10px;border-radius:8px;
@@ -187,7 +224,7 @@ body.side-collapsed .side-brand .sl,body.side-collapsed .side-brand .by{display:
 .nav a.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:600;
   box-shadow:none}
 .nav a.on .ic{color:var(--accent)}
-.nav a.on:hover{background:#DFF0ED}
+.nav a.on:hover{background:#EFF4FF}
 /* 左下角只留文字字标（RiffCut 影创）+ 标语 + 出品方。
    原来上面还有一个三角 V 图形标，跟字标里的 V 重复，删掉了；
    所以这里要补一点上留白，否则字标会显得被挤在会话列表下面。 */
@@ -213,10 +250,8 @@ body.side-collapsed .side-brand .sl,body.side-collapsed .side-brand .by{display:
 .sc-ic.on{background:var(--accent-soft);color:var(--accent-ink)}
 .sc-search{flex:0 0 auto;padding:6px 8px 2px}
 .sc-search[hidden]{display:none}
-.sc-search input{width:100%;height:30px;padding:0 10px;border-radius:8px;
-  border:1px solid var(--line);background:#F7F9FC;font-size:var(--f4);color:#1E2430;
-  outline:none;transition:border-color .14s,background .14s}
-.sc-search input:focus{border-color:var(--accent-line);background:#FFFFFF}
+.sc-search input{width:100%;height:30px;padding:0 10px;font-size:var(--f4);color:#1E2430}
+.sc-search input:focus{}
 .sc-list{flex:1 1 auto;min-height:0;overflow:auto;overflow-x:hidden;
   display:flex;flex-direction:column;gap:1px;padding:4px 8px 4px 8px;
   scrollbar-width:none}
@@ -282,7 +317,7 @@ body.side-collapsed .side-brand .sl,body.side-collapsed .side-brand .by{display:
   display:none;align-items:center;gap:2px}
 .sc-item .acts{display:none !important}
 .sc-item .act{display:grid;place-items:center;width:20px;height:20px;border-radius:6px;
-  color:#9AA2B1;cursor:pointer;border:1px solid transparent}
+  color:#9AA2B1;cursor:pointer;border:1px solid var(--line-c)}
 .sc-item .act:hover{color:#1E2430;border-color:#E3E8F0;background:#fff}
 .sc-item .act.del:hover{color:#D33B2F;border-color:#F0D2CE}
 .sc-item .act svg{width:12px;height:12px}
@@ -413,7 +448,7 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
 .set-hint{margin-top:22px;font-size:13px;color:#98A0AE;line-height:1.7}
 /* 内嵌标题条：必须能退回来，否则进了模块就没有出口（浮层里没有侧栏） */
 .set-embar{flex:0 0 auto;display:none;align-items:center;gap:10px;height:46px;
-  padding:0 50px 0 14px;border-bottom:1px solid var(--line);background:#FCFDFE}
+  padding:0 50px 0 14px;border-bottom:1px solid var(--line);background:#FFFFFF}
 .set-embar.on{display:flex}
 .set-back{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;
   border-radius:7px;background:transparent;border:1px solid var(--line);color:#5A6272;
@@ -438,16 +473,25 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
 .page.on{display:flex}
 
 /* ── 通用组件（u-） ────────────────────── */
-.u-card{background:#FFFFFF;border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-1);overflow:hidden}
+/* 卡片：一圈淡框，不要阴影。纯白界面里阴影会让边缘发灰，
+   反而比线更脏；线是直的、可预期的，影是糊的。 */
+.u-card{background:#FFFFFF;border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:none;overflow:hidden}
 .u-head{display:flex;align-items:flex-start;gap:12px;flex:0 0 auto}
 .u-head .txt{flex:1;min-width:0}
 .u-title{font-size:var(--f1);font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:9px}
 .u-sub{font-size:var(--f5);color:var(--ink3);margin-top:4px;letter-spacing:.3px}
 .u-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.u-btn{height:32px;padding:0 14px;border-radius:var(--r-sm);background:#FFFFFF;border:1px solid var(--line);
+/* 按钮不画框。一排工具按钮各带一圈框，横着看就是一张表格。
+   改成：无边框，靠 hover/active 的底色变化告诉人「这里能点」。 */
+.u-btn{height:32px;padding:0 14px;border-radius:8px;background:transparent;border:1px solid transparent;
   font-size:var(--f4);color:#3E4655;display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  box-shadow:var(--sh-btn);transition:background .16s,box-shadow .16s,transform .16s;white-space:nowrap}
-.u-btn:hover{background:#FAFBFD;box-shadow:var(--sh-1);transform:translateY(-1px)}
+  box-shadow:none;transition:background .16s,box-shadow .16s,transform .16s;white-space:nowrap}
+.u-btn:hover{background:#F1F3F6;box-shadow:none;transform:none}
+.u-btn:active{background:#E8EBF0}
+/* 主操作按钮：全站只有「导出成片」「发布」这类一次性大动作才用实心蓝。
+   其余按钮一律无框无底，避免满屏按钮都在抢注意力。 */
+.u-btn.primary,.u-btn.on{background:#2563EB;color:#FFF;border-color:transparent;font-weight:600}
+.u-btn.primary:hover,.u-btn.on:hover{background:#1D4ED8;color:#FFF}
 /* 页签条：把「品牌资产」并进「客户与素材库」，用页签在两者间切换，
    不再单独占一个一级菜单位。样式跟 u-btn 同一套尺寸语言，只换形态。 */
 .u-tabs{display:flex;gap:2px;flex:0 0 auto;padding:3px;border-radius:8px;
@@ -460,9 +504,9 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
   box-shadow:0 1px 3px rgba(20,30,50,.10)}
 .u-tabs button .ic{width:14px;height:14px}
 .u-tabs .cnt{font-size:10.5px;color:#98A0AE;font-weight:400}
-.u-tabs button.on .cnt{color:#1B8B7E}
+.u-tabs button.on .cnt{color:#2563EB}
 .u-btn .ic{width:14px;height:14px}
-.u-btn.gold{background:linear-gradient(180deg,#EEF1F6 0%,#E3E8F0 100%);color:#33405A;font-weight:600;border-color:#EAF5F3;
+.u-btn.gold{background:linear-gradient(180deg,#EEF1F6 0%,#E3E8F0 100%);color:#33405A;font-weight:600;border-color:#EFF4FF;
   box-shadow:0 2px 6px rgba(190,145,70,.26),inset 0 1px 0 rgba(255,255,255,.65)}
 .u-btn.gold:hover{box-shadow:0 4px 12px rgba(190,145,70,.34),inset 0 1px 0 rgba(255,255,255,.65)}
 .u-btn.sm{height:26px;padding:0 10px;font-size:var(--f5)}
@@ -474,7 +518,7 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
 .u-tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--gold-deep);border-radius:4px}
 .u-tag{display:inline-flex;align-items:center;gap:4px;height:21px;padding:0 8px;border-radius:12px;
   background:#F3F5F9;color:#5A6272;font-size:var(--f5);white-space:nowrap}
-.u-tag.gold{background:#EAF5F3;color:#5A6272}
+.u-tag.gold{background:#EFF4FF;color:#5A6272}
 .u-tag.green{background:#E4F7EC;color:#2E7D52}
 .u-tag.blue{background:#E8F0FE;color:#3567C0}
 .u-tag.purple{background:#EFEAFB;color:#6E55A8}
@@ -487,10 +531,9 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
 .u-dot.off{background:#C4CAD5}.u-dot.warn{background:#E9A23B}
 .u-field{display:flex;flex-direction:column;gap:6px}
 .u-field label{font-size:var(--f5);color:var(--ink2);font-weight:600}
-.u-input,.u-select{height:34px;border:1px solid var(--line);border-radius:var(--r-sm);background:#FFFFFF;
-  box-shadow:var(--sh-in);padding:0 10px;font-size:var(--f4);display:flex;align-items:center;gap:8px;min-width:0}
-.u-input input,.u-select select{border:0;outline:none;background:transparent;width:100%;font-size:var(--f4);color:#333B49;min-width:0}
-.u-select select{appearance:none;cursor:pointer}
+.u-input,.u-select{height:34px;padding:0 10px;font-size:var(--f4);display:flex;align-items:center;gap:8px;min-width:0}
+.u-input input,.u-select select{;width:100%;font-size:var(--f4);color:#333B49;min-width:0;border:0;box-shadow:none;background:transparent}
+.u-select select{appearance:none;cursor:pointer;border:0;box-shadow:none;background:transparent}
 .u-input .ic,.u-select .ic{width:13px;height:13px;color:#9AA2B1;flex:0 0 auto}
 .u-scroll{overflow:auto;scrollbar-width:none;min-height:0}
 .u-scroll::-webkit-scrollbar{display:none}
@@ -504,7 +547,7 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
 .u-switch.on{background:var(--gold-deep)}
 .u-switch.on::after{transform:translateX(15px)}
 .u-progress{height:5px;border-radius:4px;background:#EDF0F5;overflow:hidden}
-.u-progress i{display:block;height:100%;background:linear-gradient(90deg,#E3E8F0,#1B8B7E);border-radius:4px}
+.u-progress i{display:block;height:100%;background:linear-gradient(90deg,#E3E8F0,#2563EB);border-radius:4px}
 .u-divider{height:1px;background:var(--line);flex:0 0 auto}
 .u-row{display:flex;align-items:center;gap:10px}
 .u-thumb{border-radius:8px;background-size:cover;background-position:center;border:1px solid rgba(0,0,0,.04);
@@ -513,15 +556,15 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
 
 /* ── 通知：只有后台长任务才留，顶部只显示最后一条（通知按钮左边） ───────── */
 .tb-notice{display:none;align-items:center;gap:6px;max-width:230px;min-width:0;
-  padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:#FBFCFE;
+  padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:#FFFFFF;
   font-size:var(--f5);color:var(--ink2);white-space:nowrap;overflow:hidden}
 .tb-notice.on{display:inline-flex}
-.tb-notice .dot{width:6px;height:6px;border-radius:50%;background:#1B8B7E;flex:0 0 auto}
+.tb-notice .dot{width:6px;height:6px;border-radius:50%;background:#2563EB;flex:0 0 auto}
 .tb-notice.bad .dot{background:#C96A6A}
 .tb-notice .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .tb-actions button.unread{position:relative}
 .tb-actions button.unread::after{content:"";position:absolute;top:3px;right:3px;
-  width:6px;height:6px;border-radius:50%;background:#1B8B7E;border:1px solid #fff}
+  width:6px;height:6px;border-radius:50%;background:#2563EB;border:1px solid #fff}
 .notice-pop{position:fixed;top:52px;right:16px;width:310px;z-index:420;
   background:#fff;border:1px solid var(--line);border-radius:12px;
   box-shadow:0 12px 34px rgba(28,38,58,.16);padding:10px 12px;display:none}
@@ -559,27 +602,27 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
 .v-f{display:flex;flex-direction:column;gap:6px}
 .v-f>label{font-size:var(--f5);color:var(--ink2);font-weight:600}
 .v-f .u-input{height:34px}
-.v-f .u-input input{height:100%;font-size:var(--f4)}
+.v-f .u-input input{height:100%;font-size:var(--f4);border:0;box-shadow:none;background:transparent}
 .v-sel,.v-ta{width:100%;border:1px solid var(--line);border-radius:var(--r-sm);background:#fff;
   color:var(--ink);font-size:var(--f4);padding:8px 10px;outline:none;font-family:inherit;box-sizing:border-box}
 .v-sel{height:34px;padding:0 10px}
 .v-ta{min-height:66px;resize:vertical;line-height:1.6}
-.v-sel:focus,.v-ta:focus{border-color:#BFE0DA}
+.v-sel:focus,.v-ta:focus{border-color:#A8C4F8}
 .v-row{display:flex;gap:9px;align-items:flex-end;flex-wrap:wrap}
 .v-row .v-f{flex:1;min-width:140px}
 .v-chk{display:flex;align-items:center;gap:7px;font-size:var(--f5);color:var(--ink2);cursor:pointer;user-select:none}
-.v-chk input{width:15px;height:15px;accent-color:#1B8B7E}
+.v-chk input{width:15px;height:15px;accent-color:#2563EB}
 .v-inline{display:flex;gap:6px;align-items:center}
 .v-inline .u-input{flex:1;min-width:0}
 .v-paste{flex:0 0 auto;width:34px;height:34px;border:1px solid var(--line);border-radius:var(--r-sm);
   background:#fff;color:#7A8292;display:grid;place-items:center;cursor:pointer}
 .v-paste .ic{width:15px;height:15px}
-.v-paste:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
+.v-paste:hover{border-color:#A8C4F8;color:#5A6272;background:#FFFFFF}
 .v-tip{font-size:var(--f5);color:var(--ink3);line-height:1.75;background:#F8FAFD;
   border:1px solid var(--line);border-radius:8px;padding:9px 11px}
 .v-tip b{color:var(--ink);font-weight:600}
 .v-tip .v-path{display:block;margin-top:5px;font-family:ui-monospace,Menlo,monospace;
-  font-size:var(--f5);color:#147567;word-break:break-all}
+  font-size:var(--f5);color:#1D4ED8;word-break:break-all}
 .v-sep{height:1px;background:var(--line);margin:2px 0}
 
 
@@ -647,7 +690,7 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
 .m-confirm-txt b{color:#B45B5B}
 .m-confirm-row{display:flex;gap:7px;align-items:center}
 .m-confirm-row .u-input{flex:1;min-width:0;height:36px}
-.m-confirm-row .u-input input{height:100%;font-size:var(--f4)}
+.m-confirm-row .u-input input{height:100%;font-size:var(--f4);border:0;box-shadow:none;background:transparent}
 .m-confirm .m-dialog-ft .u-btn.danger{background:#FFF1F1;border-color:#E9C1C1;color:#B45B5B}
 .m-confirm .m-dialog-ft .u-btn.danger:disabled{opacity:.45;cursor:default;filter:grayscale(.4)}
 .compact .m-dialog{width:min(470px,94vw)}
@@ -863,6 +906,7 @@ body.side-collapsed .side-set .ic{flex:0 0 20px}
   });
 })();
 </script>
+<!--TEXTSTYLES-->
 <!--PAGES-->
     </div>
   </div>

@@ -186,6 +186,187 @@ async function edit(d) {
   if (act === 'tpl_status') {
     return r_ok({ ok: true, note: '模板预览走 velora://app/edt/ 协议' })
   }
+
+  /* ★ 界面右侧「这个模板能改的内容」面板读的就是这里。
+     之前只有一个 act === 'vars'（by 模板名，给 AI 用），界面传的是 action=template_vars
+     + clip_id，落到最后一行「不认识的 action」→ 面板永远显示「读不到这个模板的参数」。
+     模板明明声明了 6 项可改内容，用户却一个字都改不了。
+
+     这里按**片段**回，不是按模板：同一个模板在这条时间线上装两次，各填各的。
+     decl 来自模板源码的 data-composition-variables，values 来自片段自己的 vars。 */
+  if (act === 'template_vars') {
+    const nm = str(d.project).trim()
+    const cid = str(d.clip_id).trim()
+    if (!nm) return rErr('要给工程名')
+    const data = TL.load(nm)
+    if (!data) return rErr('没有这个工程：' + nm)
+    let hit = null
+    for (const tr of data.tracks || []) {
+      for (const c of tr.clips || []) {
+        if (String(c.id) === cid) { hit = c; break }
+      }
+      if (hit) break
+    }
+    if (!hit) return rErr('这条时间线上找不到片段 ' + cid)
+    const TP = lazy('./templates')
+    const decl = TP.varsFor('block', String(hit.name || ''))
+    /* ★ 没有声明可改项的模板（blocks 210 个里有 147 个、components 238 个里有 54 个）
+       以前只能显示「这个模板没有可改项，内容是写死的」，用户换个模板就没法改字。
+       现在退一步：把那篇 HTML 里**看得见的文字**扫出来，让用户直接覆盖原文。
+       特效全在 script/style 里，一个字都不碰，所以「只换字不改特效」照样成立。 */
+    /* ★ 文字表**总是**扫，不再只在「没声明可改项」时才扫：
+       现在改字是「直接点预览画面上的文字」，画面里的文字和 t0/t1… 的对应关系
+       全靠这张表；有声明可改项的模板（glass-hero 之类）照样得给。 */
+    const TPLT = lazy('./tpltext')
+    const dir = TL.projDir(nm)
+    const f = path.join(dir, String(hit.src || ''))
+    const text = fs.existsSync(f) ? TPLT.scanFile(f) : []
+    return r_ok({
+      items: [{
+        clip_id: cid, name: hit.name, decl,
+        values: hit.vars || {},
+        text,
+        edits: hit.edits || {},
+        src: hit.src || '',
+      }]
+    })
+  }
+
+  /* 写回模板变量。只改片段的 vars，不动模板源文件 —— 同一个模板装两次互不影响。
+     传 vars 就整批替换（面板一次改一个键，前端负责合并后整批发）。 */
+  if (act === 'set_template_vars') {
+    const nm = str(d.project).trim()
+    const cid = str(d.clip_id).trim()
+    if (!nm) return rErr('要给工程名')
+    const data = TL.load(nm)
+    if (!data) return rErr('没有这个工程：' + nm)
+    let hit = null
+    for (const tr of data.tracks || []) {
+      for (const c of tr.clips || []) {
+        if (String(c.id) === cid) { hit = c; break }
+      }
+      if (hit) break
+    }
+    if (!hit) return rErr('这条时间线上找不到片段 ' + cid)
+    let next = {}
+    if (d.vars && typeof d.vars === 'object') next = d.vars
+    else if (d.vars_json) { try { next = JSON.parse(str(d.vars_json)) } catch (e) { return rErr('vars_json 不是合法 JSON') } }
+    /* 空字符串要删掉而不是存空串：模板里 V.headline || "CLARITY" 的兜底逻辑
+       遇到空串也会走兜底，但存空串会让「用户故意清空」和「没填过」分不清。 */
+    const clean = {}
+    for (const k of Object.keys(next)) {
+      const v = next[k]
+      if (v === '' || v === null || v === undefined) continue
+      clean[k] = v
+    }
+    if (Object.keys(clean).length) hit.vars = clean
+    else delete hit.vars
+
+    /* ★ 正文文字覆盖（给没有声明可改项的模板用）。
+       为什么不改模板源文件：模板库里的 HTML 是所有工程共用的，改一次全站都变；
+       而且同一模板在一条时间线上装两次、各填各的字，也只有副本能做得到。
+       所以：源 → 按 edits 覆盖 → 写成这只片段专属的 compositions/<名>--<片段id>.html，
+       再把 clip.src 指过去。预览（uiserver 按 src 找文件）与导出
+       （data-composition-src 指同一路径）吃的都是这份副本，不会出现
+       「预览对了成片不对」这种最难查的问题。 */
+    /* text_edits（按原文覆盖）也走这一支：界面点画面改字时只传原文，不传 t-key。 */
+    if (d.edits !== undefined || Array.isArray(d.text_edits)) {
+      const TPLT = lazy('./tpltext')
+      const dir = TL.projDir(nm)
+      const base = String(hit.tplSrc || hit.src || '').trim()
+      if (!base) return rErr('这条片段没有模板源路径，改不了字')
+      if (!hit.tplSrc) hit.tplSrc = base
+      /* 源文件按「剥掉副本后缀的原名」去找：tplSrc 被界面保存覆盖掉也能找回来。 */
+      const baseExt = path.extname(base) || '.html'
+      const baseStemRaw = path.basename(base, baseExt)
+      const cidRaw = String(cid).replace(/[^\w-]/g, '')
+      let baseStem = baseStemRaw
+      if (cidRaw) { const sfx = '--' + cidRaw; while (baseStem.endsWith(sfx)) baseStem = baseStem.slice(0, -sfx.length) }
+      const originRel = 'compositions/' + baseStem + baseExt
+      let srcAbs = path.join(dir, originRel)
+      if (!fs.existsSync(srcAbs)) srcAbs = path.join(dir, base)
+      if (!fs.existsSync(srcAbs)) return rErr('模板源文件不在了：' + base)
+      let edits = {}
+      if (d.edits && typeof d.edits === 'object') edits = d.edits
+      else if (typeof d.edits === 'string' && d.edits.trim()) {
+        try { edits = JSON.parse(d.edits) } catch (e) { return rErr('edits 不是合法 JSON') }
+      }
+      /* ★ 按「原文」覆盖（界面在预览画面上直接点字改用这条路）。
+         前端不需要知道 t3 对应哪一句：它只知道用户点的那段原文是什么。
+         这里拿源模板重新扫一遍，把原文匹配到 t-key 再并进 edits。
+         用原文匹配而不是编号，是因为编号是源文件扫描顺序，渲染后的 DOM 顺序
+         未必一致（条件渲染、伪元素、SVG），原文比对才稳。
+         传 text_edits:'[]' （空数组）＝把这类覆盖全部撤销，回到模板原文。 */
+      if (Array.isArray(d.text_edits)) {
+        const TPLT0 = lazy('./tpltext')
+        const oAbs = path.join(dir, originRel)
+        const list = fs.existsSync(oAbs) ? TPLT0.scanFile(oAbs) : []
+        const byText = {}
+        for (const it of list) if (!byText[it.text]) byText[it.text] = it.key
+        const keep = {}
+        for (const k of Object.keys(edits)) keep[k] = edits[k]
+        /* ★ 第二次改同一句话时，画面上的字已经是上一次改过的了（to 而不是原文），
+           拿它去源模板里找原文必然找不到 —— 用户会看到「点了没反应」。
+           所以先按原文找，找不到再反查「哪个 t-key 当前的值正好是 from」。 */
+        const byValue = {}
+        for (const k of Object.keys(keep)) if (!byValue[keep[k]]) byValue[keep[k]] = k
+        for (const te of d.text_edits) {
+          const from = String((te && te.from) || '').replace(/\s+/g, ' ').trim()
+          const to = String((te && te.to) || '').replace(/\s+/g, ' ').trim()
+          if (!from) continue
+          const k = byText[from] || byValue[from]
+          if (!k) continue
+          if (to && to !== from) keep[k] = to
+          else delete keep[k]
+        }
+        edits = keep
+      }
+      /* 空值要删掉：删掉就回到模板原文，面板清空输入框应该等于「不用覆盖」。 */
+      const ec = {}
+      for (const k of Object.keys(edits || {})) {
+        const v = edits[k]
+        if (v === '' || v === null || v === undefined) continue
+        ec[k] = String(v)
+      }
+      const ext = path.extname(base) || '.html'
+      const cidSafe = String(cid).replace(/[^\w-]/g, '')
+      /* ★ 副本名必须是幂等的。
+         tplSrc（原模板路径）存在片段上，但界面保存时会把整个 project_data 推上来，
+         tplSrc 这种「后端自己记账」的字段会被覆盖掉 —— 曾经因此把上一次的副本
+         当成原模板，文件名一路叠成 app-showcase--tpl-x--tpl-x--…（叠了 9 层），
+         而且 reads 的源也变成上一版副本，越改越脏。
+         这里不依赖 tplSrc 一定还在：把末尾所有 `--<本片段id>` 依次剥掉，
+         剥完就是真正的模板名。副本名因此永远只有一层后缀。 */
+      let stem = path.basename(base, ext)
+      if (cidSafe) {
+        const suffix = '--' + cidSafe
+        while (stem.endsWith(suffix)) stem = stem.slice(0, -suffix.length)
+      }
+      const copyRel = 'compositions/' + stem + '--' + cidSafe + ext
+      if (Object.keys(ec).length) {
+        try {
+          TPLT.writeCopy(srcAbs, path.join(dir, copyRel), ec)
+        } catch (e) { return rErr('写模板副本失败：' + e.message) }
+        hit.edits = ec
+        hit.src = copyRel
+        hit.tplSrc = originRel
+      } else {
+        /* 一个字都没覆盖：把副本删掉、src 指回原模板，别在工程里留垃圾文件。 */
+        const cpAbs = path.join(dir, copyRel)
+        try { if (fs.existsSync(cpAbs)) fs.unlinkSync(cpAbs) } catch (e) {}
+        delete hit.edits
+        /* ★ 回退目标也要验存在：tplSrc 可能被界面保存覆盖成历史上那个叠了后缀的
+           脏名字（文件早删了），直接指过去会让预览 404。存在才用，否则用
+           「剥掉副本后缀」算出来的 originRel。 */
+        const backAbs = path.join(dir, String(hit.tplSrc || ''))
+        hit.src = (hit.tplSrc && fs.existsSync(backAbs)) ? hit.tplSrc : originRel
+      }
+    }
+
+    TL.save(nm, data)
+    return r_ok({ clip_id: cid, vars: hit.vars || {}, edits: hit.edits || {}, src: hit.src || '' })
+  }
+
   return rErr('不认识的 action：' + act)
 }
 
@@ -233,7 +414,67 @@ function workspace(d) {
   } catch (e) { return rErr(e.message) }
   const w = C.workspaceRoot()
   const cp = C.custPaths(C.currentCustomer())
-  return r_ok({ workspace: w || '', id: str((P.load('settings', {}) || {}).workspace), list: C.workspaces(), root: cp.root, out: cp.videos })
+  return r_ok({
+    workspace: w || '',
+    id: str((P.load('settings', {}) || {}).workspace),
+    list: C.workspaces(),
+    root: cp.root,
+    out: cp.videos,
+    /* 切完工作区顺手数一下里面有多少素材，前端据此决定要不要提示「要不要先扫一遍」。
+       数不了就返回 null 而不是 0 —— 0 会被前端当成「空文件夹，不用提示」，
+       但其实只是没读到（权限/刚拔的 U 盘），这两种情况必须分开。 */
+    assets: countAssets(cp.root),
+  })
+}
+
+/* 软件在工作区根下自建的目录名。用户素材绝不可能叫这些名字（真叫了也不影响，
+   只是不统计 —— 少算比把成片当素材更不容易误导人）。 */
+const OWN_DIRS = new Set([
+  '产出', '工程', '缓存', '缩略图', '品牌套件', '音色', 'RiffCut-索引',
+])
+
+/* 数工作区根目录下有多少能看的素材（视频/图片）。只看根下两层，
+   不递归全盘 —— 用户塞一个 200G 的素材盘进来，递归会把主进程卡死。
+   返回 null 表示这个目录根本读不了，不是「没有素材」。 */
+function countAssets(root) {
+  const VID = new Set(['.mp4', '.mov', '.m4v', '.mkv', '.avi', '.webm'])
+  const IMG = new Set(['.jpg', '.jpeg', '.png', '.heic', '.webp', '.gif', '.bmp'])
+  const out = { video: 0, image: 0, total: 0, scanned: false }
+  let ents
+  try { ents = fs.readdirSync(String(root), { withFileTypes: true }) } catch (e) { return null }
+  const walk = (dir, depth) => {
+    if (depth > 2) return
+    let list
+    try { list = fs.readdirSync(dir, { withFileTypes: true }) } catch (e) { return }
+    for (const e of list) {
+      if (e.name.startsWith('.')) continue
+      const full = path.join(dir, e.name)
+      if (e.isDirectory()) {
+        /* ★ 软件自己在工作区根下建的目录不进统计，否则用户看到「素材 +1」
+           其实是自己的成片、或者是缩略图里的一张 jpg。
+           这份清单必须和 core.js 的 custPaths() 保持一致 —— 那边多一个目录，
+           这边就会把那个目录里的文件当成用户素材。 */
+        if (OWN_DIRS.has(e.name)) continue
+        walk(full, depth + 1)
+        continue
+      }
+      const ext = path.extname(e.name).toLowerCase()
+      if (VID.has(ext)) out.video++
+      else if (IMG.has(ext)) out.image++
+    }
+  }
+  walk(String(root), 1)
+  out.total = out.video + out.image
+  /* ★ 判断「扫过了」不能看 RiffCut-索引 目录在不在。
+     那个目录是 custPaths() 一进工作区就 ensureDir 建好的 —— 空目录永远存在，
+     于是 scanned 永远是 true，前端永远不会提示「要不要扫一遍」。
+     必须看里面有没有真正的索引文件。 */
+  try {
+    const idxDir = path.join(String(root), 'RiffCut-索引')
+    const names = fs.readdirSync(idxDir)
+    out.scanned = names.some((n) => /\.json$/i.test(n))
+  } catch (e) { out.scanned = false }
+  return out
 }
 
 /* ══════════════ 素材 ══════════════ */
@@ -241,6 +482,34 @@ async function scan(d) {
   const A = lazy('./assets')
   if (!str(d.root)) return rErr('请先选择一个素材文件夹')
   return r_ok(await A.scanFolder(str(d.root), d.customer, !!d.incremental))
+}
+
+/* 把一个文件登记进素材库（拖进对话窗的文件走这里）。
+   和 scan 的区别：scan 是「扫一整个文件夹」，这个是「加这一个文件」。
+   A.ingest 已经在 tools.js 的 assets 工具里用了很久，行为是熟的：
+   按 size 判重，生成缩略图，写进 library.json。 */
+async function assetsIngest(d) {
+  const A = lazy('./assets')
+  const p = str(d.path)
+  if (!p) return rErr('要给 path（文件绝对路径）')
+  const list = p.split(',').map((x) => x.trim()).filter(Boolean)
+  const customer = d.customer || C.currentCustomer()
+  /* 拖进来的路径本来就是绝对路径（主进程 webUtils 给的），
+     不需要 resolveUserPath 那套「相对路径猜目录」的逻辑。
+     只做一次存在性检查，把不存在的一次性报清楚。 */
+  const fsx = require('node:fs')
+  const abs = []
+  const miss = []
+  for (const one of list) {
+    const full = String(one).replace(/^~/, require('node:os').homedir())
+    try {
+      if (fsx.statSync(full).isFile()) abs.push(full)
+      else miss.push(full)
+    } catch (e) { miss.push(full) }
+  }
+  if (!abs.length) return rErr('这些路径都不是文件：' + miss.join(', '))
+  const res = await A.ingest(abs, customer)
+  return r_ok(res)
 }
 
 function library(d) {
@@ -1799,7 +2068,7 @@ async function docs(d = {}) {
 function fsStat(f) { try { return require('node:fs').statSync(f).mtimeMs } catch (e) { return 0 } }
 
 module.exports = {
-  bootstrap, edit, settings, ui, workspace, scan, library, indexStatus,
+  bootstrap, edit, settings, ui, workspace, scan, library, indexStatus, assetsIngest,
   templates, audio, models, plugins, agent, tasks, works, projects,
   skills, conversations, hotspot, openapi, legal, integrity, publish, chat, stepsPoll, kernelState,
   kernelAbility, localmodels, agents, workers, voicemodels, kb, brand, usage, depsApi, customers,

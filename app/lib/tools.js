@@ -376,6 +376,60 @@ tool('review', '【看成片】把刚剪出来的片子摊开给自己看：结�
   return R.reviewReport(res)
 })
 
+tool('look_folder', '【扫一个文件夹，把里面的素材逐个看懂】给一个目录，把每个视频抽一帧、图片直接取，' +
+  '\n拼成一张图墙一次性交给视觉模型看，逐条告诉你：画面里是什么、能不能用（能/勉强/不能用）、为什么。' +
+  '\n什么时候用：用户丢来一个素材文件夹说「看看这些能用吗」「挑一条能当片头的」——不要一条条 probe，先跑这个。' +
+  '\n没有视觉模型时它会明确告诉你没配，别猜画面内容。',
+  { path: '要扫的目录（不填用当前客户的素材目录）', limit: '最多看几个，默认 12，上限 24', model: '视觉模型 id，留空用绑定的那个' },
+  { level: '只读' })(async (a, customer) => {
+  const V = require('./assetsview')
+  const d = { customer, limit: Number(a.limit) || 12 }
+  if (a.model) d.model = a.model
+  if (a.path) {
+    const r = resolveUserPath(a.path, customer)
+    if (!r.ok) return '❌ ' + r.error
+    d.root = r.abs
+  }
+  let res
+  try {
+    res = await V.analyze(d)
+  } catch (e) {
+    return '❌ ' + String((e && e.message) || e)
+  }
+  const lines = (res.items || []).map((x, i) => `${i + 1}. ${x.file} —— ${x.verdict}`)
+  return clip(`目录：${res.root}\n模型：${res.model}\n共 ${res.total} 个文件，看了 ${res.looked} 个，其中不能用 ${res.bad} 个。\n` +
+    (res.note ? res.note + '\n' : '') + '\n' + lines.join('\n') +
+    ((res.notes && res.notes.length) ? '\n\n备注：\n' + res.notes.join('\n') : ''))
+})
+
+/* 2026-11-21 新增：逐镜头读一条视频。
+   ★ 和 look_folder / review 的分工（这是三个问法）：
+     · look_folder —— 一整个文件夹每条抽 1 帧，「这条大概是什么、能不能用」
+     · review      —— 一条成片等间隔抽 30 帧，「结构上哪段太长、哪段黑屏」
+     · read_video  —— 按真实镜头边界切段、每镜取中间帧，「第几个镜头出了什么问题」
+   等间隔抽帧会漏掉 0.4 秒的闪切，而废片往往就是那一两个短镜头。 */
+tool('read_video', '【逐镜头读一条视频】按真实镜头边界把片子切开，每个镜头取中间帧拼成图墙，逐镜回答：画面里是什么、有没有问题、能不能用。'
+  + '\n什么时候用：片子已经出来了要验收、或用户问「这条哪里有问题」「第几秒是废的」——不要自己凭结构表猜，跑这个。'
+  + '\n特别会查这几类废帧：黑场或纯色、文字乱码笔画崩坏、同一画面重复、跟前后镜头不搭。'
+  + '\n镜头数超过上限时它会明确告诉你还有多少个没看，别拿局部结论当整条片子的结论。',
+  { video: '视频路径（必填）', maxShots: '最多看几段，默认 16，上限 60（长镜头会自动分段）', model: '视觉模型 id，留空用绑定的那个', threshold: '镜头切分灵敏度，默认 0.12；屏录/PPT 类片子切不出来时给 0.08', longShot: '超过几秒的镜头要分段看，默认 3', fresh: '要重新看一遍（默认同一条片同参数读过就直接给索引里的结论，不重复烧模型）' },
+  { level: '只读' })(async (a, customer) => {
+  const V = require('./vidlook')
+  let video = String(a.video || '').trim()
+  if (!video) return '❌ 给 video（视频路径）'
+  const rp = resolveUserPath(video, customer)
+  if (rp.ok) video = rp.abs
+  try {
+    const res = await V.readVideo(video, {
+      maxShots: a.maxShots, model: a.model, threshold: a.threshold,
+      longShot: a.longShot, fresh: !!a.fresh, customer,
+    })
+    return V.report(res)
+  } catch (e) {
+    return '❌ ' + String((e && e.message) || e)
+  }
+})
+
 tool('film_match', '画面台词对位：每张图配的台词是不是同一件事。出片前跑一次 —— 结构全对的片子也可以是「画面挺好但跟念的话没关系」。判不了（没视觉模型/抽不出帧）会如实说判不了，不拦你。',
   { data: '整份方案（JSON 字符串或对象），要有 shots[].caption 与 shots[].asset', project: '工程名（不给 data 就用工程的）', model: '视觉模型 id' },
   { level: '只读' })(async (a, customer) => {
@@ -463,7 +517,7 @@ tool('assets', '素材与索引：library 看绑定、scan 重扫目录、ingest
 })
 
 // ══════════════════ 模板库 ══════════════════
-tool('templates', '搜模板库：448 个现成的动效模板。片头、转场、字幕条、图表、产品展示、3D 场景。',
+tool('templates', '搜模板库：448 个现成的动效模板。片头、转场、字幕条、图表、产品展示、3D 场景。★模板是设计参考，不是素材：先用 design_with_template 拆它的编排语法（几秒换一个信息块、怎么错开、用什么缓动），再照语法用你自己的内容去填长片，不要把模板复制多遍铺时间线。',
   { q: '关键词（留空=列全部）', cat: '分类：字幕/下三分之一/转场/片头片尾/图表数据/产品展示/社媒包装/文字动画/背景纹理/动效零件', kind: 'block | component', limit: '几条（默认 30）' },
   { level: '只读' })(async (a) => {
   const T = require('./templates')
@@ -517,6 +571,116 @@ tool('template_family', '找同族模板：给一个模板名，列出跟它同�
   const fam = T.family(String(a.name || ''), Number(a.limit) || 12)
   return fam.length ? `「${a.name}」同族 ${fam.length} 个：\n` + fam.map(x => `- ${x.name}  ${x.title || ''}`).join('\n') : '没找到同族模板'
 })
+
+/* ★ design_with_template —— 用户的核心诉求：
+     「模版不是给ai的参考吗? 他不应该根据模版的思路来设计内容吗?」
+   对。模板的价值是**一套组织内容的语法**，不是一段可以直接复用的画面。
+   所以这个工具做的是：拆语法 → 按语法给长片排版 → AI 照着自己写内容。
+   它**不复制模板**，只输出一份一拍一拍的内容规划。 */
+tool('design_with_template', '拿一个模板当"设计参考"，拆出它的编排语法（几秒换一个信息块、元素怎么错开、用什么缓动、靠什么属性制造动感），再按这套骨架把你要的长片排成一拍一拍的内容规划。你照规划自己写内容——不要把模板复制多遍。',
+  {
+    name: '模板名（从 templates 搜到的那个）',
+    total: '你的片子要多长（秒）',
+    points: '可选：你要讲的几个点，一行一个；不给就生成空槽让你填',
+    beats: '可选：指定分几拍；不给就按模板自己的节奏算',
+  },
+  { level: '只读' })(async (a) => {
+  const T = require('./templates')
+  const C = T.choreo(String(a.name || ''))
+  if (C.error) return C
+  const total = Math.max(1, Number(a.total) || 0)
+  if (!(total > 0)) return { error: '要给 total（你的片子多长）' }
+
+  const beatLen = Number(a.beats) > 0
+    ? Math.round((total / Number(a.beats)) * 10) / 10
+    : (C.每拍秒数 > 0 ? C.每拍秒数 : (C.设计时长 || 2.5))
+  const n = Math.max(1, Math.round(total / beatLen))
+
+  const pts = String(a.points || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean)
+
+  const 主缓动 = (C.缓动[0] || {}).曲线 || 'power3.out'
+  const 错开 = (C.拍子[0] || {}).错开 || 0.15
+  const 主属性 = (C.变化维度[0] || {}).属性 || 'opacity'
+
+  const plan = []
+  for (let i = 0; i < n; i++) {
+    const st = Math.round(i * beatLen * 100) / 100
+    const en = Math.round(Math.min(total, (i + 1) * beatLen) * 100) / 100
+    const isFirst = i === 0
+    const isLast = i === n - 1
+    const 内容 = pts.length ? pts[i % pts.length] : ''
+    plan.push({
+      第几拍: i + 1,
+      时间: st + 's → ' + en + 's',
+      时长: Math.round((en - st) * 100) / 100,
+      这一段放什么: 内容 || (isFirst ? '开场钩子：一句话说清这条片子讲什么' : isLast ? '收尾：结论/行动号召' : '第 ' + (i + 1) + ' 个要点（一句一个，别塞两点）'),
+      动作建议: isFirst
+        ? '主元素先出场（' + 主属性 + ' 从 0 到 1），副元素按 ' + 错开 + ' 秒依次跟上'
+        : '先让上一拍的元素退场，再让这一拍的进场；同样 ' + 错开 + ' 秒错开',
+      缓动: 主缓动,
+    })
+  }
+
+  return {
+    参考模板: C.模板,
+    模板标题: C.标题,
+    你学到的语法: {
+      节奏: C.排法,
+      每拍秒数: C.每拍秒数,
+      同拍错开: 错开 + ' 秒',
+      主缓动: 主缓动,
+      动感来源: C.变化维度.map(x => x.属性 + '（' + x.说明 + '）'),
+      拍子结构: C.拍子,
+    },
+    给你的片子排的版: {
+      总长: total + 's',
+      分几拍: n,
+      一拍时长: beatLen + 's',
+      规划: plan,
+    },
+    怎么落地: [
+      '1. 这份规划是骨架，内容是**你自己写的**，不是复制模板画面。',
+      '2. 模板最多装一次（' + (C.设计时长 || 5) + ' 秒），放在片头当"视觉定调"，或者干脆不装——语法已经在上面了。',
+      '3. 其余每一拍用 edit_timeline 加你自己的片段：文字用 addtext（配 tstyle 定样式），素材用 add。',
+      '4. 每拍内的元素要错开 ' + 错开 + ' 秒进场，别一起出现。',
+      '5. 缓动统一用 ' + 主缓动 + ' 这一族，风格才连续。',
+      '6. 别为了"填满时间"把同一句话拉很长——一拍只讲一件事。',
+    ],
+    别这么做: '不要把 ' + C.模板 + ' 复制 ' + n + ' 遍铺满 ' + total + ' 秒。观众会看成同一段画面反复，内容一点没增加。',
+  }
+})
+
+/** 给一个刚装上的模板片段填文字（走与「点画面改字」同一条链路）。 */
+async function applySegText(project, clipId, line) {
+  try {
+    const T = require('./timeline')
+    const TPLT = require('./tpltext')
+    const fs = require('node:fs')
+    const path = require('node:path')
+    const parts = String(line).split('|').map(s => s.trim())
+    const d = T.load(project)
+    const dir = T.projDir(project)
+    let clip = null
+    for (const tr of d.tracks || []) for (const c of tr.clips || []) if (c.id === clipId) clip = c
+    if (!clip) return false
+    const srcAbs = path.join(dir, String(clip.src || ''))
+    if (!fs.existsSync(srcAbs)) return false
+    const list = TPLT.scanFile(srcAbs)
+    if (!list.length) return false
+    const edits = Object.assign({}, clip.edits || {})
+    for (let i = 0; i < parts.length && i < list.length; i++) {
+      if (parts[i]) edits[list[i].key] = parts[i]
+    }
+    if (!Object.keys(edits).length) return false
+    const per = 'compositions/' + String(clip.name) + '--' + String(clipId).replace(/[^\w-]/g, '') + '.html'
+    TPLT.writeCopyFull(srcAbs, path.join(dir, per), edits, Number(clip.duration) || undefined)
+    clip.src = per
+    clip.edits = edits
+    clip.tplSrc = clip.tplSrc || srcAbs
+    T.save(project, d)
+    return true
+  } catch { return false }
+}
 
 // ══════════════════ 视觉库 ══════════════════
 tool('transitions', '这台机器上真能渲出来的转场清单。', {}, { level: '只读' })(async () => {
@@ -586,6 +750,8 @@ tool('slides', '做演示稿视频（PPT 视频 / 口播 PPT）。给一份大�
 })
 
 tool('edit_timeline', '剪辑台的时间线。AI 剪片一律先建成可改的多轨时间线，不是直接出成片。' +
+  '\n文字样式（addtext 的 tstyle）：46 款成品样式直接套，不要自己拼 CSS。' +
+  '先用 text_style 工具列一遍再挑，常见的：solid 纯白 / plate 黑底衬 / glass 毛玻璃 / gold 金渐变 / glowCyan 青光 / hollowW 白中空 / poster 大字报 / vert 竖排。' +
   '\n轨道语义（最常犯的错就在这）：v1 是底层画面，g1 是图形/模板层，t1 是文字层，a1 是音频层。' +
   '模板只有它自己的那几秒，播完之后如果 v1 没有画面垫着，观众看到的是纯黑。' +
   '所以加完模板一定要检查：模板结束到片尾之间，v1 上有没有东西。这是最常见的一种废片。',
@@ -595,6 +761,9 @@ tool('edit_timeline', '剪辑台的时间线。AI 剪片一律先建成可改的
     path: '素材路径（add 用）：直接写 assets list/find 返回的文件名就行（如 xxx.png），别自己拼「素材库/图片」这种目录，系统会自动找真实位置', text: '文字（addtext 用）', template: '模板名（addtemplate 用）',
     vars: '模板变量（addtemplate 用）：先用 template_vars 查出可改项，如 {"action_line":"青衣 Cyanweb","button_label":"关注我们"}。改的是模板自己的字，不用再叠 addtext',
     width: '画布宽', height: '画布高', fps: '帧率', data: '整份时间线 JSON（save 用）',
+    tstyle: '文字样式 id（addtext 用）：先用 text_style 工具查，如 gold 金渐变 / hollowW 白中空 / glass 毛玻璃 / poster 大字报。不给就是默认黑底衬',
+    c2: '副色（addtext 用，仅渐变款吃）：十六进制，如 #FF5E7E。不给则用款式自带的第二档',
+    anim: '文字动效（addtext 用）：无/fade 淡入淡出/slideUp 上滑入/slideDown 下滑入/slideLeft 左滑入/slideRight 右滑入/zoomIn 放大入/zoomOut 缩小入/kenburns 缓慢推镜/charIn 逐字弹入/typewriter 打字机',
   },
   { level: '建议', mutates: 'render' })(async (a, customer) => {
   const T = require('./timeline')
@@ -699,6 +868,10 @@ tool('edit_timeline', '剪辑台的时间线。AI 剪片一律先建成可改的
       align: a.align || 'center',
       anim: a.anim || 'fade',
       height: Number(d.height) || 1920,
+      /* 文字样式与副色：AI 说「来个金渐变的标题」时，光改 color 是没用的
+         —— 渐变靠的是整套声明串。这里把 tstyle 交给 textClip 去查表。 */
+      tstyle: a.tstyle || '',
+      c2: a.c2 || '',
     })
     tr.clips.push(clipObj)
     T.save(name, d)
@@ -1319,6 +1492,21 @@ tool('add_caption', '把文字或一个 .srt/.ass 字幕文件烧进成片画面
   } else return '❌ 给 srt 或 text'
   const res = await S.burnCaption(r.abs, { srt: srtPath, preset: a.preset })
   return res.ok ? `✓ ${res.path}\n   ${humanSize(res.size)}` : '❌ ' + res.error
+})
+
+tool('text_style', '文字样式表：剪辑台里那 46 款成品文字样式的清单（id + 中文名 + 是否需要副色）。' +
+  '\n什么时候用：要给视频加文字/标题，先调这个看有哪些款，再 edit_timeline addtext 带 tstyle=选中的 id。' +
+  '\n★ 不要自己拼 CSS 塞 color 就当样式 —— 渐变、中空、霓虹、印章这些全靠整套声明串，一个 color 拼不出来。',
+  { name: '按名字模糊查，如「渐变」「中空」「毛玻璃」，不填列全部' },
+  { level: '读' })(async (a) => {
+  const lib = require('../ui/src/textstyles')
+  const q = String(a.name || '').trim()
+  const all = lib.list()
+  const hit = q ? all.filter(x => x.name.indexOf(q) >= 0 || x.id.indexOf(q) >= 0) : all
+  if (!hit.length) return `❌ 没有匹配「${q}」的样式。全部 ${all.length} 款可以不带参数直接列。`
+  const rows = hit.map(x => `${x.id || '(空)'}  ${x.name}${x.two ? '  [需副色]' : ''}`)
+  return clip(`共 ${hit.length} 款文字样式（共 ${all.length} 款）：\n` + rows.join('\n') +
+    `\n\n用法：edit_timeline action=addtext text=标题 tstyle=gold c2=#FF5E7E anim=charIn`)
 })
 
 tool('subtitle_style', '把 .srt 变成带样式的 .ass（短视频那种大字、关键词变色、弹字进场），不烧进画面。',
@@ -2152,43 +2340,67 @@ tool('web_search', '【联网搜文案和钩子】查某类视频/话题别人�
   const q = String(a.query || a.q || '').trim()
   if (!q) return '❌ 要给搜索词 query。'
   const lim = Math.max(1, Math.min(15, Number(a.limit) || 8))
-  try {
-    const r = await globalThis.fetch('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-      },
-      signal: AbortSignal.timeout(15000),
-    })
-    const html = await r.text()
-    if (!r.ok) throw new Error('HTTP ' + r.status)
-    // DuckDuckGo HTML：每条结果是 <a class="result__a">标题</a> + <a class="result__snippet">摘要</a>
-    const decode = (s) => String(s || '')
-      .replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
-      .replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-      .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
-    const blocks = html.split(/class="result results_links/).slice(1)
+  /* ★ 2026-11-22：源从 DuckDuckGo HTML 换成 Bing。
+     DDG 在这台机器上 fetch 一直超时（curl -m 15 也 timeout，HTTP 000），
+     而 Bing 实测 HTTP 200、能解析出 10 条真结果。两源的 HTML 结构不同，
+     Bing 是 <li class="b_algo"> 包 <h2><a href>标题</a></h2> + <p class="b_lineclamp*">摘要</p>。
+     保留 DDG 作兜底：Bing 解析不出结果时再试一次 DDG。 */
+  const decode = (s) => String(s || '')
+    .replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&nbsp;|&ensp;/g, ' ').replace(/&#\d+;/g, ' ').replace(/\s+/g, ' ').trim()
+  const parseBing = (html) => {
     const items = []
-    for (const b of blocks) {
+    for (const b of html.split(/<li class="b_algo"/).slice(1)) {
+      const tm = b.match(/<h2[^>]*>\s*<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/)
+      if (!tm) continue
+      const sm = b.match(/<p class="b_lineclamp[^"]*"[^>]*>([\s\S]*?)<\/p>/)
+      const title = decode(tm[2])
+      if (title) items.push({ title, url: decode(tm[1]), snippet: decode(sm && sm[1]) })
+      if (items.length >= lim) break
+    }
+    return items
+  }
+  const parseDdg = (html) => {
+    const items = []
+    for (const b of html.split(/class="result results_links/).slice(1)) {
       const tm = b.match(/class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/)
       const sm = b.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/)
       if (!tm) continue
-      const title = decode(tm[2])
-      const snippet = decode(sm && sm[1])
       let url = decode(tm[1])
       const um = url.match(/uddg=([^&]+)/)
       if (um) { try { url = decodeURIComponent(um[1]) } catch (e) {} }
-      if (title) items.push({ title, url, snippet })
+      const title = decode(tm[2])
+      if (title) items.push({ title, url, snippet: decode(sm && sm[1]) })
       if (items.length >= lim) break
     }
-    if (!items.length) {
-      return '（联网搜到了页面但没解析出结果，可能被反爬拦了。换一个更具体的中文词再试，或说明「联网没查到」，不要编。）'
-    }
-    return `联网搜「${q}」→ ${items.length} 条：\n` + items.map((x, i) =>
-      `${i + 1}. ${x.title}\n   ${x.snippet || '（无摘要）'}\n   来源：${x.url}`).join('\n')
-  } catch (e) {
-    return '（联网搜索失败：' + String(e.message || e) + '。如实告诉用户没查到，不要编造搜索结果。）'
+    return items
   }
+  const sources = [
+    { name: 'Bing', url: 'https://www.bing.com/search?q=' + encodeURIComponent(q), parse: parseBing },
+    { name: 'DuckDuckGo', url: 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), parse: parseDdg },
+  ]
+  const errors = []
+  for (const src of sources) {
+    try {
+      const r = await globalThis.fetch(src.url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+        },
+        signal: AbortSignal.timeout(15000),
+      })
+      const html = await r.text()
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      const items = src.parse(html)
+      if (items.length) {
+        return `联网搜「${q}」（${src.name}）→ ${items.length} 条：\n` + items.map((x, i) =>
+          `${i + 1}. ${x.title}\n   ${x.snippet || '（无摘要）'}\n   来源：${x.url}`).join('\n')
+      }
+      errors.push(src.name + ': 没解析出结果')
+    } catch (e) { errors.push(src.name + ': ' + String(e.message || e)) }
+  }
+  return '（联网搜索失败：' + errors.join('；') + '。如实告诉用户没查到，不要编造搜索结果。）'
 })
 
 /* ══════════════ 分镜文档：无素材创作的核心产物 ══════════════

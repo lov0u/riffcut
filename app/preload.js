@@ -1,5 +1,5 @@
 // 渲染进程的唯一对外面：window.riffcut
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer, webUtils } = require('electron')
 
 contextBridge.exposeInMainWorld('riffcut', {
   info: () => ipcRenderer.invoke('app:info'),
@@ -52,8 +52,20 @@ contextBridge.exposeInMainWorld('riffcut', {
   // 选素材文件（原生对话框，可多选）——剪辑台「导入」用。选完拿到绝对路径
   // 再走 onFilesPicked → /api/edit import，绝不经过不存在的 window.webkit。
   pickFiles: (opts) => ipcRenderer.invoke('sys:pickFiles', opts || {}),
-  // 拖拽的 File 取绝对路径（Electron 32+ 用 webUtils，File.path 已移除）
-  pathForFile: (file) => ipcRenderer.invoke('sys:pathForFile', file),
+  // 拖拽的 File 取绝对路径（Electron 32+ 用 webUtils，File.path 已移除）。
+  // ★ 必须在 preload（渲染进程侧）直接调 webUtils.getPathForFile，只回传路径字符串。
+  // 曾经走 ipcRenderer.invoke('sys:pathForFile', file) 把 File 对象跨 IPC 传给主进程，
+  // 结构化克隆会丢掉 File 底层的原生路径引用，主进程 getPathForFile 拿到空字符串，
+  // 表现就是拖任何文件都弹「拿不到这个文件夹的路径」。不要改回 IPC 传 File。
+  pathForFile: (file) => {
+    try {
+      const p = webUtils.getPathForFile(file)
+      return Promise.resolve({ ok: !!p, path: p || '' })
+    } catch (e) {
+      return Promise.resolve({ ok: false, error: String((e && e.message) || e) })
+    }
+  },
+  statPath: (p) => ipcRenderer.invoke('sys:statPath', p),
   // 一键重启（装插件/改 bundle 后生效必须重启）
   restart: () => ipcRenderer.invoke('app:restart'),
 

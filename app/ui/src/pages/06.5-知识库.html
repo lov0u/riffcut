@@ -16,7 +16,7 @@
 .b-item .r2{font-size:var(--f5);color:var(--ink3);margin-top:5px;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
 .b-item .r2 .ds{flex-basis:100%;margin-top:1px;font-size:var(--f6);color:#939BAA}
 .b-item .r2 .ds{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
-.b-del{position:absolute;right:7px;top:8px;width:19px;height:19px;border:1px solid transparent;border-radius:8px;
+.b-del{position:absolute;right:7px;top:8px;width:19px;height:19px;border:1px solid var(--line-c);border-radius:8px;
   background:transparent;color:#A8AFBC;font-size:12px;line-height:1;display:grid;place-items:center;cursor:pointer;opacity:0}
 .b-item:hover .b-del{opacity:1}
 .b-del:hover{border-color:#E4C7C7;background:#FFF1F1;color:#B45B5B}
@@ -28,10 +28,10 @@
 .b-meta{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap;align-items:center}
 .b-meta label{display:flex;align-items:center;gap:6px;font-size:var(--f5);color:var(--ink3)}
 .b-meta .u-input{width:150px;height:28px}
-.b-meta .u-input input{height:100%;font-size:var(--f5)}
+.b-meta .u-input input{height:100%;font-size:var(--f5);border:0;box-shadow:none;background:transparent}
 .b-code{flex:1;min-height:0;width:100%;resize:none;border:0;outline:none;padding:14px 16px;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--f5);line-height:1.85;
-  color:#3A4252;background:#FCFDFE;tab-size:2}
+  color:#3A4252;background:#FFFFFF;tab-size:2}
 .b-edit-ft{flex:0 0 auto;display:flex;gap:10px;padding-top:8px;border-top:1px solid var(--line);
   font-size:var(--f5);color:var(--ink3)}
 .b-edit-ft span:last-child{margin-left:auto}
@@ -55,8 +55,8 @@
 .b-lr .bd{flex:1;min-width:0}
 .b-lr .bd .t1{color:#3A4252;font-weight:600;word-break:break-all}
 .b-lr .bd .t2{color:var(--ink3);word-break:break-all}
-.b-pend{border:1px solid #BFE0DA;background:#FDF7EA;border-radius:var(--r-md);padding:9px 10px;margin-bottom:8px}
-.b-pend .t{font-size:var(--f5);font-weight:600;color:#147567;word-break:break-all}
+.b-pend{border:1px solid #A8C4F8;background:#FDF7EA;border-radius:var(--r-md);padding:9px 10px;margin-bottom:8px}
+.b-pend .t{font-size:var(--f5);font-weight:600;color:#1D4ED8;word-break:break-all}
 .b-pend .w{font-size:var(--f6);color:#5A6272;margin-top:4px;line-height:1.55}
 .b-pend .a{display:flex;gap:6px;margin-top:8px}
 .compact .b-body{grid-template-columns:clamp(185px,23%,250px) minmax(0,1fr) clamp(180px,21%,230px)}
@@ -135,7 +135,7 @@
     <div class="k-dialog-hd"><b>知识库索引</b><button class="k-x" data-close="bIdxModal">×</button></div>
     <div class="k-dialog-bd">
       <div class="k-tip">这就是 AI 每次动手前读的那份索引：最近更新 → 按分类 → 标签反查。由程序自动生成。</div>
-      <pre id="bIdxBody" style="margin:0;padding:13px 15px;background:#FCFDFE;border:1px solid var(--line);border-radius:var(--r-sm);
+      <pre id="bIdxBody" style="margin:0;padding:13px 15px;background:#FFFFFF;border:1px solid var(--line);border-radius:var(--r-sm);
         font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--f5);line-height:1.8;
         color:#3A4252;white-space:pre-wrap;word-break:break-word;max-height:52vh;overflow:auto">正在读…</pre>
     </div>

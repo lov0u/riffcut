@@ -113,9 +113,19 @@ async function thumb(file, kind, out) {
 // ── 索引（软件内部，不进用户文件夹）───────────────────
 function indexPath(root, customer) {
   const key = md5(normalize(String(root).replace(/^~/, require('node:os').homedir()))).slice(0, 16)
-  const d = C.custPaths(customer).index
-  P.ensureDir(d)
-  return join(d, key + '.json')
+  /* ★ 素材索引写在**被扫描的那个目录自己**下面的 RiffCut-索引/。
+     用户原话：「索引文件夹要写到素材的根目录，用户给的视频文件在哪里就写到哪里。」
+     旧做法写软件内部缓存，用户翻文件夹看不到，换机器/重装就全丢。
+     不可写时退回内部缓存，而不是让扫描直接失败。 */
+  const near = join(String(root), 'RiffCut-索引')
+  try {
+    P.ensureDir(near)
+    return join(near, '素材索引-' + key + '.json')
+  } catch (e) {
+    const d = C.custPaths(customer).index
+    P.ensureDir(d)
+    return join(d, key + '.json')
+  }
 }
 
 function readIndex(root, customer) {

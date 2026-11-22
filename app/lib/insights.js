@@ -229,10 +229,40 @@ function dirSize(dir) {
   return n
 }
 
+/* 客户隐藏名单：「只删记录（文件保留）」的用户语义是「我不想再看到它」，
+   但文件要留着。而列表是从目录 readdir 出来的 —— 光返回一句 note 不改列表，
+   用户点了确认界面纹丝不动，看起来就是「删除失败」。
+   所以必须单独记一份名单，列目录时滤掉。文件在 配置/客户隐藏.json。 */
+function hiddenFile() { return path.join(P.HOME, '配置', '客户隐藏.json') }
+function hiddenNames() {
+  try {
+    const f = hiddenFile()
+    if (!fs.existsSync(f)) return []
+    const a = JSON.parse(fs.readFileSync(f, 'utf8'))
+    return Array.isArray(a) ? a.map(String) : []
+  } catch (e) { return [] }
+}
+function setHidden(name, on) {
+  const cur = hiddenNames().filter((x) => x !== name)
+  if (on) cur.push(name)
+  const f = hiddenFile()
+  P.ensureDir(path.dirname(f))
+  fs.writeFileSync(f, JSON.stringify(cur, null, 1))
+}
+
 function customers(d = {}) {
   const act = String(d.action || 'list')
   const base = path.join(P.HOME, '客户')
+  /* ★ 必须滤掉两种东西，否则它们会当成「客户」出现在列表里：
+     1) 删客户时留下的 `xxx.废-mwqgd9cz` 备份目录 —— 那是回滚用的，不是客户；
+     2) `xxx-废-mwqgd9cz-废-mwqgdd76` 这种反复改名叠出来的 —— 同一次删除被
+        执行了多遍就会这样，说明上一次 rename 之后又抛了异常。
+     判据用正则匹配 `.废-<base36>` 结尾，不靠前缀，因为备份名是「原名 + .废-xxx」。 */
+  const isTrash = (f) => /[.\-]废-[0-9a-z]+$/i.test(f)
+  const hidden = hiddenNames()
   const names = fs.existsSync(base) ? fs.readdirSync(base).filter((f) => {
+    if (isTrash(f)) return false
+    if (hidden.includes(f)) return false
     try { return fs.statSync(path.join(base, f)).isDirectory() } catch (e) { return false }
   }) : []
   if (act === 'list') {
@@ -258,14 +288,30 @@ function customers(d = {}) {
     const name = String(d.name || d.id || '')
     if (!names.includes(name)) throw new Error('没有这个客户：' + name)
     if (name === C.currentCustomer()) throw new Error('不能删正在用的客户，先切到别的客户')
-    const dir = C.custPaths(name).root
+    /* ★ 不能用 C.custPaths(name).root 拿路径：那个函数每次调用都会
+       P.ensureDir 把整套目录重建一遍。删之前重建，rename 的源目录就变了样
+       （甚至刚被改成备份名），于是抛 ENOENT —— 之前几次「删除失败」就是
+       这个原因，而磁盘上其实已经改名成功了，留下 .废- 目录没人清。
+       这里直接按 slug 拼路径，只读不建。 */
+    const dir = path.join(base, P.slug(name))
+    if (!fs.existsSync(dir)) {
+      setHidden(path.basename(dir), true)
+      return { name, purged: false, customer: C.currentCustomer(),
+        note: '磁盘上已经没有这个客户的目录了，列表里的记录一并去掉：' + dir }
+    }
     if (d.purge) {
       /* 真删：先改名再留 3 天，用户后悔还能捞回来 */
       const bak = dir + '.废-' + Date.now().toString(36)
       fs.renameSync(dir, bak)
-      return { name, purged: true, backup: bak, note: '没直接删，改成 ' + path.basename(bak) + ' 了，确认不要了再手动清' }
+      setHidden(path.basename(dir), true)
+      return { name, purged: true, backup: bak, customer: C.currentCustomer(),
+        note: '没直接删，改成 ' + path.basename(bak) + ' 了，确认不要了再手动清' }
     }
-    return { name, purged: false, note: '只从列表里去掉，文件还在：' + dir }
+    setHidden(path.basename(dir), true)
+    /* ★ 必须带上 customer：前端 doDelCustomer 里写的是 V().customer=r.customer，
+       少了这个字段就把「当前客户」清成 undefined，整页跟着空掉。 */
+    return { name, purged: false, customer: C.currentCustomer(),
+      note: '已从列表移除，文件都还在：' + dir + '（想恢复就把它从 配置/客户隐藏.json 里去掉）' }
   }
   throw new Error('不认识的 action：' + act)
 }

@@ -15,7 +15,7 @@
 .k-line{display:flex;align-items:center;gap:5px;padding:4px 7px;border-radius:4px;
   font-size:var(--f5);line-height:1.5;color:#3E4655;cursor:pointer}
 .k-line:hover{background:#F4F6FA}
-.k-line.on{background:#EAF5F3;color:#147567;font-weight:600}
+.k-line.on{background:#EFF4FF;color:#1D4ED8;font-weight:600}
 .k-line.off .nm{color:#A8AFBC}
 .k-line .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .k-empty{padding:26px 10px;text-align:center;color:var(--ink3);font-size:var(--f5);line-height:1.8}
@@ -26,16 +26,16 @@
 .k-meta{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap;align-items:center}
 .k-meta label{display:flex;align-items:center;gap:6px;font-size:var(--f5);color:var(--ink3)}
 .k-meta .u-input{width:140px;height:28px}
-.k-meta .u-input input{height:100%;font-size:var(--f5)}
+.k-meta .u-input input{height:100%;font-size:var(--f5);border:0;box-shadow:none;background:transparent}
 .k-sw-row{cursor:pointer;user-select:none}
 .k-code{flex:1;min-height:0;width:100%;resize:none;border:0;outline:none;padding:14px 16px;
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--f5);line-height:1.85;
-  color:#3A4252;background:#FCFDFE;tab-size:2}
+  color:#3A4252;background:#FFFFFF;tab-size:2}
 .k-edit-ft{flex:0 0 auto;display:flex;gap:10px;padding-top:8px;border-top:1px solid var(--line);
   font-size:var(--f5);color:var(--ink3)}
 /* 技能正文默认按 markdown 排出来看，点「编辑」才是文本框。
    以前一直是个 textarea，## 和 ** 原样摆在那儿，读一条技能像读源码。 */
-.k-view{flex:1;min-height:0;overflow:auto;padding:14px 18px;background:#FCFDFE;
+.k-view{flex:1;min-height:0;overflow:auto;padding:14px 18px;background:#FFFFFF;
   font-size:var(--f5);line-height:1.85;color:#3A4252}
 .k-view h2{font-size:calc(var(--f5) + 2px);font-weight:700;color:#1F2735;
   margin:14px 0 6px;padding-bottom:5px;border-bottom:1px solid var(--line)}
@@ -83,13 +83,13 @@
 .k-f{display:flex;flex-direction:column;gap:6px}
 .k-f label{font-size:var(--f5);color:var(--ink2);font-weight:600}
 .k-f .u-input{height:34px}
-.k-f .u-input input{height:100%;font-size:var(--f4)}
+.k-f .u-input input{height:100%;font-size:var(--f4);border:0;box-shadow:none;background:transparent}
 .k-inline{display:flex;gap:6px;align-items:center}
 .k-inline .u-input{flex:1;min-width:0}
 .k-paste{flex:0 0 auto;width:34px;height:34px;border:1px solid var(--line);border-radius:var(--r-sm);
   background:#fff;color:#7A8292;display:grid;place-items:center;cursor:pointer}
 .k-paste .ic{width:15px;height:15px}
-.k-paste:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
+.k-paste:hover{border-color:#A8C4F8;color:#5A6272;background:#FFFFFF}
 .k-tip{font-size:var(--f5);color:var(--ink3);line-height:1.7;background:#F8FAFD;border:1px solid var(--line);
   border-radius:8px;padding:9px 11px}
 .k-src-hd{display:flex;align-items:center;gap:8px;font-size:var(--f4);font-weight:600}
@@ -103,19 +103,19 @@
 .k-src .k-x{width:19px;height:19px;font-size:15px;flex:0 0 auto}
 .k-src-add{display:flex;gap:6px;align-items:center}
 .k-src-add .u-input{flex:1;min-width:0;height:32px}
-.k-src-add .u-input input{height:100%;font-size:var(--f5)}
+.k-src-add .u-input input{height:100%;font-size:var(--f5);border:0;box-shadow:none;background:transparent}
 .k-scan-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
 .k-scan-bar b{font-size:var(--f5);color:var(--ink2);font-weight:600;flex:0 0 auto}
 .k-scan-bar .u-input{width:170px;height:28px}
-.k-scan-bar .u-input input{height:100%;font-size:var(--f5)}
+.k-scan-bar .u-input input{height:100%;font-size:var(--f5);border:0;box-shadow:none;background:transparent}
 .k-scan-list{max-height:240px;min-height:90px;overflow:auto;display:flex;flex-direction:column;gap:5px;
-  border:1px solid var(--line);border-radius:8px;padding:8px;background:#FBFCFE}
+  border:1px solid var(--line);border-radius:8px;padding:8px;background:#FFFFFF}
 .k-scan-list::-webkit-scrollbar{width:6px}
 .k-scan-list::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:4px}
 .k-row{display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:8px;background:#fff;border:1px solid var(--line)}
 .k-row:hover{background:#F7F9FC}
 .k-row.done{opacity:.55}
-.k-row input[type=checkbox]{width:15px;height:15px;flex:0 0 auto;accent-color:#1B8B7E;margin-top:2px}
+.k-row input[type=checkbox]{width:15px;height:15px;flex:0 0 auto;accent-color:#2563EB;margin-top:2px}
 .k-row .txt{flex:1;min-width:0}
 .k-row .t{font-size:var(--f4);font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .k-row .d{font-size:var(--f5);color:var(--ink3);margin-top:3px;line-height:1.55;

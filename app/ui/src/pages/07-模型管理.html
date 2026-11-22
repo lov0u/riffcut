@@ -29,15 +29,15 @@
 .m-f{display:flex;flex-direction:column;gap:5px;min-width:0}
 .m-f>label{font-size:var(--f4);color:var(--ink2);font-weight:600}
 .m-f .u-input,.m-f .u-select{height:36px}
-.m-f .u-input input,.m-f .u-select select{font-size:var(--f4);height:100%}
+.m-f .u-input input,.m-f .u-select select{font-size:var(--f4);height:100%;border:0;box-shadow:none;background:transparent}
 .m-inline{display:flex;gap:7px;align-items:center;min-width:0}
 .m-inline .u-input{flex:1;min-width:0}
 .m-paste{flex:0 0 auto;width:34px;height:36px;border:1px solid var(--line);border-radius:var(--r-sm);
   background:#fff;color:var(--ink3);display:grid;place-items:center;cursor:pointer}
 .m-paste .ic{width:15px;height:15px}
-.m-paste:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
+.m-paste:hover{border-color:#A8C4F8;color:#5A6272;background:#FFFFFF}
 .m-adv{border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;
-  display:flex;flex-direction:column;gap:9px;background:#FBFCFE}
+  display:flex;flex-direction:column;gap:9px;background:#FFFFFF}
 
 /* 预设说明卡：选中一家供应商后告诉用户「接口已填好，密钥得你自己去注册」 */
 /* ── 自绘供应商下拉 ────────────────────────────────
@@ -97,19 +97,19 @@
 .m-adv-t{font-size:var(--f4);font-weight:600;color:var(--ink2)}
 .m-checks{display:flex;gap:8px 16px;flex-wrap:wrap}
 .m-check{display:flex;align-items:center;gap:7px;font-size:var(--f5);color:var(--ink);cursor:pointer}
-.m-check input{width:15px;height:15px;accent-color:#1B8B7E}
+.m-check input{width:15px;height:15px;accent-color:#2563EB}
 .m-check.off{opacity:.48;cursor:default}
 .m-protocol{display:flex;align-items:center;gap:9px;font-size:var(--f5);color:var(--ink2)}
 .m-protocol .u-select{width:190px;height:30px}
 .m-hint{font-size:var(--f5);color:var(--ink3);line-height:1.6;min-height:18px}
-.m-hint.warn{color:#5A6272;background:#FCFDFE;border:1px solid #F4F6FA;border-radius:8px;padding:7px 10px}
+.m-hint.warn{color:#5A6272;background:#FFFFFF;border:1px solid #F4F6FA;border-radius:8px;padding:7px 10px}
 .m-dialog-ft{display:flex;justify-content:flex-end;gap:8px;padding-top:11px;border-top:1px solid var(--line)}
 .m-dialog-ft .u-btn{min-width:82px;height:34px}
 .m-dialog-ft .u-btn:disabled{opacity:.42;cursor:default;filter:grayscale(.6)}
 .m-note{font-size:var(--f5);color:var(--ink3);line-height:1.6}
 
 /* 读取可用模型 → 勾选要添加哪几个 */
-.m-scan{border:1px solid var(--line);border-radius:var(--r-md);background:#FBFCFE;
+.m-scan{border:1px solid var(--line);border-radius:var(--r-md);background:#FFFFFF;
   padding:10px 12px;display:flex;flex-direction:column;gap:9px}
 /* 展开后的列表内部也要留间距，否则「添加选中的」按钮会贴着列表最后一行 */
 #mScanBody{display:flex;flex-direction:column;gap:8px}
@@ -119,10 +119,10 @@
 .m-scan-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .m-scan-top b{font-size:var(--f4)}
 .m-scan-top .u-input{flex:1;min-width:110px;height:28px}
-.m-scan-top .u-input input{height:100%;font-size:var(--f5)}
+.m-scan-top .u-input input{height:100%;font-size:var(--f5);border:0;box-shadow:none;background:transparent}
 .m-scan-top button{font-size:var(--f5);padding:4px 8px;border:1px solid var(--line);
   border-radius:8px;background:#fff;color:var(--ink2);cursor:pointer;white-space:nowrap}
-.m-scan-top button:hover{border-color:#BFE0DA;color:#5A6272}
+.m-scan-top button:hover{border-color:#A8C4F8;color:#5A6272}
 .m-scan-list{max-height:164px;overflow:auto;display:flex;flex-direction:column;gap:4px;
   border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px}
 .m-scan-list::-webkit-scrollbar{width:6px}
@@ -130,12 +130,11 @@
 .m-scan-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px;
   font-size:var(--f5);cursor:pointer;min-width:0}
 .m-scan-row:hover{background:#F7F9FC}
-.m-scan-row input[type=checkbox]{width:15px;height:15px;flex:0 0 auto;accent-color:#1B8B7E}
+.m-scan-row input[type=checkbox]{width:15px;height:15px;flex:0 0 auto;accent-color:#2563EB}
 .sr-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .sr-t b{font-size:var(--f5);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sr-t span{font-size:10.5px;color:var(--ink3)}
-.m-scan-row select{height:26px;width:86px;flex:0 0 auto;font-size:var(--f5);
-  border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink2);padding:0 4px}
+.m-scan-row select{height:26px;width:86px;flex:0 0 auto;font-size:var(--f5);color:var(--ink2);padding:0 4px}
 .m-scan-ft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .m-scan-ft .m-note{flex:1;min-width:120px;font-size:var(--f5)}
 .m-scan-ft .u-btn{height:32px;white-space:nowrap}
@@ -146,7 +145,7 @@
 .m-my-hd{padding:11px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .m-g-hd{display:flex;align-items:center;gap:10px;flex:1;min-width:190px}
 .m-g-ic{width:34px;height:34px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;
-  background:linear-gradient(180deg,#FCFDFE,#F6F8FB);border:1px solid #F4F6FA;color:#5A6272}
+  background:linear-gradient(180deg,#FFFFFF,#F6F8FB);border:1px solid #F4F6FA;color:#5A6272}
 .m-g-ic .ic{width:18px;height:18px}
 .m-g-t{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
 .m-g-t b{font-size:var(--f3)}
@@ -156,8 +155,8 @@
 .m-model-card{padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;
   display:flex;flex-direction:column;gap:9px;min-width:0;
   box-shadow:var(--sh-btn);transition:border-color .15s,box-shadow .15s}
-.m-model-card:hover{border-color:#BFE0DA;box-shadow:var(--sh-1)}
-.m-model-card.is-def{border-color:#BFE0DA;background:#FFFCF4;
+.m-model-card:hover{border-color:#A8C4F8;box-shadow:var(--sh-1)}
+.m-model-card.is-def{border-color:#A8C4F8;background:#FFFCF4;
   box-shadow:0 0 0 1px rgba(199,154,75,.18),var(--sh-btn)}
 .mc-name{font-size:12px;font-weight:700;color:var(--ink);line-height:1.3;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -172,7 +171,7 @@
 .mc-acts button{flex:1;min-width:0;height:29px;font-size:var(--f5);color:#5A6272;
   border:1px solid var(--line);border-radius:8px;background:#fff;white-space:nowrap;
   transition:all .15s;cursor:pointer;padding:0 4px}
-.mc-acts button:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
+.mc-acts button:hover{border-color:#A8C4F8;color:#5A6272;background:#FFFFFF}
 .mc-acts button.danger:hover{border-color:#E4C7C7;color:#B45B5B;background:#FFF7F7}
 .m-empty{padding:14px;border:1px dashed var(--line);border-radius:var(--r-md);
   font-size:var(--f5);color:var(--ink3);text-align:center;line-height:1.6;grid-column:1/-1}
@@ -180,7 +179,7 @@
 /* 底部路由（已无本地模型面板，仅保留路由样式） */
 .m-route .nm{width:96px;flex:0 0 auto;color:#4A5262;font-weight:600}
 .m-route .u-select{flex:1;height:28px;min-width:0}
-.m-route .u-select select{font-size:var(--f5)}
+.m-route .u-select select{font-size:var(--f5);border:0;box-shadow:none;background:transparent}
 /* ══ 模型使用量 概览：只统计本机绑定模型的真实调用 ══ */
 .m-mon{flex:0 0 auto}
 .m-mon-hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 15px;
@@ -196,12 +195,12 @@
 .m-mon-right .life{font-size:var(--f5);color:var(--ink3);white-space:nowrap}
 .m-mon-body{padding:12px 15px;display:flex;flex-direction:column;gap:11px}
 .m-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:9px}
-.m-stat{border:1px solid var(--line);border-radius:var(--r-md);background:#FBFCFE;
+.m-stat{border:1px solid var(--line);border-radius:var(--r-md);background:#FFFFFF;
   padding:10px 12px;display:flex;flex-direction:column;gap:3px;min-width:0}
 .m-stat label{font-size:var(--f5);color:var(--ink3)}
 .m-stat b{font-size:20px;line-height:1.25;color:var(--ink);font-weight:700;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m-stat b.blue{color:#3569D6}.m-stat b.green{color:#2E9B62}.m-stat b.gold{color:#1B8B7E}
+.m-stat b.blue{color:#3569D6}.m-stat b.green{color:#2E9B62}.m-stat b.gold{color:#2563EB}
 .m-stat small{font-size:10.5px;color:var(--ink3);line-height:1.45}
 /* 详情里的趋势图只留一条「火花线」：一眼看走势，高度全让给下面三张表 */
 .m-chart{border:1px solid var(--line);border-radius:var(--r-md);padding:4px 12px;background:#fff;
@@ -214,7 +213,7 @@
 #mUsageChart{flex:1 1 auto;min-width:0;width:auto;height:26px;display:block}
 .m-tbl{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;flex:0 0 auto}
 .m-tbl .hd{padding:5px 12px;border-bottom:1px solid var(--line);font-size:var(--f5);
-  font-weight:600;display:flex;align-items:center;gap:7px;background:#FBFCFE}
+  font-weight:600;display:flex;align-items:center;gap:7px;background:#FFFFFF}
 .m-tbl .hd .ic{width:13px;height:13px;color:var(--gold-deep)}
 .m-tbl .hd span{margin-left:auto;font-size:var(--f5);color:var(--ink3);font-weight:400}
 .m-tbl table{width:100%;border-collapse:collapse;font-size:var(--f5);table-layout:fixed}
@@ -237,7 +236,7 @@
 .m-mon-ft .m-note{flex:1;min-width:190px}
 .m-mon-ft button{font-size:var(--f5);padding:4px 10px;border:1px solid var(--line);
   border-radius:8px;background:#fff;color:var(--ink2);cursor:pointer;white-space:nowrap}
-.m-mon-ft button:hover{border-color:#BFE0DA;color:#5A6272}
+.m-mon-ft button:hover{border-color:#A8C4F8;color:#5A6272}
 .m-mon-ft button.armed{border-color:#E4C7C7;background:#FFF1F1;color:#B45B5B}
 .tiny .m-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
 .tiny .m-mon-hd{padding:9px 12px}.tiny .m-mon-body{padding:9px 12px}
@@ -268,8 +267,8 @@
 .m-recent-scroll::-webkit-scrollbar-thumb{background:#DDE2EA;border-radius:4px}
 .m-recent-scroll table{width:100%;border-collapse:collapse;font-size:var(--f5);table-layout:fixed}
 .m-recent-scroll th,.m-recent-scroll td{padding-left:9px;padding-right:9px}
-.m-recent-scroll th{position:sticky;top:0;background:#FBFCFE;z-index:1}
-.m-tbl-scroll th{position:sticky;top:0;background:#FBFCFE;z-index:1}
+.m-recent-scroll th{position:sticky;top:0;background:#FFFFFF;z-index:1}
+.m-tbl-scroll th{position:sticky;top:0;background:#FFFFFF;z-index:1}
 .m-detail-body .m-dialog-ft{flex:0 0 auto}
 
 /* 危险操作二次确认 */
@@ -278,7 +277,7 @@
 .m-confirm-txt b{color:#B45B5B}
 .m-confirm-row{display:flex;gap:7px;align-items:center}
 .m-confirm-row .u-input{flex:1;min-width:0;height:36px}
-.m-confirm-row .u-input input{height:100%;font-size:var(--f4)}
+.m-confirm-row .u-input input{height:100%;font-size:var(--f4);border:0;box-shadow:none;background:transparent}
 .m-confirm .m-dialog-ft .u-btn.danger{background:#FFF1F1;border-color:#E4C7C7;color:#B45B5B}
 .m-confirm .m-dialog-ft .u-btn.danger:disabled{opacity:.45;cursor:default;filter:grayscale(.4)}
 

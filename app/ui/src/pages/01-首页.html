@@ -65,7 +65,7 @@ body.rws-dragging *{cursor:col-resize !important}
   transition:background .18s,color .18s,transform .18s}
 .h-bd-toggle .ic{width:16px;height:16px;grid-area:1/1}
 .h-bd-toggle .ic-expand{display:none}
-.h-bd-toggle:hover{color:#1B8B7E;background:rgba(27,139,126,.08)}
+.h-bd-toggle:hover{color:#2563EB;background:rgba(37,99,235,.08)}
 .h-bd-toggle:active{transform:scale(.93)}
 .h-bd-toggle::after{content:attr(data-tip);position:absolute;right:0;top:calc(100% + 8px);
   white-space:nowrap;pointer-events:none;padding:5px 10px;border-radius:8px;
@@ -265,7 +265,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-bd-num.warn b{color:var(--gold-deep)}
 
 .h-bd-dep{border:1px solid #F4F6FA;background:#F8FAFC;border-radius:var(--r-sm);
-  padding:8px 10px;font-size:var(--f5);color:#147567;line-height:1.6}
+  padding:8px 10px;font-size:var(--f5);color:#1D4ED8;line-height:1.6}
 .h-bd-dep a{color:var(--gold-deep);text-decoration:underline;cursor:pointer}
 
 .h-bd-empty{font-size:12px;color:var(--ink3);padding:3px 5px;line-height:1.65}
@@ -274,7 +274,7 @@ body.rws-dragging *{cursor:col-resize !important}
 /* ═══ 文档：正文路径可点 + 右侧标签页 ═══ */
 /* 正文里的文件路径 · 做成按钮，一眼看得出能点 */
 .h-docbtn{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;margin:0 1px;
-  border:1px solid #CFE6E1;border-radius:6px;background:#F3FAF8;color:#1B8B7E;
+  border:1px solid #CFE6E1;border-radius:6px;background:#F3FAF8;color:#2563EB;
   font:inherit;font-size:inherit;cursor:pointer;vertical-align:baseline;max-width:100%}
 .h-docbtn:hover{background:#E8F6F2;border-color:#A9D8CE}
 .h-docbtn .ic{width:12px;height:12px;flex:0 0 auto}
@@ -289,7 +289,7 @@ body.rws-dragging *{cursor:col-resize !important}
   border-bottom:2px solid transparent;background:transparent;cursor:pointer;font:inherit;
   font-size:12px;color:#7C8494;white-space:nowrap;max-width:170px;border-radius:6px 6px 0 0}
 .h-doctab:hover{background:#F5F8FA;color:#3E4655}
-.h-doctab.on{color:#147567;border-bottom-color:#1B8B7E;font-weight:600}
+.h-doctab.on{color:#1D4ED8;border-bottom-color:#2563EB;font-weight:600}
 .h-doctab .ic{width:12px;height:12px;flex:0 0 auto;opacity:.75}
 .h-doctab .nm{overflow:hidden;text-overflow:ellipsis}
 .h-doctab .x{width:15px;height:15px;line-height:14px;text-align:center;border-radius:4px;
@@ -349,10 +349,9 @@ body.rws-dragging *{cursor:col-resize !important}
   padding:8px 10px;line-height:1.6}
 .h-ask-step{display:flex;align-items:center;gap:8px;font-size:var(--f5);color:var(--ink3)}
 .h-ask-step span{flex:0 0 auto}
-.h-ask-step select{flex:1;min-width:0;height:28px;border:1px solid var(--line);border-radius:var(--r-sm);
-  background:#fff;color:var(--ink2);font-size:var(--f5);padding:0 6px}
+.h-ask-step select{flex:1;min-width:0;height:28px;color:var(--ink2);font-size:var(--f5);padding:0 6px}
 .h-ask-prog{height:4px;border-radius:4px;background:#EDF0F5;overflow:hidden}
-.h-ask-prog i{display:block;height:100%;width:8%;background:#1B8B7E;transition:width .4s}
+.h-ask-prog i{display:block;height:100%;width:8%;background:#2563EB;transition:width .4s}
 .h-ask-ft{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .h-ask-ft .u-btn{min-width:84px;height:32px;flex:0 0 auto}
 /* 各块用 auto 上边距均分纵向空间；空间不足时自动归零，元素紧凑排列、不会被推出卡片 */
@@ -409,15 +408,15 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-greet b{position:relative;z-index:1;font-size:inherit;font-weight:700;display:block;margin-top:6px}
 .h-greet span{position:relative;z-index:1;font-size:inherit;color:var(--ink3);display:block;margin-top:2px}
 /* 品牌广告语：比普通说明文字重一点、拉字距，读起来像一句标语而不是功能提示 */
-.h-greet .h-slogan{font-size:calc(var(--f5) + 0.5px);font-weight:600;color:#147567;
+.h-greet .h-slogan{font-size:calc(var(--f5) + 0.5px);font-weight:600;color:#1D4ED8;
   letter-spacing:0.06em;margin-top:5px}
 
 /* 选择文件夹：一行小提示 + 小按钮，不占地方 */
 .h-pickline{display:flex;align-items:center;gap:7px;flex:0 0 auto;padding:4px 0;
   flex-wrap:wrap;font-size:12px;color:var(--ink3);border-bottom:1px dashed var(--line)}
-.h-pickline>.ic{width:14px;height:14px;color:#1B8B7E;flex:0 0 auto}
+.h-pickline>.ic{width:14px;height:14px;color:#2563EB;flex:0 0 auto}
 .h-pickhint{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.h-pickmini{height:24px;padding:0 9px;border:1px solid #EAF5F3;border-radius:var(--r-sm);
+.h-pickmini{height:24px;padding:0 9px;border:1px solid #EFF4FF;border-radius:var(--r-sm);
   background:linear-gradient(180deg,#F8FAFC,#FAFBFD);color:#33405A;font-size:12px;font-weight:600;
   display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;white-space:nowrap;
   box-shadow:var(--sh-btn);transition:transform .16s,box-shadow .16s}
@@ -461,11 +460,11 @@ body.rws-dragging *{cursor:col-resize !important}
 .hr-mark:before{content:"";position:absolute;top:50%;right:2px;width:18px;height:2px;
   border-radius:2px;background:#D6DEE8;transform:translateY(-50%) scaleX(.62);
   transform-origin:100%;transition:transform .14s,background-color .14s}
-.hr-mark:hover:before,.hr-mark.on:before{background:#1B8B7E;transform:translateY(-50%) scaleX(1)}
+.hr-mark:hover:before,.hr-mark.on:before{background:#2563EB;transform:translateY(-50%) scaleX(1)}
 .hr-mark.busy:before{animation:hrBusy 1s ease-in-out infinite}
 @keyframes hrBusy{0%,100%{opacity:1}50%{opacity:.35}}
 .hr-mark:focus-visible{outline:none}
-.hr-mark:focus-visible:before{background:#1B8B7E;transform:translateY(-50%) scaleX(1)}
+.hr-mark:focus-visible:before{background:#2563EB;transform:translateY(-50%) scaleX(1)}
 .h-rail-preview{position:absolute;right:calc(100% + 8px);top:0;z-index:8;
   width:min(280px,52vw);max-height:104px;overflow:hidden;pointer-events:none;
   padding:9px 12px;border-radius:10px;background:#fff;border:1px solid #E2E8F0;
@@ -540,11 +539,11 @@ body.rws-dragging *{cursor:col-resize !important}
   border-radius:8px;background:linear-gradient(180deg,#FBFEFC,#F6FBF9);
   display:flex;flex-direction:column;gap:6px;max-width:520px}
 .h-editcard .hd{display:flex;align-items:center;gap:7px;font-size:12px;color:#1F2733}
-.h-editcard .hd .ic{width:15px;height:15px;color:#1B8B7E;flex:0 0 auto}
+.h-editcard .hd .ic{width:15px;height:15px;color:#2563EB;flex:0 0 auto}
 .h-editcard .hd b{font-weight:600}
 .h-editcard .sb{font-size:12px;color:#6C7686;line-height:1.65}
 .h-editcard .go{align-self:flex-start;height:27px;padding:0 12px;border-radius:8px;
-  border:1px solid #1B8B7E;background:#1B8B7E;color:#fff;font-size:12px;cursor:pointer}
+  border:1px solid #2563EB;background:#2563EB;color:#fff;font-size:12px;cursor:pointer}
 .h-editcard .go:hover{background:#16786C}
 /* 分镜审核卡：AI 出完分镜，用户看过点同意才放行出片闸门 */
 .h-sbcard{margin:9px 0 2px;padding:12px 14px;border:1px solid #E8DCB8;
@@ -562,7 +561,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-sbcard .sb-no{color:#B8871B;font-weight:600;flex:0 0 auto}
 .h-sbcard .sb-main{flex:1;min-width:0}
 .h-sbcard .sb-main .cap{color:#7A8493}
-.h-sbcard .sb-main .eff{color:#1B8B7E;font-size:10.5px}
+.h-sbcard .sb-main .eff{color:#2563EB;font-size:10.5px}
 .h-sbcard .sb-dur{color:#8A94A2;flex:0 0 auto}
 .h-sbcard .acts{display:flex;gap:8px;align-items:center}
 .h-sbcard .go{height:29px;padding:0 14px;border-radius:8px;border:1px solid #B8871B;
@@ -619,8 +618,24 @@ body.rws-dragging *{cursor:col-resize !important}
   margin:10px 0 5px;font-size:15px;font-weight:650;color:#232A36}
 .h-msg:not(.me) .bub blockquote{margin:4px 0 6px;padding-left:8px;border-left:2px solid #D5DCE8;color:#5A6473}
 .h-msg:not(.me) .bub hr{border:0;border-top:1px solid #E2E7EF;margin:8px 0}
-.h-msg:not(.me) .bub a{color:#147567;text-decoration:underline}
-.h-msg.me .bub{background:#EAF5F3;color:#33405A}
+/* ★ 表格排版（照 DSH markdown 表格）：13px/22px、细边框、浅灰表头、斑马纹。
+   以前零条 table CSS，浏览器默认样式把「1920x1080」折成两行、列黏一起，就是用户截图那个烂排版。
+   外壳可横向滚动，窄窗口里表格不被挤扁；纯数字/尺寸单元格 h-td-nowrap 不折行。 */
+.h-msg:not(.me) .bub .h-table-wrap{width:100%;overflow-x:auto;margin:8px 0 10px;
+  border:1px solid #E4E8EE;border-radius:8px;-webkit-overflow-scrolling:touch}
+.h-msg:not(.me) .bub .h-table-wrap::-webkit-scrollbar{height:6px}
+.h-msg:not(.me) .bub .h-table-wrap::-webkit-scrollbar-thumb{background:#C8D0DC;border-radius:6px}
+.h-msg:not(.me) .bub table{border-collapse:collapse;width:100%;font-size:13px;line-height:22px}
+.h-msg:not(.me) .bub table th,.h-msg:not(.me) .bub table td{
+  border:0;border-bottom:1px solid #E4E8EE;padding:6px 12px;text-align:left;vertical-align:top}
+.h-msg:not(.me) .bub table th{background:#F5F7FA;color:#5A6473;font-weight:600;
+  border-bottom:1px solid #DDE2E9;position:sticky;top:0;white-space:nowrap}
+.h-msg:not(.me) .bub table tbody tr:last-child td{border-bottom:0}
+.h-msg:not(.me) .bub table tbody tr:nth-child(even){background:#FAFBFD}
+.h-msg:not(.me) .bub table td{white-space:normal}          /* 中文长句照常换行 */
+.h-msg:not(.me) .bub table td.h-td-nowrap{white-space:nowrap;font-variant-numeric:tabular-nums}
+.h-msg:not(.me) .bub a{color:#1D4ED8;text-decoration:underline}
+.h-msg.me .bub{background:#EFF4FF;color:#33405A}
 /* 聊天区生成内容卡片：AI 导演自己调后台模型，出图 / 出视频都在这里显示 */
 .h-msg .bub.img{padding:8px;background:#fff;border:1px solid var(--line);max-width:100%}
 .h-msg .bub.img img,.h-msg .bub.img video{display:block;width:100%;max-width:250px;max-height:190px;
@@ -630,7 +645,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-msg .bub.img .iacts{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
 .h-msg .bub.img .iacts button{font-size:var(--f5);padding:3px 9px;border:1px solid var(--line);
   border-radius:8px;background:#fff;color:var(--ink2);cursor:pointer}
-.h-msg .bub.img .iacts button:hover{border-color:#BFE0DA;color:#5A6272;background:#FCFDFE}
+.h-msg .bub.img .iacts button:hover{border-color:#A8C4F8;color:#5A6272;background:#FFFFFF}
 /* 制作方案确认卡片：未确认不执行正式剪辑（文档 P0 确认机制） */
 .h-plan{border:1px solid var(--line);border-radius:var(--r-md);background:#fff;
   box-shadow:var(--sh-1);overflow:hidden;max-width:100%;margin:2px 0 4px}
@@ -671,7 +686,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-pet:active{transform:translateY(-2px) scale(.99)}
 
 .h-aiinput{position:relative;border-radius:28px;background:#FFFFFF;
-  border:1px solid #DDE4EE;
+  border:1px solid #CFE6E1;
   /* 原来是三层外阴影（1px + 8px + 20px 各带 -6/-18 负扩散），叠起来像一块悬浮的板子，
      边缘发灰、上下都比实际盒子大一圈。改成「一层极近的定位影 + 一层很淡的扩散」，
      靠更圆的 28px 圆角去表达「这是一块可以说话的框」，不是靠阴影厚度。 */
@@ -689,15 +704,20 @@ body.rws-dragging *{cursor:col-resize !important}
              0 24px 52px -20px rgba(46,158,146,.26),
              inset 0 1px 0 rgba(255,255,255,.9)}
 /* 拖入文件夹：整框高亮 + 居中提示 */
-.h-aiinput.drop-in{border-color:#1B8B7E!important;border-style:dashed;
-  box-shadow:0 0 0 3px rgba(27,139,126,.12),0 10px 28px -6px rgba(46,158,146,.22)!important}
+.h-aiinput.drop-in{border-color:#2563EB!important;border-style:dashed;
+  box-shadow:0 0 0 3px rgba(37,99,235,.12),0 10px 28px -6px rgba(46,158,146,.22)!important}
 .h-drop-hint{display:none;position:absolute;inset:0;z-index:20;pointer-events:none;
   align-items:center;justify-content:center;gap:9px;border-radius:28px;
-  background:rgba(250,254,253,.93);color:#1B8B7E;font-size:13px;font-weight:600}
+  background:rgba(250,254,253,.93);color:#2563EB;font-size:13px;font-weight:600}
 .h-aiinput.drop-in .h-drop-hint{display:flex}
 .h-drop-hint svg{width:20px;height:20px}
-.h-aiinput input,.h-aiinput textarea{width:100%;border:0;background:transparent;outline:none;
-  font-size:12px;line-height:1.6;color:var(--ink);font-family:inherit;padding:0}
+/* 外层 .h-aiinput 自己已经是一圈淡绿框，里面再套框就成了「框套框」。
+   所以容器内部的输入元素一律去框、去阴影、去底色，只留文字。 */
+.h-aiinput input,.h-aiinput textarea{width:100%;
+  font-size:12px;line-height:1.6;color:var(--ink);font-family:inherit;padding:0;
+  border:0;box-shadow:none;background:transparent;border-radius:0}
+.h-aiinput input:focus,.h-aiinput textarea:focus{
+  border:0;box-shadow:none;background:transparent}
 .h-aiinput textarea{min-height:82px;max-height:210px;resize:none;overflow-y:auto;display:block;
   /* 吉祥物 .h-pet 绝对定位在右上角（58px 宽），长文本会钻到它底下被挡住。
      右内边距留出它的宽度，文字自然在它左边换行 —— 不改吉祥物位置。 */
@@ -720,7 +740,43 @@ body.rws-dragging *{cursor:col-resize !important}
 .hq-row button{flex:0 0 auto;width:22px;height:22px;border:0;border-radius:6px;cursor:pointer;
   background:transparent;color:#8A93A3;font-size:13px;line-height:1}
 .hq-row button:hover{background:#EEF2F8;color:#252B36}
-.hq-row .hq-steer:hover{background:#E4F4F0;color:#1B8B7E}
+.hq-row .hq-steer:hover{background:#E4F4F0;color:#2563EB}
+/* ── 图片附件轨道（照 DSH ComposerAttachments）：输入框里横向排的 64px 缩略图 ── */
+.h-att-rail{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 4px;
+  scrollbar-width:none;flex:0 0 auto}
+.h-att-rail::-webkit-scrollbar{display:none}
+.h-att-rail[hidden]{display:none}
+.h-att-img{position:relative;flex:0 0 64px;width:64px;height:64px;border-radius:10px;
+  overflow:visible;border:1px solid #E4E8EE;background:#F5F7FA}
+.h-att-img img{width:100%;height:100%;object-fit:cover;border-radius:9px;display:block;cursor:zoom-in}
+.h-att-img .h-att-del{position:absolute;top:-6px;right:-6px;width:18px;height:18px;
+  border-radius:50%;border:1px solid #E4E8EE;background:#fff;color:#5C6478;
+  font-size:12px;line-height:16px;text-align:center;cursor:pointer;padding:0;
+  box-shadow:0 1px 3px rgba(28,38,58,.14)}
+.h-att-img .h-att-del:hover{background:#D6423C;color:#fff;border-color:#D6423C}
+/* ── 图片消息（照 DSH UserContent：图片一块、文字气泡一块，上下分开）──
+   DSH 的 durable 层仍是一条 message，但前端把 image block 渲染进独立的
+   attachmentRow、text 渲染进 bubble。用户看到的就是「图片一条、文字一条」。
+   这里照做：.h-attrow 与 .bub 平级，不再把缩略图塞进文字气泡里。 */
+.h-msg .h-attrow{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin:0 0 6px;align-self:flex-end}
+.h-msg .h-attrow.multi{gap:8px}
+.h-msg .h-attrow .h-attimg{position:relative;padding:0;border:0;background:none;cursor:zoom-in;
+  border-radius:12px;overflow:hidden;line-height:0;flex:0 0 auto}
+.h-msg .h-attrow .h-attimg img{display:block;max-width:240px;max-height:240px;width:auto;height:auto;
+  object-fit:cover;border-radius:12px;border:1px solid #E4E8EE;background:#F5F7FA}
+.h-msg .h-attrow.multi .h-attimg img{width:96px;height:96px;object-fit:cover}
+.h-msg .h-attrow .h-attimg:hover img{border-color:#A8C4F8;box-shadow:0 4px 14px -4px rgba(37,99,235,.28)}
+/* ── 灯箱（照 DSH ImageLightbox）：Esc / 点遮罩 / 点关闭三法，无缩放无左右切换 ── */
+.h-lb{position:fixed;inset:0;z-index:1000}
+.h-lb-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:40px}
+.h-lb-mask{position:absolute;inset:0;background:rgba(16,22,32,.72);backdrop-filter:blur(10px)}
+.h-lb-img{position:relative;max-width:min(100%,1600px);max-height:100%;object-fit:contain;
+  border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.45);background:#fff}
+.h-lb-close{position:absolute;top:20px;right:20px;z-index:1;display:grid;place-items:center;
+  width:36px;height:36px;border:1px solid rgba(255,255,255,.28);border-radius:999px;
+  background:rgba(20,26,36,.72);color:#fff;cursor:pointer;font-size:17px;line-height:1;padding:0}
+.h-lb-close:hover{background:rgba(20,26,36,.94)}
+.h-lb-close:focus-visible{outline:2px solid #2563EB;outline-offset:3px}
 /* 输入底部一行：工具按钮 | 模型选择器 | 发送 */
 .h-inputbar{display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0}
 .h-toolgrp{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto;flex-wrap:nowrap}
@@ -744,8 +800,8 @@ body.rws-dragging *{cursor:col-resize !important}
   border:1px solid #DDE3EC;border-radius:8px;background:#FAFBFC;color:#3E4655;
   font-size:10.5px;line-height:1;cursor:pointer;max-width:100%;min-width:0;
   transition:border-color .16s,background .16s,color .16s}
-.h-mp-btn:hover{border-color:#1B8B7E;background:#FFFFFF;color:#1B8B7E}
-.h-modelpick.open .h-mp-btn{border-color:#1B8B7E;background:#FFFFFF;color:#1B8B7E}
+.h-mp-btn:hover{border-color:#2563EB;background:#FFFFFF;color:#2563EB}
+.h-modelpick.open .h-mp-btn{border-color:#2563EB;background:#FFFFFF;color:#2563EB}
 .h-mp-txt{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .h-mp-btn .chev{width:11px;height:11px;flex:0 0 auto;opacity:.55;
   transition:transform .18s,opacity .18s}
@@ -765,12 +821,12 @@ body.rws-dragging *{cursor:col-resize !important}
   font-size:12px;color:#3E4655;cursor:pointer;line-height:1.35;
   transition:background .12s,color .12s}
 .h-mp-item:hover{background:#F4F7FB}
-.h-mp-item.on{background:#EDF8F5;color:#147567;font-weight:600}
+.h-mp-item.on{background:#EDF8F5;color:#1D4ED8;font-weight:600}
 .h-mp-item .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .h-mp-item .tag{flex:0 0 auto;font-size:10.5px;color:#9AA2B1;font-weight:400;
   background:#F2F5F9;border-radius:4px;padding:1px 4px}
-.h-mp-item.on .tag{background:#D9F0EA;color:#147567}
-.h-mp-item .tick{width:11px;height:11px;flex:0 0 auto;color:#1B8B7E;opacity:0}
+.h-mp-item.on .tag{background:#D9F0EA;color:#1D4ED8}
+.h-mp-item .tick{width:11px;height:11px;flex:0 0 auto;color:#2563EB;opacity:0}
 .h-mp-item.on .tick{opacity:1}
 .h-mp-empty{padding:10px 9px;font-size:12px;color:#A6ADBB;text-align:center}
 .h-sendgrp{display:flex;align-items:center;gap:10px;flex:0 0 auto}
@@ -780,10 +836,10 @@ body.rws-dragging *{cursor:col-resize !important}
   transition:background .15s,color .15s}
 .h-atool:hover{background:#E5EAF2;color:#252B36}
 .h-atool .ic{width:12px;height:12px}
-.h-atool .capdot{width:5px;height:5px;border-radius:50%;background:#1B8B7E;margin-left:2px}
+.h-atool .capdot{width:5px;height:5px;border-radius:50%;background:#2563EB;margin-left:2px}
 .h-atool.permission{background:#FFF2EF;color:#D6423C}
 .h-atool.permission:hover{background:#FFE6E0}
-.h-atool.on{background:#E5F6F2;color:#1B8B7E}
+.h-atool.on{background:#E5F6F2;color:#2563EB}
 
 /* 功能面板：每个按钮一个独立面板，绝不混在一起（2026-11-17 用户要求）。
    宽度按内容收紧（width:max-content + min/max 夹住），不再是一条 330px 宽的空条。 */
@@ -791,8 +847,8 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-wsbtn{gap:5px;max-width:150px}
 .h-wsbtn .chev{width:11px;height:11px;opacity:.55;flex:0 0 auto;transition:transform .16s}
 .h-wsbtn.open .chev{transform:rotate(180deg)}
-.h-wsbtn.on{background:#EDF8F5;border-color:#BFE4DC;color:#147567}
-.h-wsbtn.on .ic{color:#1B8B7E}
+.h-wsbtn.on{background:#EDF8F5;border-color:#A8C4F8;color:#1D4ED8}
+.h-wsbtn.on .ic{color:#2563EB}
 /* 对话已开始 → 工作区锁定。变灰 + 去掉下拉箭头，让「不能再改」这件事看得见，
    而不是点了没反应或者弹一个选了也没用的菜单。 */
 .h-wsbtn.locked{opacity:.55;cursor:not-allowed;background:#F5F6F8;border-color:var(--line);color:var(--ink-3)}
@@ -808,14 +864,14 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-ws-item{display:flex;align-items:center;gap:7px;height:30px;padding:0 8px;
   border-radius:8px;font-size:12px;color:#3E4655;cursor:pointer;white-space:nowrap}
 .h-ws-item:hover{background:#F5F8FB}
-.h-ws-item.on{background:#EDF8F5;color:#147567}
+.h-ws-item.on{background:#EDF8F5;color:#1D4ED8}
 .h-ws-item .ic{width:14px;height:14px;flex:0 0 auto;color:#8A92A2}
-.h-ws-item.on .ic{color:#1B8B7E}
+.h-ws-item.on .ic{color:#2563EB}
 .h-ws-item .nm{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis}
-.h-ws-item .tick{width:13px;height:13px;flex:0 0 auto;opacity:0;color:#1B8B7E}
+.h-ws-item .tick{width:13px;height:13px;flex:0 0 auto;opacity:0;color:#2563EB}
 .h-ws-item.on .tick{opacity:1}
 .h-ws-item.add{border-top:1px solid #EEF1F5;border-radius:0 0 7px 7px;margin-top:4px;padding-top:0;color:#5A6473}
-.h-ws-item.add .ic{color:#1B8B7E}
+.h-ws-item.add .ic{color:#2563EB}
 .h-ws-sep{height:1px;background:#EEF1F5;margin:4px 6px 0}
 .cappanel{position:fixed;z-index:88;
   width:max-content;min-width:0;max-width:min(400px,90vw);
@@ -827,7 +883,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .cappanel.open{display:block;opacity:1;transform:translateY(0)}
 .cappanel h4{margin:0 0 2px;font-size:12px;font-weight:600;color:#2C3340;
   display:flex;align-items:center;gap:6px;white-space:nowrap}
-.cappanel h4 .ic{width:13px;height:13px;color:#1B8B7E;flex:0 0 auto}
+.cappanel h4 .ic{width:13px;height:13px;color:#2563EB;flex:0 0 auto}
 .cappanel h4 span{margin-left:auto;font-size:10.5px;font-weight:500;color:#8A93A3;
   padding-left:12px;white-space:nowrap}
 .cappanel .cdesc{margin:0 0 7px;font-size:10.5px;color:#9AA2B1;line-height:1.55;white-space:nowrap}
@@ -838,17 +894,16 @@ body.rws-dragging *{cursor:col-resize !important}
   font-size:12px;color:#3E4655;cursor:pointer;line-height:1.35;white-space:nowrap;
   height:26px;box-sizing:border-box;flex:0 0 auto}
 .cappanel .crow:hover{background:#F6F8FB}
-.cappanel .crow input{width:13px;height:13px;accent-color:#1B8B7E;margin:0;flex:0 0 auto}
+.cappanel .crow input{width:13px;height:13px;accent-color:#2563EB;margin:0;flex:0 0 auto}
 .cappanel .crow .lb{flex:1 1 auto}
 .cappanel .crow .tag{flex:0 0 auto;font-size:10.5px;color:#A6ADBB;padding-left:14px}
-.cappanel .crow select{margin-left:auto;height:22px;border:1px solid #E1E6EE;border-radius:8px;
-  background:#fff;color:#3E4655;font-size:10.5px;padding:0 4px;outline:none}
+.cappanel .crow select{margin-left:auto;height:22px;color:#3E4655;font-size:10.5px;padding:0 4px}
 .cappanel .cfoot{display:flex;gap:6px;margin-top:10px;padding-top:9px;border-top:1px solid #EEF1F5}
 .cappanel .cfoot button{flex:1 1 auto;height:26px;border:1px solid #E1E6EE;border-radius:8px;
   background:#F8FAFC;color:#5A6473;font-size:10.5px;cursor:pointer;white-space:nowrap;
   transition:border-color .15s,color .15s,background .15s}
-.cappanel .cfoot button:hover{border-color:#9FD8CF;color:#1B8B7E;background:#F4FBF9}
-.cappanel .cfoot button.pri{background:#1B8B7E;border-color:#1B8B7E;color:#fff}
+.cappanel .cfoot button:hover{border-color:#9FD8CF;color:#2563EB;background:#F4FBF9}
+.cappanel .cfoot button.pri{background:#2563EB;border-color:#2563EB;color:#fff}
 .cappanel .cfoot button.pri:hover{background:#178073;color:#fff}
 /* 技能条目：名字 + 一句说明两行排，不再把说明挤到右边一列 */
 .cappanel .skrow{display:flex;align-items:flex-start;gap:8px;padding:6px 7px;border-radius:8px;
@@ -862,10 +917,10 @@ body.rws-dragging *{cursor:col-resize !important}
   line-height:1.5;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cappanel .cctxs{max-height:260px;overflow-y:auto;overflow-x:hidden;display:block}
 /* 发送 / 语音输入落到底部右侧，状态类保持原语义 */
-.h-aiinput .send{width:34px;height:34px;border-radius:50%;background:#1B8B7E;color:#fff;
+.h-aiinput .send{width:34px;height:34px;border-radius:50%;background:#2563EB;color:#fff;
   display:grid;place-items:center;border:0;flex:0 0 auto;
-  box-shadow:0 2px 8px rgba(27,139,126,.32);transition:background .16s,transform .16s}
-.h-aiinput .send:hover{background:#147567}
+  box-shadow:0 2px 8px rgba(37,99,235,.32);transition:background .16s,transform .16s}
+.h-aiinput .send:hover{background:#1D4ED8}
 .h-aiinput .send:active{transform:scale(.94)}
 .h-aiinput .send .ic{width:14px;height:14px}
 .h-aiinput .mic{width:32px;height:32px;border-radius:50%;background:#EEF1F6;color:#5A6473;
@@ -936,7 +991,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-center-tabs{gap:10px}
 .h-center-tabs .h-idx{margin-left:auto;font-size:10.5px;color:var(--ink3);border:1px solid var(--line);
   border-radius:12px;padding:2px 8px;background:#FAFBFD;white-space:nowrap}
-.h-center-tabs .h-idx:hover{border-color:#BFE0DA;color:#5A6272}
+.h-center-tabs .h-idx:hover{border-color:#A8C4F8;color:#5A6272}
 .h-center-tabs .more{margin-left:0}
 /* 素材条：横向可滚动，把当前文件夹里的素材都列出来，不只 5 个 */
 .h-strip{flex:0 0 clamp(54px,20%,78px);display:flex;gap:8px;min-height:0;
@@ -946,7 +1001,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-strip::-webkit-scrollbar-thumb{background:#D9DFE9;border-radius:4px}
 .h-strip .h-empty{flex:1}
 .h-asset{position:relative;flex:0 0 96px;height:100%;min-height:0;border-radius:var(--r-sm);
-  background:#EEF1F6 center/cover no-repeat;cursor:pointer;border:1px solid transparent;
+  background:#EEF1F6 center/cover no-repeat;cursor:pointer;border:1px solid var(--line-c);
   overflow:hidden;transition:transform .16s,box-shadow .16s,border-color .16s}
 .h-asset:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(28,38,58,.18)}
 .h-asset.on{border-color:var(--gold-deep);box-shadow:0 0 0 2px rgba(199,154,75,.35)}
@@ -971,7 +1026,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-float-hd button{font-size:10.5px;color:#C9D2E0;border:1px solid rgba(255,255,255,.18);
   border-radius:4px;padding:3px 9px;background:rgba(255,255,255,.06);cursor:pointer;white-space:nowrap}
 .h-float-hd button:hover{background:rgba(255,255,255,.16);color:#fff}
-.h-float-hd button.on{background:#1B8B7E;border-color:#1B8B7E;color:#1A1408}
+.h-float-hd button.on{background:#2563EB;border-color:#2563EB;color:#1A1408}
 .h-float-bd{flex:1;min-height:0;position:relative;background:#0B1119}
 .h-float-bd video,.h-float-bd img{width:100%;height:100%;object-fit:contain;background:#0B1119;display:block}
 .h-float-rs{position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;z-index:4;
@@ -1002,7 +1057,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-tk .body{flex:1;min-width:0}
 .h-tk .nm{font-size:var(--f4);font-weight:600;display:flex;align-items:center;gap:6px}
 .h-tk .nm .ic{width:13px;height:13px;color:#6A7282}
-.h-tk input{width:100%;border:0;outline:none;background:transparent;font-size:var(--f5);color:var(--ink2);margin-top:3px}
+.h-tk input{width:100%;font-size:var(--f5);color:var(--ink2);margin-top:3px}
 .h-tk input::placeholder{color:#B3BAC7}
 .h-tk .lk{width:22px;height:22px;display:grid;place-items:center;color:#A8AFBD;flex:0 0 auto;cursor:pointer}
 .h-tk .lk .ic{width:14px;height:14px}
@@ -1019,12 +1074,12 @@ body.rws-dragging *{cursor:col-resize !important}
    项目设置里模板只保留「套用模板」一条下拉，下面直接是「项目名称」。 */
 /* 模板选择：一行紧凑下拉（选模板时才用），把纵向空间省给真实设置项 */
 .h-tplrow{grid-column:1/-1;display:flex;align-items:center;gap:6px;min-width:0;height:28px}
-.h-tplrow>.ic{width:13px;height:13px;color:#1B8B7E;flex:0 0 auto}
+.h-tplrow>.ic{width:13px;height:13px;color:#2563EB;flex:0 0 auto}
 .h-tplrow label{font-size:var(--f5);color:var(--ink2);font-weight:600;flex:0 0 auto;white-space:nowrap;
   line-height:1;display:flex;align-items:center}
 .h-tplpick{flex:1;min-width:0;height:28px;position:relative;display:flex;align-items:center;
   border:1px solid var(--line);border-radius:var(--r-sm);background:#fff;box-shadow:var(--sh-btn)}
-.h-tplpick select{flex:1;min-width:0;height:100%;border:0;background:transparent;outline:none;
+.h-tplpick select{flex:1;min-width:0;height:100%;
   padding:0 22px 0 9px;font-size:var(--f5);color:#3E4655;font-family:inherit;line-height:28px;
   -webkit-appearance:none;appearance:none;text-overflow:ellipsis;cursor:pointer}
 .h-tplpick .ic{position:absolute;right:6px;width:11px;height:11px;color:#8C93A1;pointer-events:none}
@@ -1040,7 +1095,7 @@ body.rws-dragging *{cursor:col-resize !important}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .h-field label::before{content:"›";color:var(--gold-deep);font-size:12px;font-weight:700;flex:0 0 auto}
 .h-field .u-input,.h-field .u-select{height:32px;min-width:0;padding:0 8px;gap:4px}
-.h-field .u-input input,.h-field .u-select select{font-size:var(--f5);min-width:0;text-overflow:ellipsis}
+.h-field .u-input input,.h-field .u-select select{font-size:var(--f5);min-width:0;text-overflow:ellipsis;border:0;box-shadow:none;background:transparent}
 /* 画质 / 片尾 这种「两个下拉挤一行」的组合，箭头必须瘦下来，否则 select 只剩几像素、文字被吃光 */
 .h-dur .u-select{padding:0 6px;gap:2px}
 .h-dur .u-select .ic{width:11px;height:11px}
@@ -1048,7 +1103,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-dur{display:flex;gap:6px;min-width:0}
 .h-dur .u-select{flex:1;min-width:0}
 .h-dur .u-input{flex:0 0 62px;padding:0 6px;gap:2px;justify-content:flex-end}
-.h-dur .u-input input{text-align:right;min-width:0}
+.h-dur .u-input input{text-align:right;min-width:0;border:0;box-shadow:none;background:transparent}
 .h-dur .u-input span{font-size:10.5px;color:var(--ink3);flex:0 0 auto}
 .h-dur .u-input.off{opacity:.45}
 .h-dur .u-input.off input{pointer-events:none}
@@ -1059,7 +1114,7 @@ body.rws-dragging *{cursor:col-resize !important}
   .h-pane[data-pane="project"]{padding:9px 13px 10px}
   .h-setgrid{gap:7px 8px}
   .h-field .u-input,.h-field .u-select{height:30px}
-  .h-field .u-input input,.h-field .u-select select{font-size:var(--f5)}
+  .h-field .u-input input,.h-field .u-select select{font-size:var(--f5);border:0;box-shadow:none;background:transparent}
 }
 /* 四个预设创意按钮整体往下：欢迎语和按钮之间留固定间距，不被上下均分吃掉 */
 .h-ai > .h-chips{flex:0 0 auto;margin-top:clamp(22px,2.8vh,34px)}
@@ -1096,7 +1151,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-search{width:200px;height:29px;border:1px solid var(--line);border-radius:var(--r-sm);
   display:flex;align-items:center;gap:7px;padding:0 10px;color:var(--ink3);background:#FFFFFF;box-shadow:var(--sh-in)}
 .h-search .ic{width:13px;height:13px}
-.h-search input{border:0;outline:none;background:transparent;width:100%;font-size:var(--f5)}
+.h-search input{;width:100%;font-size:var(--f5)}
 .h-search input::placeholder{color:#A6ADBB}
 .h-viewbtn{width:29px;height:29px;border:1px solid var(--line);border-radius:var(--r-sm);
   display:grid;place-items:center;color:#8A92A2;background:#FFFFFF;box-shadow:var(--sh-btn)}
@@ -1168,8 +1223,8 @@ body.rws-dragging *{cursor:col-resize !important}
 
 /* 工具栏「展开」按钮：点开悬浮层看全部项目与完整信息 */
 .h-prj-exp{height:29px;display:flex;align-items:center;gap:6px;padding:0 10px;flex:0 0 auto;
-  border:1px solid #BFE0DA;border-radius:var(--r-sm);
-  background:linear-gradient(180deg,#FCFDFE,#F4F6FA);color:#33405A;
+  border:1px solid #A8C4F8;border-radius:var(--r-sm);
+  background:linear-gradient(180deg,#FFFFFF,#F4F6FA);color:#33405A;
   font-size:var(--f5);font-weight:600;cursor:pointer;box-shadow:var(--sh-btn)}
 .h-prj-exp:hover{border-color:var(--gold-deep)}
 .h-prj-exp .ic{width:13px;height:13px}
@@ -1202,7 +1257,7 @@ body.rws-dragging *{cursor:col-resize !important}
   border-radius:var(--r-sm);display:flex;align-items:center;gap:7px;padding:0 10px;
   color:var(--ink3);background:#fff;flex:0 0 auto}
 .h-prj-ov .ov-search .ic{width:13px;height:13px}
-.h-prj-ov .ov-search input{border:0;outline:none;background:transparent;width:100%;font-size:var(--f5)}
+.h-prj-ov .ov-search input{;width:100%;font-size:var(--f5)}
 .h-prj-ov .ov-x{width:29px;height:29px;border:1px solid var(--line);border-radius:var(--r-sm);
   background:#fff;color:#8A92A2;font-size:20px;line-height:1;cursor:pointer;flex:0 0 auto}
 .h-prj-ov .ov-x:hover{color:var(--ink);border-color:#D6DCE8}
@@ -1273,7 +1328,7 @@ body.rws-dragging *{cursor:col-resize !important}
   transition:box-shadow .12s}
 .h-seg:last-child{border-right:0}
 .h-seg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,17,25,.04),rgba(11,17,25,.42))}
-.h-seg.on{box-shadow:inset 0 0 0 2px #1B8B7E;z-index:3}
+.h-seg.on{box-shadow:inset 0 0 0 2px #2563EB;z-index:3}
 .h-seg .nm{position:absolute;left:5px;right:5px;bottom:3px;z-index:2;color:#fff;font-size:10.5px;
   line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   text-shadow:0 1px 2px rgba(0,0,0,.55)}
@@ -1428,7 +1483,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-audio-btn{display:flex;align-items:center;gap:7px;height:32px;padding:0 9px;flex:1;min-width:0;
   border:1px solid var(--line);border-radius:var(--r-sm);background:#fff;box-shadow:var(--sh-btn);
   cursor:pointer;text-align:left;color:var(--ink);font-family:inherit}
-.h-audio-btn:hover{border-color:#BFE0DA;background:#FCFDFE}
+.h-audio-btn:hover{border-color:#A8C4F8;background:#FFFFFF}
 .h-audio-btn .ic{width:14px;height:14px;flex:0 0 auto;color:#5A6272}
 .h-audio-btn .txt{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:0;line-height:1.15}
 .h-audio-btn .txt b{font-size:var(--f5);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto;max-width:100%}
@@ -1443,7 +1498,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .au-tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);padding-bottom:9px;flex:0 0 auto;flex-wrap:wrap}
 .au-tabs button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 11px;
   font-size:var(--f5);color:var(--ink2);cursor:pointer;font-family:inherit}
-.au-tabs button.on{background:#EAF5F3;border-color:#BFE0DA;color:#33405A;font-weight:600}
+.au-tabs button.on{background:#EFF4FF;border-color:#A8C4F8;color:#33405A;font-weight:600}
 .au-grp{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:8px}
 .au-gh{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#F8FAFD;font-size:var(--f5);flex-wrap:wrap}
 .au-gh b{font-size:var(--f4);color:var(--ink)}
@@ -1456,8 +1511,8 @@ body.rws-dragging *{cursor:col-resize !important}
 .au-v .u-tag{flex:0 0 auto}
 .au-mini{border:1px solid var(--line);background:#fff;border-radius:8px;padding:3px 9px;flex:0 0 auto;
   font-size:var(--f5);color:var(--ink2);cursor:pointer;white-space:nowrap;font-family:inherit}
-.au-mini:hover{border-color:#BFE0DA;color:#147567}
-.au-mini.on{background:#EAF5F3;border-color:#BFE0DA;color:#33405A;font-weight:600}
+.au-mini:hover{border-color:#A8C4F8;color:#1D4ED8}
+.au-mini.on{background:#EFF4FF;border-color:#A8C4F8;color:#33405A;font-weight:600}
 .au-note{font-size:var(--f5);color:var(--ink3);line-height:1.7}
 .au-sec-t{font-size:var(--f4);font-weight:600;display:flex;align-items:center;gap:7px;margin:3px 0;flex-wrap:wrap}
 .au-sec-t .u-tag{margin-left:auto}
@@ -1465,78 +1520,96 @@ body.rws-dragging *{cursor:col-resize !important}
 .au-player{width:100%;height:34px;margin-top:2px}
 .mu-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);
   border-radius:8px;font-size:var(--f5);margin-bottom:5px}
-.mu-row.sel{border-color:#BFE0DA;background:#FCFDFE}
+.mu-row.sel{border-color:#A8C4F8;background:#FFFFFF}
 .mu-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.v-f input[type=range]{width:100%;accent-color:#1B8B7E;height:28px}
+.v-f input[type=range]{width:100%;accent-color:#2563EB;height:28px}
 /* ── AI 工作流程卡片（对齐 DSH）：一行摘要，点开看每一步 ── */
 /* 不画边框：这是「过程」不是「内容」，有框会跟对话气泡抢注意力。
    只用左边一条 2px 竖线标出“这里有东西在跑”，跑完就收掉。 */
-.h-flow{margin:2px 0 10px;border:0;border-left:2px solid #CFE6E1;
-  border-radius:0;background:transparent;padding-left:9px;
-  overflow:hidden;max-width:100%;box-sizing:border-box}
-.h-flow.done{border-left-color:transparent}
-.h-flow-h{display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;
-  font-size:12px;color:#5C6478;user-select:none;transition:color .16s}
-.h-flow-h:hover{color:#2C3340}
-.h-flow-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:#1B8B7E;
-  box-shadow:0 0 0 3px rgba(199,154,75,.16);animation:hFlowPulse 1.4s ease-in-out infinite}
-.h-flow.done .h-flow-dot{background:#2E9E76;box-shadow:0 0 0 3px rgba(46,158,118,.14);animation:none}
-@keyframes hFlowPulse{0%,100%{opacity:.45}50%{opacity:1}}
+/* ══ DSH 式「过程组」：一轮只占一行灰色小字，点开才看每步，跑完自动收起 ══
+   照 dsh-client-ui-chat 的 ChatGroupSeat / TurnProcessNodeView 重做：
+   - 标题用 label-tertiary 灰、14px 内容字号、hover 才显 chevron
+   - 语义图标按 activity 分类（read/search/write/commands/web/subagents/tools/plan）
+   - 完成态不要卡片、不要左边框，只留一条极淡的分隔，跟正文融在一起
+   - 运行中文字轻微 shimmer，一眼看出「还在干活」 */
+.h-flow{margin:2px 0 9px;max-width:100%;box-sizing:border-box;overflow:hidden}
+.h-flow-h{display:flex;align-items:center;gap:6px;padding:3px 2px;cursor:pointer;
+  font-size:12px;color:#8A93A6;user-select:none;transition:color .1s;
+  border:0;background:none;width:100%;text-align:left;font-family:inherit}
+.h-flow-h:hover{color:#525C6B}
+.h-flow-ic{width:14px;height:14px;flex:0 0 auto;display:inline-flex;align-items:center;
+  justify-content:center;color:inherit;position:relative}
+.h-flow-ic svg{width:14px;height:14px;display:block}
+.h-flow-ai,.h-flow-chev{position:absolute;inset:0;display:inline-flex;transition:opacity .1s}
+.h-flow-chev{opacity:0}
+.h-flow-h:hover .h-flow-ai,.h-flow.open .h-flow-ai{opacity:0}
+.h-flow-h:hover .h-flow-chev,.h-flow.open .h-flow-chev{opacity:1}
 .h-flow-t{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.h-flow.done .h-flow-t{color:#3E4655}
-.h-flow-n{flex:0 0 auto;font-size:10.5px;color:#98A0B0;font-variant-numeric:tabular-nums}
-.h-flow-chev{width:13px;height:13px;flex:0 0 auto;color:#98A0B0;transition:transform .18s}
-.h-flow.open .h-flow-chev{transform:rotate(90deg)}
-/* 流式输出时的小光标：让"还在写"这件事看得见 */
-.h-caret{display:inline-block;width:2px;height:1em;vertical-align:-2px;margin-left:2px;
-  background:#1B8B7E;animation:hCaret .9s steps(2) infinite;border-radius:1px}
-@keyframes hCaret{0%,50%{opacity:1}51%,100%{opacity:0}}
-.h-flow-b{display:none;padding:1px 0 4px}
-/* ★ 步骤多了会把整屏撑爆：24 步就是几百像素，对话被挤没了，新步骤也看不到。
-   给个体面高度上限，里面自己滚；新步骤自动滚到底（在 flowRender 里做）。 */
+.h-flow.run .h-flow-t{animation:hFlowShimmer 1.5s ease-in-out infinite}
+@keyframes hFlowShimmer{0%,100%{opacity:.5}50%{opacity:1}}
+.h-flow-n{flex:0 0 auto;font-size:10.5px;color:#A2AABB;font-variant-numeric:tabular-nums}
+.h-flow-sep{flex:0 0 auto;color:#B2BAC7;font-size:11px}
+/* turn 汇总行：完成才出现，「已完成，用时 X」，.5px 下边框，hover 变深 */
+.h-flow-sum{display:none;width:100%;align-items:center;gap:4px;padding:5px 2px 7px;margin-top:2px;
+  border:0;border-bottom:.5px solid #E4E8EE;background:none;cursor:pointer;text-align:left;
+  color:#8A93A6;font:inherit;font-size:12px;transition:color .1s}
+.h-flow-sum:hover{color:#525C6B}
+.h-flow-sum-t{flex:1 1 auto;min-width:0;font-variant-numeric:tabular-nums}
+.h-flow-sum-chev{width:13px;height:13px;flex:none;transition:transform .12s}
+.h-flow.open .h-flow-sum-chev{transform:rotate(180deg)}
+.h-flow-b{display:none;padding:5px 0 3px 20px}
 .h-flow.open .h-flow-b{display:block;max-height:min(46vh,420px);overflow-y:auto;
-  overscroll-behavior:contain;scrollbar-width:thin;padding-right:3px}
+  overscroll-behavior:contain;scrollbar-width:thin}
 .h-flow.open .h-flow-b::-webkit-scrollbar{width:6px}
 .h-flow.open .h-flow-b::-webkit-scrollbar-thumb{background:#DCE3EA;border-radius:3px}
-.h-flow.open .h-flow-b::-webkit-scrollbar-thumb:hover{background:#C4CDD8}
-.h-flow.open .h-flow-b::-webkit-scrollbar-track{background:transparent}
 .h-flow-step{display:flex;align-items:flex-start;gap:7px;flex-wrap:wrap;
-  padding:5px 0;font-size:12px;line-height:1.55;color:#3E4655;min-width:0}
-.h-flow-step + .h-flow-step{border-top:1px dashed #F0F3F8}
-.h-flow-i{width:13px;flex:0 0 auto;text-align:center;color:#2E9E76;font-weight:700}
+  padding:4px 0;font-size:11.5px;line-height:1.55;color:#5C6478;min-width:0}
+.h-flow-step + .h-flow-step{border-top:1px solid #F4F6F9}
+.h-flow-i{width:14px;height:14px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;color:#5C6478}
+.h-flow-i svg{width:13px;height:13px}
 .h-flow-step.bad .h-flow-i{color:#C04848}
-/* 正在跑的那一步：转圈 + 加粗，让人一眼看到"现在在干嘛" */
-.h-flow-step.run .h-flow-i{color:#C79A4B;animation:hfspin 1s linear infinite;display:inline-block}
-@keyframes hfspin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-.h-flow-step.run .h-flow-nm{color:#8A6B28}
-.h-flow-nm{flex:0 0 auto;font-weight:600;color:#2C3340}
-.h-flow-dt{flex:1 1 auto;min-width:0;color:#8A93A6;font-family:ui-monospace,Menlo,monospace;
-  font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.h-flow-out{flex-basis:100%;padding-left:20px;color:#8A93A6;font-size:12px;line-height:1.5;
-  white-space:pre-wrap;word-break:break-all;max-height:72px;overflow:hidden}
-.h-flow-step.bad .h-flow-out{color:#A5766F}
-/* 每步耗时：靠右的小灰字，等宽数字对齐 */
+.h-flow-step.run .h-flow-i{color:#2563EB}
+.h-flow-nm{flex:0 0 auto;font-weight:500;color:#3E4655}
+.h-flow-dt{flex:1 1 auto;min-width:0;color:#98A0B0;font-family:ui-monospace,Menlo,monospace;
+  font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .h-flow-ms{flex:0 0 auto;margin-left:auto;font-size:10.5px;color:#A2AABB;
   font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,monospace}
-/* 有细节的步骤：箭头可点，展开后看完整入参与返回 */
 .h-flow-step.expandable{cursor:pointer}
-.h-flow-d2{width:12px;height:12px;flex:0 0 auto;color:#A2AABB;transition:transform .16s}
+.h-flow-d2{width:12px;height:12px;flex:0 0 auto;color:#B2BAC7;transition:transform .16s}
 .h-flow-step.det-open .h-flow-d2{transform:rotate(180deg)}
-.h-flow-det{flex-basis:100%;display:none;padding:6px 0 4px 20px;min-width:0}
+.h-flow-det{flex-basis:100%;display:none;padding:5px 0 4px 21px;min-width:0}
 .h-flow-step.det-open .h-flow-det{display:block}
 .h-flow-det-lb{font-size:10.5px;color:#98A0B0;letter-spacing:.04em;margin:5px 0 3px}
-.h-flow-det pre{margin:0 0 5px;background:#F3F6FA;border:1px solid #E6EBF2;border-radius:7px;
+.h-flow-det pre{margin:0 0 5px;background:#F7F9FC;border:1px solid #EAEDF2;border-radius:7px;
   padding:8px 10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
-  line-height:1.55;color:#4A5464;white-space:pre-wrap;word-break:break-word;
+  line-height:1.55;color:#5C6478;white-space:pre-wrap;word-break:break-word;
   max-height:190px;overflow:auto}
 .h-steps.open .h-steps-b{display:flex}
 .h-step.bad{background:#FDECEC;color:#B04A4A}
 
+/* ── 思考过程（DSH 式 ReasoningRow）：默认折成一行灰字，点开看全文 ──
+   DSH 把 reasoning 做成独立 disclosure，跟工具步骤并列、不混进回答正文。
+   收起态显示第一行摘要（去掉 ** 标记），展开态是次级字号的完整 Markdown。 */
+.h-think{margin:2px 0 7px;border-left:2px solid #DDE2E9;padding:1px 0 1px 10px}
+.h-think-h{display:flex;align-items:center;gap:5px;cursor:pointer;color:#8A93A6;font-size:11.5px;
+  line-height:1.6;user-select:none}
+.h-think-h:hover{color:#5C6478}
+.h-think-h .ht-ic{width:12px;height:12px;flex:0 0 auto;opacity:.7}
+.h-think-h .ht-t{flex:0 0 auto;font-weight:500}
+.h-think-h .ht-sum{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9AA2B1}
+.h-think-h .ht-chev{width:11px;height:11px;flex:0 0 auto;transition:transform .14s;opacity:.6}
+.h-think.open .ht-chev{transform:rotate(180deg)}
+.h-think.run .ht-sum{animation:hFlowShimmer 1.5s ease-in-out infinite}
+.h-think-b{display:none;margin:4px 0 2px;padding:7px 10px;background:#F7F9FC;border:1px solid #EAEDF2;
+  border-radius:7px;font-size:11.5px;line-height:1.72;color:#6B7385;white-space:pre-wrap;word-break:break-word;
+  max-height:min(40vh,360px);overflow:auto}
+.h-think.open .h-think-b{display:block}
+
 .h-greet{gap:9px;margin:6px 0 10px;text-align:center}
 .h-greet::before{display:none}
 .h-greet > .d-kicker{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 11px;
-  border-radius:12px;background:#EAF5F3;color:#147567;font-size:10.5px;font-weight:600;letter-spacing:.5px}
-.h-greet > .d-kicker i{width:6px;height:6px;border-radius:50%;background:#1B8B7E;display:inline-block}
+  border-radius:12px;background:#EFF4FF;color:#1D4ED8;font-size:10.5px;font-weight:600;letter-spacing:.5px}
+.h-greet > .d-kicker i{width:6px;height:6px;border-radius:50%;background:#2563EB;display:inline-block}
 /* 欢迎区排版：标识克制、标语为主。字号用 clamp 是因为它属于展示级标题，
    不参与正文的四档体系（10.5/12/15/20），标题档单独一套尺度。 */
 /* 2026-11-17 去可爱风：原来这里是机器人吉祥物（圆形渐变底+青绿光晕+悬浮阴影），
@@ -1608,14 +1681,14 @@ body.rws-dragging *{cursor:col-resize !important}
   .d-sugs{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 .d-sug:hover{background:#F7F9FC;border-color:#CFDAE9;box-shadow:0 1px 3px rgba(28,38,58,.06)}
-.d-sug:hover .d-sug-t{color:#147567}
+.d-sug:hover .d-sug-t{color:#1D4ED8}
 /* 彩色小方块是这一屏唯一的颜色来源，同时承担「这三件事分别是什么类型」的信息 */
 .sq{flex:0 0 auto;width:19px;height:19px;border-radius:5px;
   display:flex;align-items:center;justify-content:center}
 .sq .ic{width:11px;height:11px;color:#fff}
 .sq-a{background:#252B36}   /* 剪辑 · 墨黑 */
 .sq-b{background:#2F6BFF}   /* 文案 · 蓝 */
-.sq-c{background:#1B8B7E}   /* 模板 · 品牌青 */
+.sq-c{background:#2563EB}   /* 模板 · 品牌青 */
 /* 第四条是「问路」，不是具体功能，所以用品牌金而不是功能色：
    前三个色块在说「这是剪辑 / 文案 / 模板」，金色在说「这不是某一类活」。 */
 .sq-d{background:linear-gradient(135deg,#C9A227 0%,#E0BE5A 100%)}
@@ -1669,7 +1742,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-wk:hover{border-color:#C9D6EC;box-shadow:0 1px 4px rgba(30,45,80,.07)}
 .h-wk-dot{width:6px;height:6px;border-radius:50%;flex:0 0 auto;background:#2F6BFF;
   box-shadow:0 0 0 3px rgba(47,107,255,.14);animation:hwkPulse 1.5s infinite}
-.h-wk.done .h-wk-dot{background:#1B8B7E;box-shadow:none;animation:none}
+.h-wk.done .h-wk-dot{background:#2563EB;box-shadow:none;animation:none}
 .h-wk.failed .h-wk-dot{background:#C25B5B;box-shadow:none;animation:none}
 .h-wk.stopped .h-wk-dot{background:#B4BAC6;box-shadow:none;animation:none}
 @keyframes hwkPulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -1693,15 +1766,14 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-wsheet-hd button:hover{color:var(--ink)}
 .h-wsheet-bd{padding:10px 13px;overflow:auto;flex:1;font-size:var(--f4);color:var(--ink-2);line-height:1.6}
 .h-wsheet-bd .st{display:flex;gap:6px;align-items:baseline;padding:3px 0;border-bottom:1px dashed #F0F2F5}
-.h-wsheet-bd .st i{font-style:normal;color:#1B8B7E;flex:0 0 auto}
+.h-wsheet-bd .st i{font-style:normal;color:#2563EB;flex:0 0 auto}
 .h-wsheet-bd .st.bad i{color:#C25B5B}
 .h-wsheet-bd .st b{font-weight:500;color:var(--ink);flex:0 0 auto}
 .h-wsheet-bd .st span{color:#9AA2B1;font-size:var(--f5);min-width:0;overflow:hidden;text-overflow:ellipsis}
 .h-wsheet-bd .out{white-space:pre-wrap;background:#F7F8FA;border-radius:8px;padding:8px 10px;margin-top:8px}
 .h-wsheet-ft{display:flex;gap:6px;padding:9px 11px;border-top:1px solid var(--line);background:#FCFCFD}
-.h-wsheet-ft input{flex:1;min-width:0;height:29px;padding:0 9px;border:1px solid var(--line);
-  border-radius:7px;font-size:var(--f4);outline:none;background:#fff}
-.h-wsheet-ft input:focus{border-color:#9FB8E8}
+.h-wsheet-ft input{flex:1;min-width:0;height:29px;padding:0 9px;font-size:var(--f4)}
+.h-wsheet-ft input:focus{}
 .h-wsheet-ft button{height:29px;padding:0 11px;border:1px solid var(--line);border-radius:7px;
   background:#fff;font-size:var(--f4);color:var(--ink-2);cursor:pointer;white-space:nowrap}
 .h-wsheet-ft button.pri{background:#2F6BFF;border-color:#2F6BFF;color:#fff}
@@ -1710,7 +1782,7 @@ body.rws-dragging *{cursor:col-resize !important}
 .h-wdone{display:flex;align-items:center;gap:8px;margin:7px 0 7px 2px;padding:7px 11px;
   border:1px solid #D9EDE9;background:#F6FBFA;border-radius:9px;font-size:var(--f4);cursor:pointer}
 .h-wdone.bad{border-color:#F0D6D6;background:#FEFBFB}
-.h-wdone .ic{width:13px;height:13px;color:#1B8B7E;flex:0 0 auto}
+.h-wdone .ic{width:13px;height:13px;color:#2563EB;flex:0 0 auto}
 .h-wdone.bad .ic{color:#C25B5B}
 .h-wdone b{font-weight:600;color:var(--ink)}
 .h-wdone span{color:#8E97A6;font-size:var(--f5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
@@ -1822,11 +1894,17 @@ body.rws-dragging *{cursor:col-resize !important}
           <img src="assets/mascot.png" alt="影创小助手">
         </button>
         <div class="h-queue" id="hQueue" hidden></div>
+        <!-- 图片附件轨道（DSH 同款）：拖入/选择的图片在这里排成 64px 缩略图，发送时以多模态内容交给 AI -->
+        <div class="h-att-rail" id="hAttRail" hidden></div>
         <textarea id="hChatInput" rows="1" placeholder="今天，想做什么片？ @ 添加上下文，/ 调用技能与指令" autocomplete="off"></textarea>
         <div class="h-ws-pop" id="hWsPop" role="listbox" aria-label="工作区列表"></div>
         <div class="h-inputbar">
           <div class="h-toolgrp">
             <input type="file" id="hFilePick" webkitdirectory directory multiple hidden>
+            <!-- 选图片入口（DSH 的「+」附件）：只选图片，走多模态；普通文件靠拖入走素材库 -->
+            <input type="file" id="hImgPick" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+            <button class="h-atool" id="hImgBtn" type="button" title="添加图片：让 AI 直接看到画面">
+              <svg class="ic"><use href="#i-image"/></svg>图片</button>
             <button class="h-atool h-wsbtn" id="hWsBtn" type="button" aria-haspopup="listbox"
                     aria-expanded="false"
                     title="工作空间：选一个文件夹，AI 读里面的素材、出的片子也存回里面。不选就用软件默认目录。"><svg class="ic"><use href="#i-folder"/></svg><span id="hWsTxt">默认工作区</span><svg class="chev" viewBox="0 0 24 24" fill="none"><path d="m6 15 6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -2300,6 +2378,8 @@ body.rws-dragging *{cursor:col-resize !important}
       if(extra.usage)m.usage=extra.usage;
       if(extra.model)m.model=extra.model;
       if(extra.steps)m.steps=extra.steps;
+      if(extra.thinking)m.thinking=extra.thinking;
+      if(extra.images&&extra.images.length)m.images=extra.images;
     }
     window.api('/api/conversations',{action:'save',id:CONV.id,append:[m]})
       .then(function(){document.dispatchEvent(new CustomEvent('riffcut-conv-saved'))})
@@ -2378,16 +2458,24 @@ body.rws-dragging *{cursor:col-resize !important}
           return a;
         };
         var head=cells(t);
-        var html='<table><thead><tr>'+head.map(function(c){
+        /* ★ 照 DSH 排版：表格外面套一层可横向滚动的壳。
+           以前零条 table CSS → 浏览器默认样式把「1920x1080」挤成「1920x10/80」两行、
+           列黏在一起没边框。现在给纯数字/尺寸单元格加 h-td-nowrap 不折行，
+           整表在小窗口里横向滚动，长文本列照常换行。 */
+        var html='<div class="h-table-wrap"><table><thead><tr>'+head.map(function(c){
           return '<th>'+mdInline(escMd(c))+'</th>'}).join('')+'</tr></thead><tbody>';
         i+=2;                                  /* 跳过表头与 |---| 行 */
         while(i<lines.length && /^\|.*\|\s*$/.test(lines[i].trim())){
           var row=cells(lines[i]);
-          html+='<tr>'+row.map(function(c){return '<td>'+mdInline(escMd(c))+'</td>'}).join('')+'</tr>';
+          html+='<tr>'+row.map(function(c){
+            /* 纯数字/尺寸（1920x1080、5s、12s、5-12s）不折行；中文长句照常换行 */
+            var shortNum=/^[\d][\d\s.x×*\-—~/]*$/.test(c);
+            return '<td'+(shortNum?' class="h-td-nowrap"':'')+'>'+mdInline(escMd(c))+'</td>';
+          }).join('')+'</tr>';
           i++;
         }
         i--;                                   /* 抵消循环末尾的 i++ */
-        out.push(html+'</tbody></table>');continue;
+        out.push(html+'</tbody></table></div>');continue;
       }
       if(m=t.match(/^(#{1,6})\s+(.*)$/)){
         closeList();var lv=Math.min(m[1].length+2,6);
@@ -2946,6 +3034,14 @@ body.rws-dragging *{cursor:col-resize !important}
         var b=document.createElement('div');b.className='bub';
         if(who==='我')b.textContent=text;else b.innerHTML=mdRender(text);
         dm.appendChild(w);dm.appendChild(b);
+        /* ★ 图片消息回放：图片是独立一块（照 DSH attachmentRow），排在文字气泡上面。
+           纯图消息没有文字，这时把空的气泡也去掉，看起来就是一张图一条消息。 */
+        if(who==='我'&&Array.isArray(m.images)&&m.images.length){
+          var rw=null;
+          try{rw=window.__riffAttRow(m.images)}catch(e){rw=null}
+          if(rw)dm.insertBefore(rw,b);
+          if(!text&&b.parentNode)b.parentNode.removeChild(b);
+        }
         /* 存档里带了 usage 就照原样还原；老对话没有这个字段，就什么都不挂 */
         if(who!=='我'&&m.usage)metaPaint(dm,m.usage,m.model,0,m.time);
         /* 载入历史时逐条错开 34ms 进场。全挤在同一帧淡入，看着像整块画面闪了一下，
@@ -2957,6 +3053,15 @@ body.rws-dragging *{cursor:col-resize !important}
            但以前这里只画气泡、不读 steps，切走再切回来工作流卡就凭空消失。
            现在紧跟在这条 AI 消息后面重建一张折叠好的工作流卡。
            normalize：老存档只有 {tool,ok,args,out}，缺的字段用 tool 名 / out 摘要兜底。 */
+        /* ★ 思考也要能翻回来：存档里 thinking 是独立字段（convo.js 存，最多 20KB）。
+           跟 DSH 一致【排在回答气泡前面】、默认折叠，点开看完整推理。
+           ★ 顺序必须是 思考 → 过程组 → 回答气泡：dm 已经 append 了，
+           这里要用 insertBefore(dm) 往前插，不能 appendChild（那会跑到回答下面）。 */
+        if(who!=='我' && m.thinking){
+          var thW=thinkNode();
+          thinkSet(thW,m.thinking,false);
+          box.insertBefore(thW,dm);
+        }
         if(who!=='我' && Array.isArray(m.steps) && m.steps.length){
           var savedSteps=m.steps.map(function(x){
             x=x||{};
@@ -2974,7 +3079,7 @@ body.rws-dragging *{cursor:col-resize !important}
           var sw=flowNode();
           flowRender(sw,savedSteps,true);   /* done=true：渲染成「干完了」并自动折叠 */
           sw.classList.remove('open');      /* 再确保一次折叠，跟跑完时的状态一致 */
-          box.appendChild(sw);
+          box.insertBefore(sw,dm);
         }
       });
       // 有历史就切聊天态，否则空着一条对话还占着欢迎区很怪
@@ -3007,8 +3112,10 @@ body.rws-dragging *{cursor:col-resize !important}
         }
         var pb=addMsg('RiffCut','',true,{pending:true});
         chatPending=pb||null;
+        /* 跟 doSend 一样：过程组插在占位气泡前面，思考块再插到过程组前，
+           DSH 顺序 思考→过程组→回答 才对。 */
         var fw=flowNode();
-        if(box){box.appendChild(fw);box.scrollTop=box.scrollHeight}
+        if(box){box.insertBefore(fw,pb||null);box.scrollTop=box.scrollHeight}
         run.flowW=fw;
         setSending(true);
         pollSteps(run.stepId,fw);
@@ -3790,6 +3897,7 @@ body.rws-dragging *{cursor:col-resize !important}
         var x=d||{};WSLIST=x.list||WSLIST;WSID=x.id||'';
         wsPaintName();wsOpen(false);
         window.say(x.workspace?('工作区已切到 '+x.workspace):'已回到默认目录，产出落在软件自己的客户空间');
+        wsAskScan(x);
         return x;
       }).catch(function(e){window.say('切换工作区失败：'+((e&&e.message)||'未知错误'))});
     }
@@ -3798,8 +3906,51 @@ body.rws-dragging *{cursor:col-resize !important}
         var x=d||{};WSLIST=x.list||WSLIST;WSID=x.id||'';
         wsPaintName();wsOpen(false);
         window.say('已添加工作区 '+x.workspace+'，之后读素材、出片都在这里');
+        wsAskScan(x);
         return x;
       }).catch(function(e){window.say('添加工作区失败：'+((e&&e.message)||'未知错误'))});
+    }
+
+    /* 切/加完工作区，如果里面有视频或图片、而且还没扫过，就问一句要不要先扫。
+       为什么不在切完之后默默开扫：扫一遍要抽帧、要问视觉模型，几十条片子要跑很久，
+       用户只是切个目录干别的活，被后台任务抢了 CPU 和模型额度会莫名其妙。
+       也不在没素材时弹：空文件夹弹个框纯属打扰。
+       x.assets 为 null 表示目录读不了（权限/已拔的盘），这时也不弹 —— 不是「没有素材」。 */
+    function wsAskScan(x){
+      var a=(x&&x.assets)||null;
+      if(!a||!a.total)return;
+      if(a.scanned)return;
+      var parts=[];
+      if(a.video)parts.push(a.video+' 个视频');
+      if(a.image)parts.push(a.image+' 张图片');
+      var msg='这个工作区里有 '+parts.join('、')+'，还没分析过。<br><br>现在扫一遍并生成索引？<br>'
+             +'<span style="opacity:.65">会调用视觉模型，片子多时要等一会儿。索引写在 '+esc(x.root)+'/RiffCut-索引</span>';
+      /* 走软件自己的确认框（window.__confirmAsk，live.js 里那套），别用原生 confirm ——
+         原生弹窗在 macOS 上是系统样式，跟我们自己的界面完全两回事，用户会以为是别的软件弹的。
+         签名是 (文案, 确认回调, opt)，不是 Promise；传纯文本会被 esc 转义，所以用 opt.html 传富文本。 */
+      if(typeof window.__confirmAsk==='function'){
+        window.__confirmAsk('',function(){
+          /* 两步：先 scan 登记素材（建缩略图、算清晰度/重复、探时长），
+             再 analyze 让视觉模型逐条看一遍并生成索引。
+             只 scan 不 analyze 的话，用户点完「扫描」在 RiffCut-索引 里
+             什么也看不到 —— 而他要的就是「扫描分析、生成索引」。 */
+          window.api('/api/scan',{root:x.root}).then(function(sr){
+            window.say('素材登记完了（'+((sr&&sr.count)||0)+' 个），接着让模型看一遍…');
+            return window.api('/api/vision/analyze',{root:x.root,limit:24}).then(function(ar){
+              var n=(ar&&ar.looked)||0,bad=(ar&&ar.bad)||0;
+              window.say(ar&&ar.indexed
+                ? ('看完 '+n+' 条，其中 '+bad+' 条不能用。索引已存到 '+ar.indexed)
+                : ('看完 '+n+' 条，其中 '+bad+' 条不能用。'+(ar&&ar.note?ar.note:'')));
+            });
+          }).catch(function(e){
+            var m=(e&&e.message)||'未知错误';
+            /* 没配视觉模型是最常见的一种失败，且用户看不懂原始报错，
+               直接告诉他去哪配。 */
+            if(/没配能读图的模型/.test(m))window.say('这台机器还没配能看图的模型，到「模型管理」加一个支持图片输入的再回来扫');
+            else window.say('扫描失败：'+m);
+          });
+        },{title:'要扫一遍吗？',html:'<div>'+msg+'</div>',ok:'扫描'});
+      }
     }
     /* 弹原生文件夹对话框 → 拿绝对路径 → 添加为工作区并选中。
        Electron 走 riffcut.pickFolder（webUtils/dialog 拿得到绝对路径）；
@@ -3859,15 +4010,40 @@ body.rws-dragging *{cursor:col-resize !important}
         if(!hasFile(e))return;
         e.preventDefault();e.stopPropagation();
         dragDepth=0;box.classList.remove('drop-in');
-        /* 对话已开始 → 不允许再换工作区（跟点按钮同一条规矩）。
-           拖进来一个文件夹然后啥也不发生，比直接说清楚更让人困惑。 */
-        if(wsLocked()){
-          window.say&&window.say('对话已经开始，工作区就定了。要换工作区请点「新对话」重新开始。',true);
-          return;
-        }
         var files=[].slice.call(e.dataTransfer.files||[]);
         if(!files.length)return;
+        /* ★ 拖进来的可能是「文件夹」也可能是「文件」，两者要做的事完全不同：
+             文件夹 → 设为工作区（只在首屏允许，对话中锁住）
+             文件   → 加进素材库当附件，任何时候都允许
+           以前不分，一律当文件夹走「设工作区」，于是对话中拖一张 logo 图片
+           会弹「对话已经开始，工作区就定了」—— 素材根本传不进来。 */
         var file=files[0];
+        /* ★ 图片分流（照 DSH）：图片不进素材库、也不设工作区，直接作为多模态附件，
+           让 AI 真正看到画面（base64 image block）。其余文件/文件夹走原来的逻辑。
+           一次拖多张时逐个分流：图片全进附件轨道，非图片仍按第一个处理。 */
+        var imgAdded=0,otherFiles=[];
+        files.forEach(function(f){
+          if(window.__riffImageAdd&&window.__riffImageAdd(f))imgAdded++;
+          else otherFiles.push(f);
+        });
+        if(imgAdded)window.say('已添加 '+imgAdded+' 张图片，发送后 AI 能直接看到画面');
+        if(!otherFiles.length)return;   /* 全是图片，分流完就结束 */
+        file=otherFiles[0];
+        function asAttachment(file,absPath){
+          if(!absPath){window.say('拿不到这个文件的路径，请用「@」面板选素材',true);return}
+          window.say('正在加入素材库…');
+          if(!window.api){window.say('浏览器预览模式不能加素材，请在桌面 App 里拖入',true);return}
+          window.api('/api/assets',{action:'ingest',path:absPath}).then(function(r){
+            var n=(r&&r.added)||0;
+            window.say(n?('已加入素材库：'+file.name):('这个文件之前加过了：'+file.name));
+            /* 顺手把文件名写进输入框，用户接着说「用这张图做片尾」就行 */
+            var ta=$('#hChatInput');
+            if(ta&&!String(ta.value).trim()){
+              ta.value='用素材「'+file.name+'」';
+              ta.dispatchEvent(new Event('input',{bubbles:true}));
+            }
+          }).catch(function(err){window.say('加入素材库失败：'+((err&&err.message)||err),true)});
+        }
         function usePath(p,name){
           if(!p){ window.say('拿不到这个文件夹的路径，请用「添加工作区」选一次',true);return }
           /* 设为工作区（后端会验证是不是目录；拖单个文件会被拒并明确提示） */
@@ -3893,7 +4069,15 @@ body.rws-dragging *{cursor:col-resize !important}
         }
         if(window.riffcut&&window.riffcut.pathForFile){
           window.riffcut.pathForFile(file).then(function(r){
-            usePath(r&&r.path,(file.name||'').replace(/\.[^.]+$/,''));
+            var abs=(r&&r.path)||'';
+            if(!abs){ usePath('','');return }
+            /* 是文件还是文件夹，交给主进程判定 —— 渲染进程没有 fs */
+            if(!window.riffcut.statPath){ usePath(abs,(file.name||'').replace(/\.[^.]+$/,''));return }
+            window.riffcut.statPath(abs).then(function(st){
+              if(st&&st.isDir){ usePath(abs,(file.name||'').replace(/\.[^.]+$/,'')); return }
+              if(st&&st.isFile){ asAttachment(file,abs); return }
+              usePath(abs,(file.name||'').replace(/\.[^.]+$/,''));
+            }).catch(function(){ usePath(abs,(file.name||'').replace(/\.[^.]+$/,'')) });
           }).catch(function(){ usePath('','') });
         }else{
           /* 浏览器预览模式没有主进程通道 */
@@ -3965,6 +4149,141 @@ body.rws-dragging *{cursor:col-resize !important}
     });
     wsLoad();
     document.addEventListener('riffcut-ready',wsLoad);
+  })();
+
+  /* ── 图片附件（照 DSH ComposerAttachments）：让 AI 直接看到画面 ──
+     DSH 把图片读成 base64 塞进 contentBlocks 的 image block；普通文件/文件夹
+     不上传内容，只把 @路径 写进文本。这里图片走多模态，其余交给工作区/素材库那套。
+     暴露三个全局给 drop 分流和 doSend 用（它们各自在别的 IIFE 里）。 */
+  (function(){
+    window.__riffImages=window.__riffImages||[];
+    var MIME=/^image\/(png|jpeg|webp|gif)$/i;
+
+    /* ── 灯箱（照 DSH ImageLightbox）────────────────────────────────
+       草稿缩略图、已发图片消息共用这一个函数，所以两处点开的体验完全一致。
+       关闭三法：Esc / 点遮罩 / 点右上关闭按钮；焦点锁在关闭按钮，关掉后还回去。
+       不做缩放和左右切换 —— DSH 也没有（原图 object-fit:contain 完整展示）。 */
+    var _lbEl=null,_lbPrev=null;
+    window.__riffLightbox=function(src,alt){
+      if(!src)return;
+      if(_lbEl)return;                       /* 已经开着就别再叠一层 */
+      _lbPrev=document.activeElement;
+      var wrap=document.createElement('div');wrap.className='h-lb';
+      wrap.setAttribute('role','dialog');wrap.setAttribute('aria-modal','true');
+      wrap.setAttribute('aria-label','图片预览');
+      var stage=document.createElement('div');stage.className='h-lb-stage';
+      var mask=document.createElement('div');mask.className='h-lb-mask';mask.setAttribute('aria-hidden','true');
+      var img=document.createElement('img');img.className='h-lb-img';img.src=src;img.alt=alt||'';
+      var btn=document.createElement('button');btn.type='button';btn.className='h-lb-close';
+      btn.setAttribute('aria-label','关闭预览');btn.textContent='✕';
+      function close(){
+        if(!_lbEl)return;
+        window.removeEventListener('keydown',onKey,true);
+        if(_lbEl.parentNode)_lbEl.parentNode.removeChild(_lbEl);
+        _lbEl=null;
+        try{if(_lbPrev&&_lbPrev.focus)_lbPrev.focus()}catch(e){}
+      }
+      function onKey(e){
+        if(e.key==='Escape'){e.stopPropagation();close()}
+        else if(e.key==='Tab'){e.preventDefault();btn.focus()}
+      }
+      mask.addEventListener('mousedown',close);
+      btn.addEventListener('click',close);
+      window.addEventListener('keydown',onKey,true);
+      stage.appendChild(mask);stage.appendChild(img);stage.appendChild(btn);
+      wrap.appendChild(stage);document.body.appendChild(wrap);
+      _lbEl=wrap;
+      try{btn.focus()}catch(e){}
+    };
+
+    /* ── 图片消息块（照 DSH attachmentRow）：一张图一个 button，可点开看大图 ──
+       纯 DOM，不依赖任何状态，doSend 造新消息、历史回放重建都用它。 */
+    window.__riffAttRow=function(imgs){
+      var row=document.createElement('div');
+      row.className='h-attrow'+(imgs.length>1?' multi':'');
+      imgs.forEach(function(im){
+        var btn=document.createElement('button');btn.type='button';btn.className='h-attimg';
+        btn.title=im.name?(im.name+' — 点击查看大图'):'点击查看大图';
+        var el=document.createElement('img');el.src=im.previewUrl||im.src||'';el.alt=im.name||'图片';
+        el.loading='lazy';
+        btn.appendChild(el);
+        btn.addEventListener('click',function(){
+          window.__riffLightbox(im.previewUrl||im.src||'',im.name||'')
+        });
+        row.appendChild(btn);
+      });
+      return row;
+    };
+
+    /* 存档用：把大图缩成最长边 480 的小图（JPEG），避免 base64 把对话存档撑爆。
+       实时消息仍用原图 previewUrl 看大图，只有写进存档的那份是缩过的。 */
+    window.__riffShrink=function(dataUrl,cb){
+      try{
+        var im=new Image();
+        im.onload=function(){
+          try{
+            var max=480,sc=Math.min(1,max/Math.max(im.width||1,im.height||1));
+            var c=document.createElement('canvas');
+            c.width=Math.max(1,Math.round((im.width||1)*sc));
+            c.height=Math.max(1,Math.round((im.height||1)*sc));
+            c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+            cb(c.toDataURL('image/jpeg',0.82));
+          }catch(e){cb('')}
+        };
+        im.onerror=function(){cb('')};
+        im.src=dataUrl;
+      }catch(e){cb('')}
+    };
+
+    function railRender(){
+      var rail=$('#hAttRail');if(!rail)return;
+      rail.innerHTML='';
+      var ims=window.__riffImages||[];
+      rail.hidden=!ims.length;
+      ims.forEach(function(im,i){
+        var d=document.createElement('div');d.className='h-att-img';
+        var img=document.createElement('img');img.src=im.previewUrl||'';img.title=(im.name?im.name+' — ':'')+'点击查看大图';
+        /* 草稿没发送也能点开看大图 —— 跟已发消息共用同一个灯箱 */
+        img.addEventListener('click',function(){window.__riffLightbox(im.previewUrl||'',im.name||'')});
+        var del=document.createElement('button');del.className='h-att-del';
+        del.type='button';del.textContent='×';del.title='移除这张图片';
+        del.addEventListener('click',function(ev){
+          ev.stopPropagation();
+          window.__riffImages.splice(i,1);railRender()
+        });
+        d.appendChild(img);d.appendChild(del);rail.appendChild(d);
+      });
+    }
+    /* 返回 true 表示这张图已被本模块接管（调用方别再当普通文件处理） */
+    window.__riffImageAdd=function(file){
+      if(!file||!MIME.test(file.type||''))return false;
+      var reader=new FileReader();
+      reader.onload=function(){
+        var url=String(reader.result||'');
+        var data=url.slice(url.indexOf(',')+1);   /* 存裸 base64，data URL 头留给 previewUrl */
+        window.__riffImages.push({id:'im-'+Date.now()+'-'+Math.floor(Math.random()*1e4),
+          name:file.name||'',mimeType:file.type,data:data,previewUrl:url});
+        railRender();
+      };
+      reader.readAsDataURL(file);
+      return true;
+    };
+    /* 取出并清空（doSend 调用）。返回带 previewUrl 的完整对象，wire 传输时再剥。 */
+    window.__riffImageTake=function(){
+      var ims=(window.__riffImages||[]).slice();
+      window.__riffImages=[];railRender();
+      return ims;
+    };
+    var ib=$('#hImgBtn'),ip=$('#hImgPick');
+    if(ib&&ip){
+      ib.addEventListener('click',function(){ip.value='';ip.click()});
+      ip.addEventListener('change',function(){
+        var fs=[].slice.call(this.files||[]);this.value='';
+        var added=0;
+        fs.forEach(function(f){if(window.__riffImageAdd(f))added++});
+        if(added)window.say('已添加 '+added+' 张图片，发送后 AI 能直接看到画面');
+      });
+    }
   })();
 
   /* ── 对话模型下拉：随模型管理页动态更新 ── */
@@ -4190,6 +4509,31 @@ body.rws-dragging *{cursor:col-resize !important}
   });
   /* ── 真实对话：发送后按钮变「停止方块」，点一下立刻中断，不再卡在「正在思考」 ── */
   var chatCtrl=null,chatPending=null,chatTimer=null;
+  /* ★ 对话自动跟随到底（DSH 行为）：新内容长高时自动往下跟，最后一句不被输入框挡住。
+     以前只有「有正文 r.text」时才 box.scrollTop=scrollHeight，思考阶段和逐字早期
+     r.text 为空 → 整段思考/工具过程从不滚动，内容一长就把「正在思考」顶到
+     输入框下面（用户截图那个现象）。
+     ★ 不能靠「距底>D px 暂停」判断用户是否在翻历史 —— 思考块展开或 markdown
+     一次重排会让内容瞬间长高上千像素，dist 一下就 >D，被误判成用户在滚，
+     于是停止跟随、最后一句又被测到输入框下面。改用真实滚轮事件：
+     用户主动向上滚才暂停，滚到底或发新消息就恢复。 */
+  var chatPauseFollow=false,chatFollowBound=false;
+  function scrollChatBottom(force){
+    var box=$('#hMsgs');if(!box)return;
+    /* 惰性绑定：脚本执行时 #hMsgs 可能还没就位，第一次调用时再挂事件 */
+    if(!chatFollowBound){
+      chatFollowBound=true;
+      box.addEventListener('wheel',function(e){
+        if(e.deltaY<0)chatPauseFollow=true;   /* 用户往上翻历史 —— 别抢他的滚动 */
+      },{passive:true});
+      box.addEventListener('scroll',function(){
+        /* 用户自己滚回底部了（距底<40px）→ 恢复自动跟随 */
+        if(box.scrollHeight-box.scrollTop-box.clientHeight<40)chatPauseFollow=false;
+      },{passive:true});
+    }
+    if(chatPauseFollow&&!force)return;    /* 用户正在翻历史，别硬拉回来 */
+    box.scrollTop=box.scrollHeight;
+  }
   /* ── 忙碌时排队发送（对齐 DSH 的 busyEnter，默认 queue）。
       后端已有串行队列，这里再排一层是为了「一次只发一条」——
       多条同时灌进内核会把一轮 turn 搞乱。当前轮结束后 qDrain 自动发下一条。
@@ -4242,16 +4586,128 @@ body.rws-dragging *{cursor:col-resize !important}
   /* ── AI 工作流程（对齐 DSH）：边跑边显示，可展开看每一步的真实参数与输出 ──
      以前是等 run_agent 全跑完才一次性画一排小标签，用户只能盯着「正在思考…」。
      现在后端把每步写进步骤总线，前端 700ms 轮询一次，实时往上长。 */
-  function flowNode(){
-    var w=document.createElement('div');w.className='h-flow';
-    var h=document.createElement('div');h.className='h-flow-h';
-    h.innerHTML='<span class="h-flow-dot"></span><span class="h-flow-t">正在动手</span>'
-      +'<span class="h-flow-n">0 步</span>'
-      +'<svg class="ic h-flow-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-      +'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
-    var bd=document.createElement('div');bd.className='h-flow-b';
+  /* ══ DSH 过程组：活动分类 → 图标 / 中文文案（照 dsh-client-ui-chat 的 PROCESS_ICONS + processTitle） ══
+     一轮工具不逐条铺开，而是先归到十几类 activity，折叠成一行语义汇总：默认「正在X」，完成「已X，并已Y」。 */
+  var FLOW_ICON={thinking:'i-bulb',read:'i-book',readImage:'i-image',search:'i-search',
+    write:'i-text',edit:'i-text',commands:'i-flow',code:'i-clip',webSearch:'i-search',
+    webFetch:'i-book',subagents:'i-user',plan:'i-task',questions:'i-chat',tools:'i-spark'};
+  var FLOW_ACT={thinking:'分析请求',read:'读取文件',readImage:'读取图片',search:'搜索代码',
+    write:'写入文件',edit:'编辑文件',commands:'运行命令',code:'运行代码',webSearch:'搜索网页',
+    webFetch:'访问网页',subagents:'协调子智能体',plan:'更新计划',questions:'等待你的操作',tools:'调用工具'};
+  var FLOW_DONE={thinking:'已完成分析',read:'已读取文件',readImage:'已读取图片',search:'已搜索代码',
+    write:'已写入文件',edit:'修改了文件',commands:'执行了命令',code:'运行了代码',webSearch:'已搜索网页',
+    webFetch:'已访问网页',subagents:'已协调子智能体',plan:'更新了计划',questions:'提出了问题',tools:'已调用工具'};
+  function flowAct(tool){
+    var t=String(tool||'');
+    if(/^(bash|pwsh|exec_command|write_stdin|terminal_|shell|open|send|read_terminal)/.test(t))return 'commands';
+    if(/^(read_image|image_review|load_image|acp_read_original_image)/.test(t))return 'readImage';
+    if(/^(read|read_mcp_resource|look_folder|read_video|working_directory)/.test(t))return 'read';
+    if(/^(grep|glob|search|kb_search|probe|probe_media|verify_media|review|film_match|assets|templates|template_vars|template_recipe|template_family|text_style|capabilities|skills|design_with_template|domain_search|platform_search)/.test(t))return 'search';
+    if(/^(web_search|advanced_search|multi_search|video_search|research|web_fetch_search)/.test(t))return 'webSearch';
+    if(/^(web_fetch|fetch)/.test(t))return 'webFetch';
+    if(/^(write|copy|move)/.test(t))return 'write';
+    if(/^(edit|self_patch)/.test(t))return 'edit';
+    if(/^(subagent|spawn_teammate|send_message|team_task|wait_agent|list_agents|interrupt_agent)/.test(t))return 'subagents';
+    if(/^(todo_|create_goal|update_goal|get_goal|plan|storyboard)/.test(t))return 'plan';
+    if(/^(ask_user_question)/.test(t))return 'questions';
+    return 'tools';
+  }
+  /* 完成态汇总：按出现次数取前 3 类，「A并B」去共享「已」前缀，>3 类加「等」（DSH processTitle 原文规则） */
+  function flowTitle(steps){
+    var cnt={};
+    steps.forEach(function(x){ if(x&&x.ok!==false){var k=flowAct(x.tool);cnt[k]=(cnt[k]||0)+1} });
+    var arr=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]});
+    var labels=arr.slice(0,3).map(function(k){return FLOW_DONE[k]||'已调用工具'});
+    if(!labels.length)return '已完成分析';
+    var first=labels[0];
+    if(!labels[1])return first;
+    var cont=function(v){return v.charAt(0).toLowerCase()+v.slice(1)};
+    var second=labels[1];
+    if(first.charAt(0)==='已'&&second.charAt(0)==='已')second=second.slice(1);
+    if(labels.length===2)return first+'并'+cont(second);
+    var title=[first].concat(labels.slice(1).map(cont)).join('，');
+    return arr.length>3?title+'等':title;
+  }
+  function flowDur(ms){
+    ms=Math.max(0,Number(ms)||0);
+    if(ms<1000)return Math.round(ms)+'毫秒';
+    if(ms<60000)return Math.round(ms/1000)+'秒';
+    return Math.floor(ms/60000)+'分'+Math.round((ms%60000)/1000)+'秒';
+  }
+  function flowIconSvg(id){
+    return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      +'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#'+(id||'i-spark')+'"/></svg>';
+  }
+  /* ── 运行中实时用时（严格照 DSH 的 RunningStatus）──────────────
+     DSH 用 setInterval 每秒 setNow(Date.now())，文案「深度求索中，用时 X ···」
+     实时变化，起点是 turn/start 事件的真实时间。这里同一个节奏：每秒跳一次，
+     只改用时相关的那段 DOM（不重建整个步骤列表，免得展开的内容闪）。
+     turn_start 是后端给的 turn/start.time；没拿到时退回本轮发送时刻。 */
+  function flowClock(w){
+    if(!w||w.__wasDone)return;
+    var t=w.querySelector('.h-flow-t'),n=w.querySelector('.h-flow-n');
+    var start=w.__turnStart||w.__t0||Date.now();
+    var ms=Math.max(1e3,Date.now()-start);
+    var s='用时 '+flowDur(ms)+' ···';
+    if((w.__stepCount||0)===0){
+      /* 还没有任何工具步骤：主文案就是 DSH 的「深度求索中，用时 X ···」 */
+      if(t)t.textContent='深度求索中，'+s;
+      if(n)n.textContent='';
+    }else if(n){
+      /* 有工具步骤：标题留给「正在 X · 详情」，用时放在右侧小字 */
+      n.textContent=s;
+    }
+  }
+  /* ── 思考块（DSH 式 ReasoningRow）─────────────────────────────
+     DSH 把模型的 reasoning 做成独立可折叠块，跟工具步骤并列、不混进回答正文。
+     收起态显示摘要（running 取最后一段第一行，完成取第一行，去掉 ** 标记），
+     点开看完整内容。跟 h-flow 一样是"过程"，不是"回答"。 */
+  function thinkNode(){
+    var w=document.createElement('div');w.className='h-think';w.style.display='none';
+    var h=document.createElement('div');h.className='h-think-h';
+    h.innerHTML='<svg class="ic ht-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      +'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bulb"/></svg>'
+      +'<span class="ht-t">思考</span><span class="ht-sum"></span>'
+      +'<svg class="ic ht-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      +'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+    var b=document.createElement('div');b.className='h-think-b';
     h.onclick=function(){w.classList.toggle('open')};
-    w.appendChild(h);w.appendChild(bd);
+    w.appendChild(h);w.appendChild(b);
+    return w;
+  }
+  function thinkSet(w,text,running){
+    if(!w)return;
+    var t=String(text||'').trim();
+    w.style.display=t?'':'none';
+    w.classList.toggle('run',!!running);
+    if(!t)return;
+    var b=w.querySelector('.h-think-b'),s=w.querySelector('.ht-sum');
+    if(b&&b.textContent!==t)b.textContent=t;             /* 内容变了才写，避免闪 */
+    if(s){
+      var first=running?(function(){var ps=t.split(/\n\s*\n/);return ps[ps.length-1]||t})():t;
+      var line=String(first).split('\n')[0].replace(/\*\*/g,'').trim();
+      s.textContent=line.length>46?line.slice(0,46)+'…':line;
+    }
+  }
+  function flowNode(){
+    var w=document.createElement('div');w.className='h-flow';w.__t0=Date.now();
+    var h=document.createElement('div');h.className='h-flow-h';
+    h.innerHTML='<span class="h-flow-ic"><span class="h-flow-ai">'+flowIconSvg('i-spark')+'</span>'
+      +'<span class="h-flow-chev"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      +'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></span>'
+      +'<span class="h-flow-t">正在分析请求</span><span class="h-flow-n"></span>';
+    var bd=document.createElement('div');bd.className='h-flow-b';
+    /* turn 汇总行：DSH 的「已完成，用时 X」，带极淡分隔，点一下同样折叠/展开过程组 */
+    var sum=document.createElement('button');sum.className='h-flow-sum';sum.type='button';
+    sum.innerHTML='<span class="h-flow-sum-t"></span><svg class="ic h-flow-sum-chev" viewBox="0 0 24 24" '
+      +'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+    sum.onclick=function(){w.classList.toggle('open')};
+    h.onclick=function(){w.classList.toggle('open')};
+    w.appendChild(h);w.appendChild(bd);w.appendChild(sum);
+    /* 运行中每秒跳一次用时（DSH RunningStatus 同款节奏）。
+       done 时由 flowRender clearInterval；节点被移出 DOM 也靠那次收尾清掉。 */
+    w.__clock=setInterval(function(){flowClock(w)},1000);
+    flowClock(w);
     return w;
   }
   /* AI 粗剪完之后给一张入口卡：点一下直接进剪辑台并打开那个工程。
@@ -4320,89 +4776,96 @@ body.rws-dragging *{cursor:col-resize !important}
 
   function flowRender(w,steps,done){
     if(!w)return;
-    var okN=steps.filter(function(x){return x.ok}).length,badN=steps.length-okN;
+    steps=steps||[];
+    w.__stepCount=steps.length;
     var t=w.querySelector('.h-flow-t'),n=w.querySelector('.h-flow-n'),bd=w.querySelector('.h-flow-b');
+    var ic=w.querySelector('.h-flow-ai'),sum=w.querySelector('.h-flow-sum'),sumT=sum&&sum.querySelector('.h-flow-sum-t');
+    var wasDone=!!w.__wasDone;
     w.classList.toggle('done',!!done);
-    /* ★ 跑完自动折叠：过程中为了看进度一直开着，跑完就收起来，
-       让对话回到主位；用户想复查再点开。只有"从没跑完变成跑完"这一次才收。 */
-    if(done && !w.__wasDone && w.classList.contains('open')) w.classList.remove('open');
+    w.classList.toggle('run',!done);
+    /* 跑完自动折叠：只有「从没跑完变成跑完」这一次才收，回看历史不拽视线 */
+    if(done&&!wasDone&&w.classList.contains('open'))w.classList.remove('open');
     w.__wasDone=!!done;
-    /* 标题说人话：用户只关心「他在干嘛 / 干完没」，不关心"几步"。
-       正在跑的时候显示当前那一步在干什么（比如「翻模板库」），
-       跑完显示「做了 N 件事，全部完成」。 */
+
+    /* ── 标题行：进行中「正在X · 详情」shimmer；完成「已X，并已Y」 ── */
     var cur=null;
     for(var i=steps.length-1;i>=0;i--){ if(steps[i]&&steps[i].running){cur=steps[i];break} }
+    var act='thinking',label='';
     if(done){
-      t.textContent=badN?('干完了 · '+okN+' 件事成功，'+badN+' 件没成'):('干完了 · 做了 '+okN+' 件事');
+      label=flowTitle(steps);
+      act=(function(){var c={};steps.forEach(function(x){var k=flowAct(x.tool);c[k]=(c[k]||0)+1});var best='thinking',bn=0;for(var k in c){if(c[k]>bn){bn=c[k];best=k}}return best})();
+      /* 用时栏交给汇总行，右侧小字清空 */
+      n.textContent='';
     }else if(cur){
-      t.textContent='正在'+String(cur.what||'处理')+(cur.hint?'：'+cur.hint:'');
+      act=flowAct(cur.tool);
+      label='正在'+FLOW_ACT[act];
+      /* 详情：从参数里按优先级取第一个有文本的字段（DSH liveToolDetail 简化版） */
+      var dk=['query','path','name','project','text','command','url','prompt','task'];
+      var det='';
+      for(var q=0;q<dk.length;q++){if(cur.args&&cur.args[dk[q]]){det=String(cur.args[dk[q]]);break}}
+      if(!det&&cur.hint)det=String(cur.hint);
+      det=det.replace(/\s+/g,' ').trim();
+      if(det.length>60)det=det.slice(0,60)+'…';
+      if(det)label+=' · '+det;
+      n.textContent='';
     }else{
-      /* ★ 工具都做完了但整轮还没结束（模型在想下一步）。
-         以前这里显示干巴巴的「正在动手…」，用户不知道在等什么 ——
-         工具结果是"立即返回"的，绝大多数时刻没有 running 的步骤，
-         所以这行几乎是常态，必须说清楚"还在想"。 */
-      var last=steps.length?steps[steps.length-1]:null;
-      var lastTxt=last?String(last.what||''):'';
-      t.textContent=lastTxt?('「'+lastTxt+'」做完了，模型在想下一步…'):'正在理解你的需求…';
+      label=steps.length?('「'+(steps[steps.length-1].what||'')+'」做完了，模型在想下一步…'):'正在分析请求';
+      n.textContent='';
     }
-    n.textContent=steps.length?(steps.length+' 步'):'';
+    t.textContent=label;
+    /* 活动图标：默认 spark，运行中/完成后换成对应 activity 图标 */
+    var ico=ic&&ic.querySelector('.h-flow-ai svg');
+    if(ico)ico.innerHTML='<use href="#'+(FLOW_ICON[act]||'i-spark')+'"/>';
+
+    /* ── turn 汇总行：完成才显示「已完成，用时 X」 ──
+       严格照 DSH 的 TurnProcessNodeView：用内核 turn/end.time - turn/start.time
+       定格，Math.max(1e3) 保底；没有真实时间时才退回墙钟。同时停掉每秒时钟。 */
+    if(sum){
+      if(done){
+        sum.style.display='flex';
+        var ms=(w.__turnStart&&w.__turnEnd)
+          ? Math.max(1e3,w.__turnEnd-w.__turnStart)
+          : Math.max(1e3,Date.now()-(w.__turnStart||w.__t0||Date.now()));
+        sumT.textContent='已完成，用时 '+flowDur(ms);
+        if(w.__clock){clearInterval(w.__clock);w.__clock=0}
+      }else sum.style.display='none';
+    }
+
+    /* ── 内部裸行列表：无勾选、无耗时，线框图标 + 工具标题 · 摘要 ── */
     bd.innerHTML='';
     steps.forEach(function(x,i){
       var r=document.createElement('div');
-      /* 整轮没结束时，最后一条标成 run（转圈）—— 用户能看出"进度走到这了" */
-      var isRun=!!x.running || (!done && i===steps.length-1);
-      r.className='h-flow-step'+(x.ok===false?' bad':'')+(isRun?' run':'');
-      /* 后端给的是 {tool, what(人话), hint(参数摘要), done(结果摘要), running, ok}。
-         ★ 一行只讲一件事：「✓ 翻模板库 · 咖啡 产品展示」。
-         以前每个工具占两行（一行 JSON 参数、一行"完成"），
-         满屏是 {"query":"...","limit":8} 这种东西，用户完全看不出在干什么。 */
-      var nm=String(x.what||H_TOOL_CN[x.tool]||x.tool||'操作');
-      /* String(undefined) 会变成字面量 "undefined" —— 截图里「看素材库 | undefined」就是这来的 */
+      var isRun=!!x.running||(!done&&i===steps.length-1);
+      var bad=x.ok===false;
+      var act2=flowAct(x.tool);
+      r.className='h-flow-step'+(bad?' bad':'')+(isRun?' run':'');
+      var nm=String(x.what||H_TOOL_CN[x.tool]||x.tool||'工具调用');
       var hint=(x.hint==null?'':String(x.hint));
-      /* 老格式兜底：detail 里可能是 JSON 字符串 */
-      if(!hint&&x.detail){
-        var ds=String(x.detail).trim();
-        try{var jo=JSON.parse(ds);if(jo&&typeof jo==='object')ds=jo.query||jo.q||jo.prompt||jo.text||jo.path||jo.project||jo.name||''}
-        catch(e){}
-        hint=String(ds);
-      }
+      if(!hint&&x.detail){var ds=String(x.detail).trim();try{var jo=JSON.parse(ds);if(jo&&typeof jo==='object')ds=jo.query||jo.q||jo.prompt||jo.text||jo.path||jo.project||jo.name||''}catch(e){}hint=String(ds)}
       hint=hint.replace(/\s+/g,' ').trim();
       if(hint==='undefined'||hint==='null')hint='';
-      if(hint.length>42)hint=hint.slice(0,42)+'…';
-      var mark=isRun?'·':(x.ok===false?'✕':'✓');
-      /* 每步耗时：后端在工具返回时填了 ms。格式化成好读的 1.2s / 380ms。 */
-      var dur=Number(x.ms||0);
-      var durTxt=dur>0?(dur>=1000?(dur/1000).toFixed(dur<10000?1:0)+'s':Math.round(dur)+'ms'):'';
-      /* 这一步有没有可展开的细节（参数 / 返回）。有就整行可点，点击展开。 */
+      if(hint.length>48)hint=hint.slice(0,48)+'…';
       var inTxt=x.args?JSON.stringify(x.args,null,2):'';
       var outTxt=x.out||'';
       var hasDetail=!!(inTxt||outTxt);
-      r.innerHTML='<span class="h-flow-i">'+mark+'</span>'
+      r.innerHTML='<span class="h-flow-i">'+flowIconSvg(FLOW_ICON[act2])+'</span>'
         +'<span class="h-flow-nm">'+esc(nm)+'</span>'
-        +(hint?'<span class="h-flow-dt">'+esc(hint)+'</span>':'')
-        +(durTxt?'<span class="h-flow-ms">'+durTxt+'</span>':'')
+        +(hint?'<span class="h-flow-sep">·</span><span class="h-flow-dt">'+esc(hint)+'</span>':'')
         +(hasDetail?'<svg class="ic h-flow-d2" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
           +'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>':'');
       if(hasDetail){
         r.classList.add('expandable');
         var det=document.createElement('div');det.className='h-flow-det';
         var parts='';
-        if(inTxt)parts+='<div class="h-flow-det-lb">入参</div><pre>'+esc(inTxt)+'</pre>';
-        if(outTxt)parts+='<div class="h-flow-det-lb">返回</div><pre>'+esc(outTxt)+'</pre>';
+        if(inTxt)parts+='<div class="h-flow-det-lb">输入</div><pre>'+esc(inTxt)+'</pre>';
+        if(outTxt)parts+='<div class="h-flow-det-lb">输出</div><pre>'+esc(outTxt)+'</pre>';
         det.innerHTML=parts;
         r.appendChild(det);
-        r.onclick=function(e){
-          if(e.target.closest('pre'))return;
-          r.classList.toggle('det-open');
-        };
+        r.onclick=function(e){if(e.target.closest('pre'))return;r.classList.toggle('det-open')};
       }
       bd.appendChild(r);
     });
-    /* 新步骤在下面：跑的过程中自动滚到底，用户总能看到"现在在干嘛"。
-       已经跑完的卡片不滚，免得回看历史时把视线拽走。 */
-    if(!done&&bd.scrollHeight>bd.clientHeight){
-      try{ bd.scrollTop=bd.scrollHeight }catch(e){}
-    }
+    if(!done&&bd.scrollHeight>bd.clientHeight){try{bd.scrollTop=bd.scrollHeight}catch(e){}}
   }
   /* 兼容旧调用点：没有 flow 卡片时新建一张 */
   function homeSteps(steps){
@@ -4417,12 +4880,27 @@ body.rws-dragging *{cursor:col-resize !important}
   function pollSteps(tid,w){
     if(!tid||!w)return function(){};
     var stopped=false,lastSeq=-1;
+    /* 思考块放在过程组前面（DSH：reasoning 与工具步骤并列，且排在工具前）。
+       没有思考时它自动隐藏，不占位置。 */
+    var thinkW=thinkNode();
+    if(w.parentNode)w.parentNode.insertBefore(thinkW,w);
+    /* ★ 存到过程组上：chat 受理后 pollSteps 会被 stopPoll 停掉，改由 streamTurn
+       接手轮询，两条路径必须共用同一个思考节点，否则要么画两遍、要么这块永远空着。 */
+    w.__thinkW=thinkW;
     function tick(){
       if(stopped)return;
       window.api('/api/steps?id='+encodeURIComponent(tid)).then(function(d){
         if(stopped)return;
         /* api() 已经剥过一层，d 就是 {seq,steps,done} 本身。 */
         var r=d||{};
+        /* ★ 思考不能放在 seq 门控里：最后一轮 done:true 常常 seq 不变
+           （思考累积在 thinking 字段、不产生新 step），放在里面就被跳过，
+           表现是过程组有内容、思考块却始终空白。thinkSet 是幂等的
+           （内容没变不写 DOM），放心每帧同步。 */
+        thinkSet(thinkW,r.thinking,!r.done);
+        /* 真实 turn 起点：让每秒时钟照内核 turn/start.time 跳，不用本地掐表 */
+        if(r.turn_start&&!w.__turnStart)w.__turnStart=r.turn_start;
+        if(r.turn_end)w.__turnEnd=r.turn_end;
         if(r.seq!==lastSeq){
           lastSeq=r.seq;
           flowRender(w,r.steps||[],!!r.done);
@@ -4817,6 +5295,12 @@ body.rws-dragging *{cursor:col-resize !important}
     if(txt)pushHist('assistant',txt);
     try{
       var _st=(d&&d.steps)||[];
+      if(flowW){
+        /* 收尾时同样把真实 turn 时间写进去：done 帧没走 streamTurn 渲染时，
+           这里是最后一次机会让「已完成，用时 X」用真实时间定格。 */
+        if(d&&d.turn_start&&!flowW.__turnStart)flowW.__turnStart=d.turn_start;
+        if(d&&d.turn_end)flowW.__turnEnd=d.turn_end;
+      }
       if(flowW&&flowW.parentNode){
         if(_st.length) flowRender(flowW,_st,true);
         else flowW.parentNode.removeChild(flowW);
@@ -4832,6 +5316,7 @@ body.rws-dragging *{cursor:col-resize !important}
           usage:(d&&d.usage)||null,model:(d&&d.model)||'',
           /* ★ 切走时也要把这一步步存进去，否则用户切回来只有回答、没有工作流卡 */
           steps:_st,
+          thinking:(d&&d.thinking)||'',
           time:new Date().toLocaleString('zh-CN',{hour12:false})
         }]}).catch(function(){});
       }catch(e){}
@@ -4842,7 +5327,7 @@ body.rws-dragging *{cursor:col-resize !important}
              {usage:(d&&d.usage)||null,model:(d&&d.model)||'',ms:(d&&d.ms)||0,
               /* ★ convAppend 会把它存进 m.steps（见 2298 行），这样切走再切回才画得出工作流卡；
                  以前漏传，正常聊完的这一步步只活在内存里，存档里根本没有。 */
-              steps:_st});
+              steps:_st,thinking:(d&&d.thinking)||''});
     }catch(e){
       try{
         var fb=document.createElement('div');fb.className='h-msg';
@@ -4891,8 +5376,22 @@ body.rws-dragging *{cursor:col-resize !important}
       window.api('/api/steps?id='+encodeURIComponent(tid)).then(function(r){
         if(stopped)return;
         r=r||{};
+        /* ★ 思考块：pollSteps 在 chat 受理后就被停掉了，真正一路跑到结束的是这里。
+           所以它必须每帧把 thinking 写进同一个节点（挂在 flowW.__thinkW 上），
+           幂等写入、内容没变不碰 DOM。放在门控外，避免 done 那帧 seq 不变被跳过。 */
+        if(flowW&&flowW.__thinkW)thinkSet(flowW.__thinkW,r.thinking,!r.done);
+        /* ★ 每帧跟随到底：思考/工具/逐字任何阶段长高都往下滚，最后一句不被输入框挡住。
+           scrollChatBottom 内部判断「用户主动上滚翻历史就暂停」。 */
+        scrollChatBottom(false);
+        /* ★ 用时的真实起点/终点：内核 turn/start.time 与 turn/end.time。
+           早点写进 flowW，运行中的每秒时钟就照真实起点跳；done 帧据此定格。 */
+        if(flowW){
+          if(r.turn_start&&!flowW.__turnStart)flowW.__turnStart=r.turn_start;
+          if(r.turn_end)flowW.__turnEnd=r.turn_end;
+        }
         if(r.workers)hWorkRender(r.workers);
-        if(r.steps&&r.seq!==lastSeq){lastSeq=r.seq;flowRender(flowW,r.steps,!!r.done)}
+        /* done 帧即使 seq 没变也要渲染一次，否则「已完成，用时 X」不出现、时钟不停 */
+        if(r.steps&&(r.seq!==lastSeq||r.done)){lastSeq=r.seq;flowRender(flowW,r.steps,!!r.done)}
         /* 正文流式落地：占位气泡改成正文字泡，不再等整轮结束才显示 */
         if(r.text&&chatPending&&chatPending.parentNode){
           var bub=chatPending.querySelector('.bub');
@@ -4911,7 +5410,7 @@ body.rws-dragging *{cursor:col-resize !important}
               try{ bub.innerHTML=mdRender(liveKey)+'<span class="h-caret"></span>' }
               catch(e){ bub.textContent=liveKey }
             }
-            var bx=$('#hMsgs');if(bx)bx.scrollTop=bx.scrollHeight;
+            scrollChatBottom(false);
           }
         }
         if(r.done){
@@ -4940,6 +5439,8 @@ body.rws-dragging *{cursor:col-resize !important}
                        + (sbsE.length||edsE.length?'\n\n已经产出的方案/工程在下面，可以继续用。':'')
                        + '\n\n**原始信息**：'+String(r.error).slice(0,200),
                     steps:r.steps||[],done:true,model:r.model||'',ms:r.ms||0,
+                    turn_start:r.turn_start||0,turn_end:r.turn_end||0,
+                    thinking:r.thinking||'',
                     storyboard_projects:sbsE,edit_projects:edsE,
                     usage:(r.usage&&(r.usage.in||r.usage.out))?r.usage:null};
             finishTurn(de,flowW,ctrl);
@@ -4957,6 +5458,8 @@ body.rws-dragging *{cursor:col-resize !important}
           if(!finalTxt&&eds.length)finalTxt='工程已经排好了，在下面的卡片里。要改就直接点开剪辑台。';
           var d={text:finalTxt,steps:r.steps||[],done:true,
                  model:r.model||'',ms:r.ms||0,
+                 turn_start:r.turn_start||0,turn_end:r.turn_end||0,
+                 thinking:r.thinking||'',
                  storyboard_projects:r.storyboard_projects||[],edit_projects:eds,usage:u};
           finishTurn(d,flowW,ctrl);
           return;
@@ -4968,8 +5471,16 @@ body.rws-dragging *{cursor:col-resize !important}
     return function(){stopped=true};
   }
 
+  /* ★ 中文输入法选词时按 Enter 也会触发 keydown，key 同样是 'Enter'。
+     没有这道守卫，打字选词那一下就发一条，用户再按回车又发一条 ——
+     表现就是「同一句话发了两遍」。isComposing 在新版 Chromium 里对
+     keydown 也有效；keyCode 229 是老输入法的兜底判据。 */
+  var _imeOn=false;
+  $('#hChatInput').addEventListener('compositionstart',function(){_imeOn=true});
+  $('#hChatInput').addEventListener('compositionend',function(){_imeOn=false});
   $('#hChatInput').addEventListener('keydown',function(e){
     if(e.key!=='Enter'||e.shiftKey)return;   /* Shift+Enter 换行 */
+    if(e.isComposing||_imeOn||e.keyCode===229)return;  /* 正在选词，这一下是给输入法的 */
     e.preventDefault();
     var t=$('#hChatInput').value.trim();
     if(chatCtrl){
@@ -4996,7 +5507,11 @@ body.rws-dragging *{cursor:col-resize !important}
     if($('#hChatInput').classList.contains('live')){
       var mb=$('#hChatMic');if(mb)mb.click();
     }
-    var v=$('#hChatInput').value.trim();if(!v){window.say('先说说你想做什么片子');return}
+    var v=$('#hChatInput').value.trim();
+    /* ★ 图片多模态：发话前把附件轨道里的图片取出来（取完即清空）。
+       有图片时允许只发图不打字（DSH 支持纯图片提问）；都没有才提示。 */
+    var sendImgs=(window.__riffImageTake?window.__riffImageTake():[]);
+    if(!v&&!sendImgs.length){window.say('先说说你想做什么片子，或者添加一张图片');return}
     /* WorkBuddy 式能力条：勾中的能力 / 技能真进本轮上下文，不是装饰按钮 */
     var wire=(window.RiffCut_CAPS&&window.RiffCut_CAPS.wire)?window.RiffCut_CAPS.wire(v):v;
     /* 缺生图 / 视频模型时不再一上来就掐断对话：
@@ -5004,16 +5519,46 @@ body.rws-dragging *{cursor:col-resize !important}
        这样「我想做个封面」这类话至少能得到专业的提示词与建议，而不是一句冷冰冰的「未添加模型」。 */
     var intent=genIntent(v);
     var mid=(window.RiffCut||{}).currentModelId||'';
-    addMsg('我',v);$('#hChatInput').value='';
+    chatPauseFollow=false;   /* 发新消息：从底部重新开始跟随，别沿用上一次翻历史的暂停态 */
+    var shownText=v||'';
+    /* ★ 照 DSH UserContent：图片进 attachmentRow、文字进 bubble，两者是同一消息里
+       上下两块；纯图时不产生文字气泡（DSH 的 showBubble = text !== ""）。
+       所以这里先 skipSave=true 自己控存档（图片要先缩图再写，见下）。 */
+    var myMsg=addMsg('我',shownText,true);$('#hChatInput').value='';
+    if(sendImgs.length&&myMsg){
+      var row=window.__riffAttRow(sendImgs);
+      var bub=myMsg.querySelector('.bub');
+      myMsg.insertBefore(row,bub||null);            /* 图片在上、文字在下 */
+      if(!shownText&&bub&&bub.parentNode)bub.parentNode.removeChild(bub);
+    }
+    /* 存档：原图可能几 MB，直接进对话存档会把文件撑爆 —— 先缩成最长边 480 的 JPEG
+       （约几十 KB）再写。缩图是异步的，所以等全部缩完才 append，保证顺序。
+       ★ convEnsure 是本 IIFE 内的局部函数，不是 window.convEnsure（写成
+       window.convEnsure 会永远为 undefined，图片就永远存不进存档）。 */
+    if(!sendImgs.length){
+      convEnsure(function(){convAppend('我',shownText,{})});
+    }else{
+      var left=sendImgs.length,out=[];
+      sendImgs.forEach(function(im,idx){
+        window.__riffShrink(im.previewUrl,function(small){
+          out[idx]={name:im.name||'',mimeType:im.mimeType,src:small||im.previewUrl};
+          if(--left===0){
+            convEnsure(function(){convAppend('我',shownText,{images:out.filter(Boolean)})});
+          }
+        });
+      });
+    }
     /* 没有选中模型不再拦：对话现在走 DSH 内核，模型由内核的 profile 提供，
        前端这个下拉只是「让用户知道大概是谁在回答」。真没配好会由后端如实报错。 */
     /* 占位气泡：三个点跳动，不写「正在思考…」四个字 ——
        文字是静态的，看着像卡死；点会动，才知道机器还在跑。 */
     addMsg('RiffCut','',true,{pending:true});   /* 占位气泡不进存档 */
     var box=$('#hMsgs');chatPending=box&&box.lastChild;
-    /* 工作流卡片：先插一张「正在动手」，随后由步骤总线实时填充 */
+    /* 工作流卡片：插在占位气泡【前面】——DSH 顺序是 思考→过程组→回答，
+       占位气泡就是"回答"的壳。用 appendChild 会让过程组跑到回答下面，
+       思考块再 insertBefore(过程组) 也还在回答下面，看着就像思考跑到了内容后面。 */
     var flowW=flowNode();
-    if(box){box.appendChild(flowW);box.scrollTop=box.scrollHeight}
+    if(box){box.insertBefore(flowW,chatPending||null);box.scrollTop=box.scrollHeight}
     var stepId='st-'+Date.now()+'-'+Math.floor(Math.random()*1000);
     var stopPoll=pollSteps(stepId,flowW);
     /* ★ 记住「哪个对话正在跑哪一步」。
@@ -5051,7 +5596,10 @@ body.rws-dragging *{cursor:col-resize !important}
        在 A 对话说"我叫阿泽"，换到 B 对话问"我叫什么"，它照样答"阿泽"。
        用户说得对：上下文只该属于当前会话，不然以后全串。
        这里把对话 id 当会话 id 传下去，一条对话一条内核会话。 */
-    window.api('/api/chat',{model:mid,agent:true,messages:msgs,step_id:stepId,
+    /* images：只传 wire 需要的裸 base64 + mimeType + name，不传 data URL 预览
+       （预览只在本地气泡里用，塞给后端纯属浪费 IPC 体积）。 */
+    var wireImgs=sendImgs.map(function(im){return {data:im.data,mimeType:im.mimeType,name:im.name}});
+    window.api('/api/chat',{model:mid,agent:true,messages:msgs,images:wireImgs,step_id:stepId,
       session_id:CONV.id?('conv-'+CONV.id):''},opt).then(function(d){
       if(chatCtrl!==ctrl)return;         /* 已停止，别把旧回复再贴回来 */
       settled=true;                      /* 先立旗：之后即便渲染出错，也不能被 catch 当成「已停止」吞掉 */
@@ -6006,8 +6554,8 @@ body.rws-dragging *{cursor:col-resize !important}
       '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">'+
       '<button id="hTlPNo" style="height:28px;padding:0 13px;border:1px solid #E1E6EF;border-radius:8px;'+
       'background:#fff;color:#4A5262;font-size:12px;cursor:pointer">取消</button>'+
-      '<button id="hTlPOk" style="height:28px;padding:0 13px;border:1px solid #BFE0DA;border-radius:8px;'+
-      'background:linear-gradient(180deg,#FCFDFE,#F4F6FA);color:#33405A;font-size:12px;font-weight:600;cursor:pointer">确定</button></div>';
+      '<button id="hTlPOk" style="height:28px;padding:0 13px;border:1px solid #A8C4F8;border-radius:8px;'+
+      'background:linear-gradient(180deg,#FFFFFF,#F4F6FA);color:#33405A;font-size:12px;font-weight:600;cursor:pointer">确定</button></div>';
     document.body.appendChild(box);
     var inp=box.querySelector('#hTlPInput');
     function close(){box.remove();document.removeEventListener('keydown',key)}
@@ -7160,5 +7708,79 @@ body.rws-dragging *{cursor:col-resize !important}
   }
   if(document.readyState!=='loading')setTimeout(bind,0);
   document.addEventListener('riffcut-ready',bind);
+})();
+</script>
+
+<!-- ══ 首次启动：清点本机语音模型，缺了就问一句要不要现在下 ══
+     2026-11-21 起安装包不再携带语音权重（ming-tts 1.6G + sense-voice 228M）。
+     体积从 3.0G 降到 1.1G，用户点一下后台就能从国内镜像拉。
+
+     ★ 为什么要「问」而不是自动下：
+       1.6G 是用户自己的流量和磁盘。不打招呼就下，等于替他做决定。
+       但也不能只丢一句"请自行下载" —— 新手会卡在"配音没声音"这一步，
+       所以默认给出「现在下载」，并写清多大、下到哪、能不能关掉。
+
+     ★ 只问一次：记在 ui.json 的 seedModelAsked。
+       用户选了"以后再说"，下次启动不再打扰，但他随时能在语音工作室里手动装。
+-->
+<script>
+(function(){
+  var FLAG='seedModelAsked';
+  function A(p,d){return window.api(p,d)}
+
+  function ask(d){
+    /* asr = 语音识别（SenseVoice 228M），tts = 情感配音（Ming 1.6G）
+       任一为 none 就值得问。system_tts 是 macOS 自带，永远不用下。 */
+    var need=[];
+    if(d.asr&&d.asr.state==='none')need.push({key:'asr',name:'语音识别',mb:228});
+    if(d.tts&&d.tts.state==='none')need.push({key:'tts',name:'情感配音（Ming）',mb:1664});
+    if(!need.length)return;
+
+    var total=need.reduce(function(s,x){return s+x.mb},0);
+    var list=need.map(function(x){
+      return '<li style="margin:4px 0">'+x.name+'　'+(x.mb>=1024?(x.mb/1024).toFixed(1)+' GB':x.mb+' MB')+'</li>'
+    }).join('');
+
+    window.__confirmAsk('',function(){
+      /* 逐个装，不并发 —— 两个下载器抢同一块磁盘反而更慢 */
+      var i=0;
+      function next(){
+        if(i>=need.length){window.say&&window.say('语音模型装好了，去「AI 语音工作室」就能用');return}
+        var it=need[i++];
+        window.say&&window.say('正在下载'+it.name+'…（可以关掉这个窗口，会继续下）');
+        A('/api/localmodels',{action:'install',kind:it.key}).then(function(){
+          setTimeout(next,1200);
+        }).catch(function(){setTimeout(next,1200)});
+      }
+      next();
+    },{
+      title:'这个软件不带语音模型',
+      ok:'现在下载（'+ (total>=1024?(total/1024).toFixed(1)+' GB':total+' MB') +'）',
+      html:'<div style="line-height:1.7">'
+        + '<div>为了安装包小一点，语音模型没有打进软件里，装的时候从网上下载：</div>'
+        + '<ul style="margin:10px 0 10px 18px;padding:0">'+list+'</ul>'
+        + '<div style="color:#6B7280;font-size:13px">'
+        + '下载在后台进行，你可以先用软件，下载完配音就能用。<br>'
+        + '不下载也不影响剪辑、导出，只是不能用本地语音识别和 Ming 配音（可以先用系统音色）。'
+        + '</div></div>'
+    });
+  }
+
+  function boot(){
+    A('/api/ui',{action:'get'}).then(function(ui){
+      if(ui&&ui[FLAG])return;
+      return A('/api/localmodels',{action:'status'}).then(function(d){
+        if(!d)return;
+        var missing=(d.asr&&d.asr.state==='none')||(d.tts&&d.tts.state==='none');
+        if(!missing)return;
+        ask(d);
+        A('/api/ui',{action:'set',patch:(function(){var o={};o[FLAG]=1;return o})()}).catch(function(){});
+      })
+    }).catch(function(){})
+  }
+
+  /* 等首屏数据都到位再问，别跟启动时的请求抢带宽 */
+  if(document.readyState!=='loading')setTimeout(boot,2200);
+  else document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,2200)});
 })();
 </script>

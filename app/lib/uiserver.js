@@ -66,6 +66,7 @@ const API = {
   '/api/multiversion': 'multiVersionTask',
   '/api/vision/analyze': 'visionAnalyze',
   '/api/assets/organize': 'assetsOrganize',
+  '/api/assets': 'assetsIngest',
   '/api/update': 'update',
   '/api/ffmpeg': 'ffmpegInfo',
   '/api/plan': 'planApi',
@@ -122,7 +123,7 @@ function projectAsset(project, name) {
  * 而 URL 是 /edt/<工程>/<模板名>，浏览器会按 /edt/<工程>/ 解析，
  * 所以这里把 <模板名> 当文件、其余相对路径都映射到 compositions/ 下。
  */
-function templatePage(project, rest, auto) {
+function templatePage(project, rest, auto, clipId, edit) {
   const TL = require('./timeline')
   const comps = path.join(TL.projDir(project), 'compositions')
   let rel = String(rest || '').replace(/\.\./g, '').replace(/^\/+/, '')
@@ -144,6 +145,30 @@ function templatePage(project, rest, auto) {
   try { html = fs.readFileSync(full, 'utf8') } catch (e) {
     return new Response('template unreadable: ' + e.message, { status: 500 })
   }
+  /* ★ 把这个片段填过的模板变量注进预览页。
+     模板源码读的是 Object.assign({}, defaults, window.__hfVariables, scoped)，
+     不给它 __hfVariables 就永远只显示模板自带的默认字（CLARITY）。
+     后果：右侧面板改了字、工程 JSON 也存了，但画面一动不动 ——
+     用户会以为「改字功能没做」。clip_id 由剪辑台的 iframe URL 带上。 */
+  let varScript = ''
+  if (clipId) {
+    try {
+      const d = TL.load(project)
+      let hit = null
+      for (const tr of (d && d.tracks) || []) {
+        for (const c of tr.clips || []) {
+          if (String(c.id) === String(clipId)) { hit = c; break }
+        }
+        if (hit) break
+      }
+      const vv = (hit && hit.vars) || {}
+      if (Object.keys(vv).length) {
+        varScript = '<script>window.__hfVariables=' +
+          JSON.stringify(vv).replace(/</g, '\\u003c') + ';</script>'
+      }
+    } catch (e) { /* 注入失败不该让预览白屏，模板自己有默认值兜底 */ }
+  }
+  if (varScript) html = html.replace(/<head([^>]*)>/i, '<head$1>' + varScript)
   // 模板里多半写的是公网 CDN。软件自称「断网也能用」，先把 GSAP 换成本地副本。
   html = html.replace(/<script[^>]+src=["'][^"']*gsap[^"']*["'][^>]*>\s*<\/script>/gi,
     '<script src="/tpllib/gsap.min.js"></script>')
@@ -176,6 +201,115 @@ function templatePage(project, rest, auto) {
 })();
 </script></body>`)
   }
+  /* ★ 点画面上的文字直接改（2026-11-21 用户要求）。
+     以前改字只能在右侧面板的输入框里对着「原文 / 空白」改，用户的原话是
+     「直接从视频上面点击就可以更改，不要从右侧面板改」。
+     这里给模板预览页注入一段交互：鼠标移上去把可改的文字框出来，点一下就
+     变成可编辑，改完把「原文 → 新文字」postMessage 给剪辑台，由剪辑台去写
+     clip.edits。为什么不在 iframe 里直接改 DOM：模板会重新执行时间轴，
+     直接改 DOM 下次 seek 就被覆盖；而写 clip.edits 是走「生成副本 + 重载预览」
+     那条已经验证过的路，预览和成片吃同一份字节。
+     匹配用「原文文字」而不是 t3 这种编号：编号是源文件扫描顺序，
+     渲染后的 DOM 里顺序未必一致（条件渲染、伪元素、SVG），原文比对才稳。 */
+  if (edit) {
+    html = html.replace('</body>', `<style>
+#rc-edit-hi{position:fixed;pointer-events:none;z-index:2147483647;border:1px solid #1B8B7E;
+  background:rgba(27,139,126,.10);border-radius:3px;display:none;transition:none}
+</style>
+<script>
+(function(){
+  var SKIP={SCRIPT:1,STYLE:1,NOSCRIPT:1,TEXTAREA:1,TITLE:1,IFRAME:1,SVG:1,CANVAS:1,HEAD:1};
+  var cid='';
+  try{cid=new URLSearchParams(location.search).get('c')||''}catch(e){}
+  var hi=document.createElement('div');hi.id='rc-edit-hi';document.documentElement.appendChild(hi);
+  var editing=false, cur=null, orig='';
+
+  /* 找一个元素「直接挂在它下面的第一段非空文字」——
+     模板里的文字基本都是直接写在样式元素里（<div class="tagline">文字</div>），
+     所以取直接子文字节点命中率最高，也不会误改到整块容器的拼接文本。 */
+  function textNodeOf(el){
+    if(!el||!el.childNodes)return null;
+    var best=null,bestLen=0;
+    for(var i=0;i<el.childNodes.length;i++){
+      var n=el.childNodes[i];
+      if(n.nodeType!==3)continue;
+      var t=(n.nodeValue||'').replace(/\s+/g,' ').trim();
+      if(t.length>bestLen){best=n;bestLen=t.length}
+    }
+    return best;
+  }
+  function usable(el){
+    if(!el||!el.nodeName)return false;
+    if(SKIP[el.nodeName])return false;
+    if(el.closest&&el.closest('script,style,noscript,textarea,title,iframe,svg,canvas'))return false;
+    var st=getComputedStyle(el);
+    if(st.display==='none'||st.visibility==='hidden')return false;
+    if(+st.opacity<0.06)return false;
+    return true;
+  }
+  function targetOf(e){
+    var el=e.target;
+    for(var i=0;i<4&&el;i++){
+      if(usable(el)&&textNodeOf(el))return el;
+      el=el.parentElement;
+    }
+    return null;
+  }
+  document.addEventListener('mousemove',function(e){
+    if(editing){hi.style.display='none';return}
+    var el=targetOf(e);
+    if(!el){hi.style.display='none';document.body.style.cursor='';return}
+    var r=el.getBoundingClientRect();
+    hi.style.display='block';
+    hi.style.left=(r.left-2)+'px';hi.style.top=(r.top-2)+'px';
+    hi.style.width=(r.width+4)+'px';hi.style.height=(r.height+4)+'px';
+    document.body.style.cursor='text';
+  },true);
+
+  function finish(commit){
+    if(!editing)return;
+    editing=false;
+    var el=cur; cur=null;
+    if(!el)return;
+    var now=(el.textContent||'').replace(/\s+/g,' ').trim();
+    el.removeAttribute('contenteditable');
+    el.style.outline='';el.style.cursor='';
+    try{window.getSelection().removeAllRanges()}catch(e){}
+    if(commit&&now&&now!==orig){
+      try{window.parent.postMessage({__rc:1,kind:'text-edit',clip:cid,from:orig,to:now},'*')}catch(e){}
+    }else if(!commit){
+      el.textContent=orig;
+    }
+  }
+  document.addEventListener('mousedown',function(e){
+    if(editing){e.stopPropagation();e.preventDefault();return}
+    var el=targetOf(e);
+    if(!el)return;
+    e.stopPropagation();e.preventDefault();
+    editing=true;cur=el;
+    orig=(el.textContent||'').replace(/\s+/g,' ').trim();
+    el.setAttribute('contenteditable','plaintext-only');
+    el.style.outline='1.5px solid #1B8B7E';
+    el.style.outlineOffset='2px';
+    el.focus();
+    try{
+      var r=document.createRange();r.selectNodeContents(el);
+      var s=window.getSelection();s.removeAllRanges();s.addRange(r);
+    }catch(e){}
+    hi.style.display='none';
+  },true);
+  document.addEventListener('keydown',function(e){
+    if(!editing)return;
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.stopPropagation();finish(true);}
+    else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finish(false);}
+  },true);
+  document.addEventListener('blur',function(){if(editing)finish(true)},true);
+  /* 模板自己的点击/拖拽逻辑不要在这时候抢事件 */
+  document.addEventListener('click',function(e){if(editing){e.stopPropagation();e.preventDefault()}},true);
+})();
+</script></body>`)
+  }
+
   return new Response(html, {
     status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
@@ -253,7 +387,7 @@ function handler(opt) {
     if (p.startsWith('/edt/')) {
       const parts = p.slice('/edt/'.length).split('/')
       const project = parts.shift() || ''
-      return templatePage(project, parts.join('/'), u.searchParams.get('auto') === '1')
+      return templatePage(project, parts.join('/'), u.searchParams.get('auto') === '1', u.searchParams.get('c') || '', u.searchParams.get('edit') === '1')
     }
 
     // ── 接口 ──

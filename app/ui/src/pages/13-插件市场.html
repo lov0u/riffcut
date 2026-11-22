@@ -6,7 +6,7 @@
 .pg-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .pg-search{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:1px solid var(--line);
   border-radius:var(--r-sm);background:#FFF;box-shadow:var(--sh-in);flex:1;min-width:200px;max-width:420px}
-.pg-search input{border:0;outline:none;background:none;font-size:var(--f4);color:#333B49;width:100%;min-width:0}
+.pg-search input{;font-size:var(--f4);color:#333B49;width:100%;min-width:0}
 .pg-search .ic{width:13px;height:13px;color:#9AA2B1;flex:0 0 auto}
 .pg-stat{font-size:var(--f5);color:#8A92A2;font-variant-numeric:tabular-nums}
 .pg-stat b{color:#33405A;font-weight:600}
@@ -19,7 +19,7 @@
 .pg-rows::-webkit-scrollbar{display:none}
 .pg-row{display:flex;align-items:flex-start;gap:11px;padding:11px 12px;border:1px solid var(--line);
   border-radius:var(--r-md);margin-bottom:8px;background:#FFF;transition:border-color .14s,box-shadow .14s}
-.pg-row:hover{border-color:#BFE0DA;box-shadow:var(--sh-1)}
+.pg-row:hover{border-color:#A8C4F8;box-shadow:var(--sh-1)}
 .pg-row .ic-box{width:34px;height:34px;flex:0 0 auto;border-radius:9px;background:#F3F6FA;
   display:flex;align-items:center;justify-content:center;color:#7A8496;font-size:13px;font-weight:700}
 .pg-row .mid{flex:1;min-width:0}
@@ -32,7 +32,7 @@
 .pg-row .right{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .pg-row .ver{font-size:10px;color:#A6ADBB;font-variant-numeric:tabular-nums}
 .pg-row .u-btn{height:27px;font-size:var(--f5);padding:0 11px}
-.pg-row.on{border-color:#BFE0DA;background:#FBFEFD}
+.pg-row.on{border-color:#A8C4F8;background:#FBFEFD}
 .pg-more{display:flex;justify-content:center;padding:6px 0 10px}
 .pg-side{display:flex;flex-direction:column;gap:clamp(8px,1%,12px);min-height:0;overflow:auto;scrollbar-width:none}
 .pg-side::-webkit-scrollbar{display:none}
@@ -51,10 +51,10 @@
 .pg-tab{height:34px;padding:0 15px;border:0;background:none;color:#7A8496;font-size:var(--f4);
   cursor:pointer;position:relative;font-weight:500}
 .pg-tab:hover{color:#33405A}
-.pg-tab.on{color:#1B8B7E;font-weight:600}
-.pg-tab.on:after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:#1B8B7E;border-radius:2px}
+.pg-tab.on{color:#2563EB;font-weight:600}
+.pg-tab.on:after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:#2563EB;border-radius:2px}
 .pg-tab .n{font-size:10px;background:#EEF2F7;border-radius:8px;padding:1px 6px;margin-left:5px;color:#7A8496}
-.pg-tab.on .n{background:#DDF3EE;color:#1B8B7E}
+.pg-tab.on .n{background:#DDF3EE;color:#2563EB}
 /* 状态标签（对齐 DSH 原生：已装 / 随包 / 未装） */
 .pg-row .u-tag.gold{background:#FBF1DC;color:#9A6B12}
 /* 重启提示条：装/改/卸后出现，一键重启 */

@@ -667,6 +667,7 @@ app.whenReady().then(async () => {
        跟 客户/资源/模板库 并排躺着。AI 的 cwd 也跟着变成那一片混合区。 */
     await kernel.start({
       provider: prof.provider, model: prof.model,
+      reasoningEffort: prof.reasoningEffort,
       cwd: HOME, env: prof.env,
     })
     __mark('内核就绪')
@@ -1044,6 +1045,16 @@ ipcMain.handle('sys:pickFiles', async (_e, opts = {}) => {
     if (r.canceled || !r.filePaths || !r.filePaths.length) return { ok: false, canceled: true, files: [] }
     return { ok: true, files: r.filePaths }
   } catch (e) { return { ok: false, error: String(e.message || e), files: [] } }
+})
+
+/* 拖进来的东西是文件还是文件夹。渲染进程拿不到 fs，又必须区分：
+   文件夹 = 设为工作区；文件 = 加进素材库当附件。
+   没有这个判定，只能把两者都当文件夹，拖图片就会被当成「换工作区」。 */
+ipcMain.handle('sys:statPath', async (_e, p) => {
+  try {
+    const st = require('node:fs').statSync(String(p))
+    return { ok: true, isDir: st.isDirectory(), isFile: st.isFile(), size: st.size }
+  } catch (e) { return { ok: false, error: String(e.message || e) } }
 })
 
 /* 拖拽进来的 File 取绝对路径。Electron 32+ 移除了 File.path，

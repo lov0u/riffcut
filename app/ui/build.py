@@ -17,6 +17,13 @@ pages = "\n\n".join(open(p, encoding="utf-8").read() for p in page_files)
 assert "<!--PAGES-->" in shell, "shell.html 缺少 <!--PAGES--> 占位符"
 html = shell.replace("<!--PAGES-->", pages)
 
+# 注入文字样式表：46 款样式原来只在 05-专业剪辑.html 里，导出端和 AI 拿不到。
+# 单独成一份 src/textstyles.js，页面里当 window.RC_TEXTSTYLES 用，Node 侧 require 同一个文件。
+tsjs = open(os.path.join(SRC, "textstyles.js"), encoding="utf-8").read()
+assert "</script" not in tsjs, "textstyles.js 里不能含 </script>"
+assert "<!--TEXTSTYLES-->" in html, "shell.html 缺少 <!--TEXTSTYLES--> 占位符"
+html = html.replace("<!--TEXTSTYLES-->", "<script>\n" + tsjs + "\n</script>")
+
 # 注入统一真实功能接线层：10 个页面的按钮全部接到本机 /api/*
 live = open(os.path.join(SRC, "live.js"), encoding="utf-8").read()
 assert "<!--LIVE-->" in html, "shell.html 缺少 <!--LIVE--> 占位符"
