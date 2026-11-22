@@ -1513,6 +1513,13 @@ body.rws-dragging *{cursor:col-resize !important}
   font-size:var(--f5);color:var(--ink2);cursor:pointer;white-space:nowrap;font-family:inherit}
 .au-mini:hover{border-color:#A8C4F8;color:#1D4ED8}
 .au-mini.on{background:#EFF4FF;border-color:#A8C4F8;color:#33405A;font-weight:600}
+/* 试听按钮三态：合成中转圈 / 播放中蓝底 / 结束复原。
+   本地 Ming 合一段试听要 5 秒上下，没有加载态用户会以为点了没反应（2026-11-22）。 */
+.au-mini.busy{pointer-events:none;border-color:#A8C4F8;background:#EFF4FF;color:#2563EB}
+.au-mini.busy::before{content:"";display:inline-block;width:8px;height:8px;margin-right:4px;
+  border:1.4px solid #2563EB;border-top-color:transparent;border-radius:50%}
+.au-mini.playing{background:#2563EB;border-color:#2563EB;color:#fff;font-weight:600}
+.au-mini.playing:hover{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
 .au-note{font-size:var(--f5);color:var(--ink3);line-height:1.7}
 /* 录音准备弹窗里的授权勾选（移植自语音工作室的 .vm-check） */
 .h-rec-check{display:flex;align-items:flex-start;gap:8px;font-size:var(--f5);color:#4A5262;
@@ -3494,14 +3501,30 @@ body.rws-dragging *{cursor:col-resize !important}
       /* ★ 参数名必须是 model / voice —— 后端 preview_voice 读的是 d.model 和 d.voice，
          以前这里传 model_id / voice_id，后端全是 undefined，于是「点哪个音色试听
          听到的都是同一个默认嗓子」，连「我的音色」也听不出来。 */
+      /* ★ 点下去立刻给加载态：本地合成要几秒，光靠底部一行提示用户看不见。 */
+      var LB=window.__auBtnState||(window.__auBtnState=function(btn,st){
+        if(!btn||!btn.classList)return;
+        btn.classList.remove('busy','playing');
+        if(st==='busy'){btn.classList.add('busy');btn.textContent='合成中'}
+        else if(st==='playing'){btn.classList.add('playing');btn.textContent='播放中'}
+        else btn.textContent='试听';
+      });
+      LB(b,'busy');
       window.api('/api/audio',{action:'preview_voice',model:mid,voice:vid,
         text:$('#auText').value.trim()||'在影创的镜头下，每一个瞬间都值得被定格，让创意，成为影像。',rate:+$('#auRate').value})
         .then(function(r){
-          if(!r||r.ok===false){window.say((r&&r.error)||'这个音色暂时不能试听');return}
-          var a=$('#auPlayer');a.src=r.url;a.style.display='';a.play().catch(function(){});
+          if(!r||r.ok===false){LB(b,'');window.say((r&&r.error)||'这个音色暂时不能试听');return}
+          var a=$('#auPlayer');a.src=r.url;a.style.display='';
+          if(a.__lbBound!==b){
+            a.__lbBound=b;
+            ['ended','pause'].forEach(function(ev){
+              a.addEventListener(ev,function(){ if(a.__lbBound) LB(a.__lbBound,'') });
+            });
+          }
+          a.play().then(function(){LB(b,'playing')}).catch(function(){LB(b,'')});
           var aux=(r.engine==='ming'?'本地 Ming':'系统配音')+(kind?' · '+kind:'');
           window.say('正在试听：'+aux);
-        }).catch(function(e){window.say(e.message)});
+        }).catch(function(e){LB(b,'');window.say(e.message)});
     }else{
       AUD.vpick={mid:mid,vid:vid,kind:kind};AUD.vtab='choose';syncAuTabs();renderVoiceGroups();
       window.say('已选音色，点「保存」写进出片设置');

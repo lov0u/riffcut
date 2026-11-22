@@ -129,6 +129,19 @@
 .vm-mini.add{font-size:15px;line-height:1;font-weight:600;padding-bottom:1px}
 .vm-mini.add:not(.on){color:#4A5670}
 .vm-mini.add.on{background:#EEF3FB;border-color:#D6E0F0;color:#42506A}
+/* 播放按钮的两态：合成/加载中转圈，播出声后变暂停图标 + 蓝底。
+   ★ 为什么必须有加载态：试听要先跑本地 Ming 合成（实测 5 秒左右），
+   这 5 秒里按钮毫无变化，用户以为点了没反应，会连点好几次，每次都在排队合成
+   （2026-11-22 用户报「点了播放什么反应都没有，得等一会儿才出来时间」）。 */
+.vm-mini.busy{pointer-events:none;color:#2563EB;border-color:#A8C4F8;background:#EFF4FF}
+/* 转圈用「圆环」而不是让三角图标自转 —— 三角转起来像坏掉的播放键，
+   截图里定格还是那个三角，用户分辨不出是在加载。 */
+.vm-mini.busy .ic{display:none}
+.vm-mini.busy::after{content:"";width:11px;height:11px;border:1.5px solid #2563EB;
+  border-top-color:transparent;border-radius:50%;animation:vmSpin .7s linear infinite}
+@keyframes vmSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.vm-mini.playing{background:#2563EB;border-color:#2563EB;color:#fff}
+.vm-mini.playing:hover{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
 /* 音色列表单独滚动：一屏正好露 6 行，再多就在框里滚，不把下面的「配音控制」挤走。
    行高 = 9*2 内边距 + 32 内容 + 2 边框 ≈ 52，加 7 的行间距 ≈ 59。 */
 .vm-vlist{max-height:calc(6 * 59px - 7px);overflow:auto;padding-right:2px;margin-bottom:8px;scrollbar-width:thin}
@@ -384,11 +397,42 @@
      同一个动作两处同时弹，字几乎一样，屏幕上就是双提示。
      现在 hint() 只是 say() 的别名，kind='bad' 让它染红，位置仍在底部那一条。 */
   function hint(msg,kind){say(msg,kind==='bad')}
-  function audioPlay(url,note){
-    if(!AUDIO)return;
-    try{AUDIO.pause();AUDIO.src=url+'?t='+Date.now();
-      var p=AUDIO.play();if(p&&p.then)p.then(function(){if(note)say(note)}).catch(function(){say('音频已生成，但播放被拦截：'+url)});
-    }catch(e){say('播放失败：'+e.message)}
+  /* 正在播那个按钮，用来播完复原 */
+  var PLAYBTN=null;
+  function setBtnState(btn,st){
+    if(!btn||!btn.classList)return;
+    btn.classList.remove('busy','playing');
+    if(st==='busy'||st==='playing')btn.classList.add(st);
+    var ic=btn.querySelector('use');
+    if(ic)ic.setAttribute('href',st==='playing'?'#i-pause':'#i-play');
+    btn.title=st==='busy'?'正在合成，稍等…':(st==='playing'?'正在播放，点一下停':'试听');
+  }
+  function audioPlay(url,note,btn){
+    if(!AUDIO){setBtnState(btn,'');return}
+    try{
+      if(PLAYBTN&&PLAYBTN!==btn)setBtnState(PLAYBTN,'');
+      PLAYBTN=btn;
+      AUDIO.pause();AUDIO.src=url+'?t='+Date.now();
+      setBtnState(btn,'busy');
+      var p=AUDIO.play();
+      if(p&&p.then)p.then(function(){
+        if(note)say(note);
+        setBtnState(btn,'playing');
+      }).catch(function(){
+        setBtnState(btn,'');
+        say('音频已生成，但播放被拦截：'+url);
+      });
+    }catch(e){setBtnState(btn,'');say('播放失败：'+e.message)}
+  }
+  /* 播完 / 手动停 → 按钮复原 */
+  function bindAudioEnd(){
+    if(!AUDIO||AUDIO.__bound)return;
+    AUDIO.__bound=1;
+    ['ended','pause'].forEach(function(ev){
+      AUDIO.addEventListener(ev,function(){
+        if(PLAYBTN){setBtnState(PLAYBTN,'');PLAYBTN=null}
+      });
+    });
   }
   function curRate(){
     var r=$('[data-cap="speed"] input');
@@ -402,7 +446,7 @@
 
   /* ── 数据加载 ── */
   function boot(){
-    AUDIO=$('#vmAudio');
+    AUDIO=$('#vmAudio');bindAudioEnd();
     try{Object.keys(OPTS).forEach(function(k){
       var v=localStorage.getItem('riffcut.vm.opt.'+k);if(v!==null)OPTS[k]=v;
     })}catch(e){}
@@ -861,8 +905,16 @@
       if(!r.ok){SEGS[i].state='失败';renderSegs();hint(r.error,'bad');return}
       SEGS[i].state='已生成';SEGS[i].url=r.url;SEGS[i].dur=r.duration||0;SEGS[i].mode=r.mode||'';
       /* 只出一条提示：以前这里 audioPlay 弹一次 say、又 hint 弹一次，同一个动作两条叠在一起。 */
-      renderSegs();audioPlay(r.url,'第 '+(i+1)+' 段配音已生成：'+(r.note||r.mode||'已生成'));
-    }).catch(function(e){SEGS[i].state='失败';renderSegs();hint(e.message,'bad')});
+      /* renderSegs() 会把整段列表重画，按钮是新的 DOM —— 所以要按索引重新拿一次，
+         否则刚加的加载态被抹掉、播放时的蓝底也没地方挂。 */
+      renderSegs();
+      var b2=document.querySelector('[data-segplay="'+i+'"]');
+      audioPlay(r.url,'第 '+(i+1)+' 段配音已生成：'+(r.note||r.mode||'已生成'),b2);
+    }).catch(function(e){
+      SEGS[i].state='失败';renderSegs();
+      setBtnState(document.querySelector('[data-segplay="'+i+'"]'),'');
+      hint(e.message,'bad');
+    });
   }
   function genAll(){
     if(!SEGS.length){hint('请先粘贴配音稿并点「重新分句」','bad');return}
@@ -960,11 +1012,15 @@
     /* 同一个动作只留一条提示：以前「合成中」是页面浮条、「已生成」又叠一条浮条 + 底部 say，
        用户看到的就是两条字几乎一样的东西叠在屏幕下方。现在全程走原来那条底部提示。 */
     say('正在用「'+V.model.name+'」合成试听…');
+    /* ★ 点下去立刻给加载态：本地合成实测 5 秒上下，光靠底部一行字用户看不见。
+       按钮自己转圈，用户就知道「在做了」，不会连点排队。 */
+    var btn=document.querySelector('[data-play="'+name+'"]');
+    setBtnState(btn,'busy');
     A('/api/voicemodels',{action:'preview',id:ACTIVE,voice:name,text:sampleText(),rate:curRate(),
       emotion:OPTS.emotion,speed:OPTS.speed,pitch:OPTS.pitch,volume:OPTS.volume}).then(function(r){
-      if(!r.ok){hint(r.error,'bad');return}
-      audioPlay(r.url,(r.mode?r.mode+'：':'')+(r.note||'试听已生成'));
-    }).catch(function(e){hint(e.message,'bad')});
+      if(!r.ok){setBtnState(btn,'');hint(r.error,'bad');return}
+      audioPlay(r.url,(r.mode?r.mode+'：':'')+(r.note||'试听已生成'),btn);
+    }).catch(function(e){setBtnState(btn,'');hint(e.message,'bad')});
   }
   function doImport(){
     if(!V||!V.model||!V.model.can_import){hint('当前模型不支持导入音色样本','bad');return}
@@ -1240,8 +1296,9 @@
     }
     var sp=t.closest('[data-segplay]');
     if(sp){var i=+sp.getAttribute('data-segplay');
-      if(SEGS[i]&&SEGS[i].url)audioPlay(SEGS[i].url,'试听第 '+(i+1)+' 段');
-      else doSeg(i);return}
+      if(SEGS[i]&&SEGS[i].url)audioPlay(SEGS[i].url,'试听第 '+(i+1)+' 段',sp);
+      else{setBtnState(sp,'busy');doSeg(i);return}
+      return}
     var sg=t.closest('[data-seggen]');
     if(sg){doSeg(+sg.getAttribute('data-seggen'));return}
     var mc=t.closest('.vm-mcard');
