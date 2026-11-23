@@ -2,7 +2,7 @@
 
 > Electron + Node.js 本地视频剪辑工作台，内置 AI 导演内核，支持从分镜策划、素材生成、剪辑合成、字幕配音到多平台发布的全流程。可离线运行，客户数据本地存储，不上传云端。
 >
-> **English:** A local-first AI video editing workstation built on Electron + Node.js with a built-in AI director. It covers the whole pipeline — storyboard planning, asset generation, editing, subtitles, voiceover and multi-platform publishing — entirely on your Mac, with no cloud upload. The full English documentation is at the end of this file 👇
+> **English:** A local-first AI video editing workstation built on Electron + Node.js with a built-in AI director. It covers the whole pipeline — storyboard planning, asset generation, editing, subtitles, voiceover and multi-platform publishing — entirely on your Mac, with no cloud upload. Click the language switcher below to read the full English version 👇
 
 [![官方网站](https://img.shields.io/badge/🌐_官网-riffcut.cn-2F6BFF?style=for-the-badge)](https://riffcut.cn)
 [![下载 macOS 版](https://img.shields.io/badge/⬇_下载-macOS_安装包-2F6BFF?style=for-the-badge)](../../releases/latest)
@@ -13,6 +13,379 @@
 [![macOS](https://img.shields.io/badge/macOS-arm64-lightgrey.svg)](https://www.apple.com/macos/)
 
 ---
+
+> 🌐 **Language / 语言**：下方默认显示中文；需要英文请点开这个折叠块 — Chinese is shown below by default; expand the box for English.
+
+<details>
+<summary>🇬🇧 English Documentation — click to expand / 点此展开英文版</summary>
+
+# RiffCut · The Professional Editing Agent
+
+> A local-first AI video editing workstation built on Electron + Node.js with a built-in AI director. It covers the whole pipeline — storyboard planning, asset generation, editing and compositing, subtitles, voiceover, and multi-platform publishing. It runs offline; all client data is stored locally and never uploaded to the cloud.
+
+[![Website](https://img.shields.io/badge/🌐_Website-riffcut.cn-2F6BFF?style=for-the-badge)](https://riffcut.cn)
+[![Download for macOS](https://img.shields.io/badge/⬇_Download-macOS-2F6BFF?style=for-the-badge)](../../releases/latest)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Electron](https://img.shields.io/badge/Electron-45.3.4-blue.svg)](https://www.electronjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-26-green.svg)](https://nodejs.org/)
+[![hyperframes](https://img.shields.io/badge/hyperframes-0.9.66-purple.svg)](https://github.com/heygen-com/hyperframes)
+[![macOS](https://img.shields.io/badge/macOS-arm64-lightgrey.svg)](https://www.apple.com/macos/)
+
+---
+
+## 1. What is it
+
+**RiffCut** is a **local editing agent** for short-video creators, self-media professionals, and content teams.
+
+> **🌐 Website: [https://riffcut.cn](https://riffcut.cn)** — product intro, tutorials, and the latest download.
+
+It is not an online editing site, and you never need to upload your footage to a cloud — all editing, rendering, and publishing happens on your own Mac.
+
+> **⬇ [Download the macOS installer](DOWNLOAD.md)** — 427 MB; 1.2 GB after install. Speech models download on first launch (about 1.9 GB, optional).
+
+Positioning:
+
+| Aspect | Description |
+|---|---|
+| **AI director** | Built-in DSH kernel; understands Chinese prompts, decomposes tasks, calls tools, and delivers finished videos |
+| **Local editing desk** | Multi-track timeline, template reuse, subtitle styles, audio layering, quality checks |
+| **Multi-platform publishing** | Drives a browser via CDP to publish directly to Douyin, Xiaohongshu, WeChat Channels, Bilibili, etc. |
+| **Offline-first** | Footage, projects, and outputs all live locally; no cloud rendering dependency |
+
+**In one sentence**: ask it for a 15-second vertical product video and it decides the direction, writes the storyboard, finds visuals, adds music, renders, then inspects the result before handing it to you.
+
+---
+
+## 2. Advantages
+
+### 1. Local-first, data never leaves your machine
+- Client footage, projects, and outputs are stored under local `home/` (or a workspace you choose)
+- The packaged `.app` is read-only; user data goes to `~/Library/Application Support/RiffCut影创`, so upgrades never lose data
+- No cloud upload — suited to creators and teams with strict privacy requirements
+
+### 2. AI director kernel, one sentence to a finished video
+- Built on the DSH (DeepSeek Harness) kernel, communicating with the Electron main process over stdio JSON-RPC
+- Give a natural-language instruction (e.g. "make a 15-second vertical product video") and the AI director handles direction, storyboard, visuals, music, rendering, and review
+- **41 built-in director skills** (`home/资源/技能/` and `home/配置/导演技能/`) covering the full production workflow
+- **Native DSH alignment**: sessions can use the kernel's native tools (file I/O, shell, search, persistent terminal, sub-agents, team collaboration, scheduled tasks) — not just a thin video wrapper. Switch permission to "full access" and the AI can read files across the whole machine, same as raw DSH
+- **Web search**: when the host has no `DEEPSEEK_API_KEY`, native search automatically falls back to the built-in stack (Bing primary, DuckDuckGo backup), so the model never stops just because a key is missing
+
+### 3. Ready-made template library, no footage required
+- Built-in registry `home/模板库/registry/`: **210 block directories**, **456 registered items** (including examples)
+- Categories: subtitles, lower thirds, transitions, intros/outros, charts, product showcases, social packaging, kinetic type, background textures, motion parts
+- Filter by category and keyword; most templates need no real footage — text + template is enough
+- **Editable text**: 384 of 448 templates (86%) support direct text editing — 247 declare `data-composition-variables`, and `tpltext.js` scans the other 137 for on-screen text. In the editor, **click the text on canvas to edit it** — no hunting through side panels
+- **Templates are design references, not assets**: instead of copying one template N times to fill the timeline (which just repeats one layout), `design_with_template` extracts the composition grammar (beats, seconds per beat, offsets, easing, which properties create motion) and uses it to lay out the whole film
+- Stretching a template syncs `data-duration` to the copy so the animation truly fills the duration
+
+### 4. Multi-track timeline + HyperFrames rendering
+- Custom `timeline.json` project format with four tracks: video / graphics / subtitles / audio
+- Local **hyperframes** rendering engine — not npx (avoids a 25 MB first-run download that users mistake for a hang)
+- Unified clip geometry: x/y as center ratio 0–1, w/h as canvas proportion, at as in-clip progress 0–1
+- Built-in animation presets: fade, slideUp/Down/Left/Right, zoomIn/Out, kenburns
+
+### 5. Subtitles: direct ASS output, keyword highlight, entry animation
+- Generates ASS directly, not just SRT — per-line styles and inline override tags
+- Presets: standard, big, pop, vertical, title, card, vertical card, karaoke, vertical karaoke, hook, editorial
+- Font size scales with the short edge; top/bottom anchors, backdrop masks, and other short-video staples
+
+### 6. Four-layer audio level management
+- Four levels: dialogue 0 dB / SFX −6 to −10 dB / music −18 to −24 dB / ambience −26 to −32 dB
+- Music ducks −4 dB under speech
+- Short-video loudness target −14 LUFS, true peak ≤ −1 dB, 1.2 dB headroom for AAC encoding
+- Supports macOS system voice (`say`) and the Ming local TTS engine (GGUF + prebuilt CLI, Metal inference, zero Python dependency)
+
+### 7. Multi-platform delivery specs, one master to many
+- Built-in `delivery.js` spec table: YouTube, Shorts, Reels, TikTok, Douyin, WeChat Channels, Xiaohongshu, Instagram Feed, X, LinkedIn, web
+- Reflows horizontal to vertical (blurred background fill, no black bars), exports per platform
+- Delivery check: is it client-ready, platform-uploadable, web-playable
+
+### 8. Browser automation publishing (CDP)
+- Minimal built-in `cdp.js` Chrome DevTools Protocol client, zero dependencies (no puppeteer — avoids conflicts with the user's logged-in Chrome profile)
+- `publish.js` supports web publishing to Douyin, Xiaohongshu, Kuaishou, WeChat Channels, Bilibili, etc.
+- Dry-run by default: fills every field, stops before the publish button, and waits for your confirmation
+
+### 9. Plugin market + MCP server
+- Built-in `market.js` index (6,112 plugins, ~4.9 MB, 6-hour cache), fetched over HTTP with zero latency
+- `mcp.js` exposes all RiffCut capabilities to the DSH kernel over stdio JSON-RPC 2.0
+- UI and AI see the same tool table — no "it's in the UI but AI can't see it" gap
+
+### 10. Background sub-agent desk, main chat never blocks
+- Long tasks (search copy → write storyboard → render) run in separate kernel sessions in the background; the main chat replies instantly
+- You can chime in mid-run and change requirements; background desks don't step on each other
+- Honest about limits: the kernel SDK has no cancel API, so "stop" is a UI-level mitigation only
+
+### 11. Observable startup, predictable experience
+- Millisecond timing at each key startup node (`RiffCut_STARTUP_TRACE=1`)
+- Single-instance lock prevents double-clicks from launching two processes fighting over one port
+- Debug port only opens when `RiffCut_DEBUG_PORT` is explicitly set; normal users have no listening port
+
+### 12. Packaging-friendly, native macOS feel
+- `构建.app.sh` builds `RiffCut影创.app` in one step with ad-hoc signing (unsigned arm64 apps get `Killed: 9`)
+- Auto-generates 10 sizes of icns
+- `home/` is excluded from the installer; large weights (speech models) are inserted after signing, cutting first-launch validation from 12.1 s to 1.8 s
+
+---
+
+## 3. Project structure
+
+```
+RiffCut影创/
+├── README.md                 # this file
+├── LICENSE                   # AGPL-3.0 full text
+├── NOTICE.md                 # third-party components and licenses
+├── 构建.app.sh               # macOS .app build script
+├── app/                      # Electron main + renderer code
+│   ├── main.js               # main entry (window, IPC, kernel, private protocol)
+│   ├── preload.js            # renderer bridge (window.riffcut API)
+│   ├── package.json          # dependencies (electron ^45.3.4, hyperframes ^0.9.66)
+│   ├── lib/                  # core libraries
+│   │   ├── core.js           # clients, workspace, settings, history, costs
+│   │   ├── paths.js          # single source of truth for all paths
+│   │   ├── tools.js          # AI tool registry (99 tools, permission tiers)
+│   │   ├── kernel.js         # DSH kernel client (stdio JSON-RPC)
+│   │   ├── render.js         # render: timeline.json → composition HTML → MP4
+│   │   ├── timeline.js       # multi-track editing project
+│   │   ├── skills.js         # director skill management
+│   │   ├── templates.js      # template library (categories + variables + grammar)
+│   │   ├── tpltext.js        # on-canvas text recognition and replacement
+│   │   ├── vidlook.js        # per-shot video reading (cut by real scene boundaries)
+│   │   ├── publish.js        # multi-platform publishing (CDP)
+│   │   ├── cdp.js            # minimal Chrome DevTools Protocol client
+│   │   ├── mcp.js            # MCP server (stdio JSON-RPC 2.0)
+│   │   ├── market.js         # plugin market index (6,112 plugins)
+│   │   ├── audio.js          # audio: TTS / music / SFX / loudness
+│   │   ├── subtitle.js       # ASS subtitles, highlight, entry animation
+│   │   ├── delivery.js       # platform specs and master derivation
+│   │   ├── ...               # others: image, brand, browser, convo, exec, vendor, ...
+│   ├── renderer/             # renderer pages
+│   └── ui/                   # DSH UI build (src/pages, build.py)
+├── kernel/dsh/               # DSH kernel (bundled)
+├── tools/                    # build and runtime tools
+│   ├── ffmpeg / ffprobe      # binaries (see NOTICE.md §3 for redistribution limits)
+│   └── audio.cpp/            # Ming local TTS engine
+└── home/                     # dev-time data dir (excluded from package)
+    ├── 客户/                 # client footage, projects, outputs
+    ├── 模板库/               # template library
+    ├── 配置/                 # settings, models, clients, tasks, history
+    └── AGENTS.md             # AI director working guide
+```
+
+---
+
+## 4. Quick start
+
+### Requirements
+- macOS (Apple Silicon arm64 recommended; Intel Mac also works)
+- Node.js 26+ (development only; end users need not install Node)
+- Python 3 (only for build-script icon generation, not needed at runtime)
+- FFmpeg (rendering and frame extraction; see below)
+
+### Development mode
+```bash
+cd app
+npm install
+npm start
+
+# with a debug port (for external tools reading the DOM)
+RiffCut_DEBUG_PORT=9355 npm run start:debug
+```
+
+### Install FFmpeg
+The bundled `tools/ffmpeg` is a specific build **not meant for source redistribution** (see `NOTICE.md` §3). Install it yourself:
+```bash
+brew install ffmpeg
+```
+Or download an LGPL build from [evermeet.cx](https://evermeet.cx/ffmpeg/) and place it in `tools/`.
+
+### Build the macOS app
+```bash
+# from the project root
+./构建.app.sh
+```
+This produces `RiffCut影创.app`, ready to double-click.
+
+### First use
+1. Double-click `RiffCut影创.app` — **no setup needed; just start chatting** (a shared model quota is included)
+2. Pick a workspace in settings (client footage and outputs go there)
+3. Tell the AI director what you want in plain language, e.g. "make a 15-second vertical product promo"
+
+### Model: works out of the box, or bring your own
+A preset `auto (multimodal)` model routes through the author's own gateway — **no account required**. It exists so first-time users can talk to it immediately and try things out.
+
+To use your own model (more quota, steadier speed, image input):
+1. Open "Model Management"
+2. Click "Add / Configure", pick "BailuCode" or "Agnes CN / Global" from the provider dropdown — endpoint and model ID fill in automatically
+3. Register on the platform, get an API Key, paste it in, save
+4. Click "Test" to verify, then select it in the model dropdown at the top of the home page
+
+Keys are stored in the macOS Keychain (`service = riffcut.apikeys`), never in config files or backups. If the built-in quota is throttled or retired, just switch to your own key — no waiting for an update.
+
+---
+
+## 5. Core modules
+
+### 5.1 AI director (kernel layer)
+The DSH kernel talks to Electron over stdio JSON-RPC via `kernel.js`:
+- **Task decomposition**: turns natural language into an executable tool-call sequence
+- **Tool calling**: 99 tools via `tools.js` (assets, templates, timeline, rendering, publishing, ...)
+- **Sub-agents**: `workers.js` runs long tasks in separate background sessions
+- **Events**: `subagent.started` / `subagent.finished` drive UI progress
+
+### 5.2 Chat UI: native DSH parity
+Several details match native DSH behavior:
+- **Reasoning**: the model's step-by-step thinking is collected into a collapsible block above the tool group and the answer — fixed order `me → reasoning → tools → answer`. The summary scrolls with content while running and auto-collapses when done. DSH controls this with `reasoningEffort`; this project declares `reasoningEfforts` tiers (`off/low/medium/high`) in the profile and defaults `high` in `initialize`.
+- **Tool group**: each turn's tool calls are packed into one collapsible group showing a single semantic line by default; expand for per-step input/output.
+- **Elapsed time**: ticks every second ("thinking… Xs"), then freezes at "done in Xs" using kernel `turn/start` / `turn/end` timestamps, not a front-end wall clock.
+- **Byte streaming**: text and reasoning stream in character by character, via `agent/assistant-stream` chunks relayed over JSON-RPC.
+- **Images**: images and text are two blocks in the **same message** (image above, text below); image-only messages leave no empty bubble. Single images are capped at 240 px, thumbnails at 96 px. Both sent images and unsent composer drafts open a lightbox (blurred backdrop; close via Esc / backdrop / close button; focus trapped and restored).
+- **Tables**: Markdown tables follow DSH tokens (13px/22px, thin borders, bold non-wrapping header, zebra striping, `tabular-nums` for numeric columns), with horizontal scroll for long tables.
+
+### 5.3 Editing project (`timeline.js`)
+`timeline.json` holds canvas size, fps, duration (default 1920×1080, 30fps, 10s), four tracks, clip geometry (x/y center ratio, w/h canvas proportion, at in-clip progress, keys keyframe path) and animation presets.
+
+### 5.4 Rendering (`render.js`)
+`timeline.json` → composition HTML → MP4, using local hyperframes (not npx), explicit ffmpeg/ffprobe paths, and the kernel's bundled Node binary (avoids `process.execPath` pointing at Electron after packaging).
+
+### 5.5 Subtitles (`subtitle.js`)
+ASS output with per-line styles and inline tags; presets listed above; font size scales with the short edge; top/bottom anchors and backdrop masks.
+
+### 5.6 Audio (`audio.js`)
+Four levels (dialogue 0 / SFX −8 / music −21 / ambience −29 dB); −14 LUFS target, −1 dB true peak, 1.2 dB AAC headroom; macOS system voice and Ming local TTS (GGUF + Metal).
+
+### 5.7 Publishing (`publish.js` + `cdp.js`)
+CDP connects to the user's logged-in Chrome (separate profile, debug port); publishes to Douyin, Xiaohongshu, Kuaishou, WeChat Channels, Bilibili, etc.; dry-run by default.
+
+### 5.8 Plugins and MCP (`market.js` + `mcp.js`)
+6,112-plugin index with 6-hour HTTP cache; MCP server over stdio JSON-RPC 2.0 exposes RiffCut to the DSH kernel.
+
+---
+
+## 6. Tech stack
+
+| Layer | Tech | Version | Notes |
+|---|---|---|---|
+| Desktop | Electron | ^45.3.4 | main + renderer |
+| Rendering | hyperframes | ^0.9.66 | local video compositing |
+| Kernel | DSH (DeepSeek Harness) | 0.2.1-rc.3 | AI director, stdio JSON-RPC |
+| Language | Node.js | 26+ | all core libraries |
+| Build | zsh + Python 3 | — | `构建.app.sh` |
+| Multimedia | ffmpeg / ffprobe | 6.0 | processing, extraction, probing |
+| Local TTS | Ming-3.0-tts-0.5B (GGUF) | — | Metal inference, zero Python deps |
+| ASR | SenseVoice Small (ONNX) | — | local transcription |
+| Browser automation | CDP (native WebSocket) | — | no puppeteer |
+| Plugin protocol | MCP | 2024-11-05 | stdio JSON-RPC 2.0 |
+
+---
+
+## 7. License, privacy, compliance
+
+### 7.1 Dual license
+| Use | License | Cost |
+|---|---|---|
+| Study, personal use, modify, redistribute (with source) | **AGPL-3.0** | Free |
+| Closed-source integration, de-branding, warranty / SLA | **Commercial** | Quote |
+
+- Full terms in [LICENSE](LICENSE) and [the licensing note](home/资源/法律/01-开源许可与商业授权.md)
+- **You own the outputs** — videos, images, copy, and voiceovers made with the software; AGPL does not restrict outputs, they may be used commercially
+- Trademarks are outside the open-source grant: modified distributions must change the name and icon
+
+### 7.2 Data and privacy
+- No telemetry, no data collection, no cloud upload of footage
+- All data lives in local `home/` or your chosen workspace
+- Data is sent only to third-party services **you configured**, and only when you actively use online features (model chat, image/video generation, hot-topic search)
+- Publishing to third-party platforms happens in your local browser; the software only assists with automation
+
+### 7.3 What you must check yourself
+- **Asset licensing**: music, fonts, images, portraits, trademarks — obtain proper rights ("free" often means personal use only)
+- **AI output review**: generated copy, visuals, and voiceovers can be wrong; review before publishing
+- **Platform rules**: comply with each platform and advertising regulations
+- **Voice cloning**: only your own voice, or voices with explicit written consent
+
+See the [Disclaimer](home/资源/法律/05-免责声明.md).
+
+### 7.4 Third-party components
+Full list, versions, licenses, and **redistribution limits** in [NOTICE.md](NOTICE.md).
+
+**Note**: the current `tools/ffmpeg` build has `--enable-nonfree` and **must not be redistributed with source**; see NOTICE.md §3.
+
+---
+
+## 8. Contributing
+
+Issues and PRs are welcome.
+
+Before submitting:
+1. Read `home/AGENTS.md` for the AI director's working rules
+2. Read `home/配置/RULES.md` for knowledge-base conventions
+3. Match the style of existing lib modules (Chinese comments and variable names are acceptable)
+4. Don't change packaging or path conventions without discussion
+
+When submitting:
+- **Code contributions are licensed under AGPL-3.0** to this project and all downstream users
+- You warrant the content is original or properly licensed
+- One PR per change, with "what / why / how verified"
+
+Not accepted:
+- Changes that remove or weaken license / copyright notices
+- License-incompatible third-party code (check [NOTICE.md](NOTICE.md))
+- Changes that break packaging (unless `构建.app.sh` and this doc are updated too)
+
+---
+
+## 9. Version history
+
+- **v0.1.0** (2026-11): first public release. Electron + DSH kernel, 41 director skills, 210 template blocks, multi-platform publishing, local rendering, dual-license open source.
+
+From the v0.1.0 development cycle (most recent first):
+
+| Category | Change |
+|---|---|
+| Installer | Speech weights no longer bundled; installer 2.1 GB → 427 MB; downloaded from domestic mirrors on first launch (ModelScope → hf-mirror → Hugging Face fallback) |
+| Chat UI | Collapsible reasoning block, tool group folding, live elapsed time frozen from real turn timestamps, byte streaming, multimodal images (image/text split, no empty bubble for image-only, shared lightbox for drafts and sent images), DSH-token Markdown tables |
+| AI | Native tools grown 0 → 52 (file I/O, shell, search, persistent terminal, sub-agents, team collaboration, scheduled tasks, skills, demos, ask-user), 99 tools total; "full access" permission reads the whole machine |
+| Search | Native search falls back to the built-in stack when `DEEPSEEK_API_KEY` is missing (Bing primary + DDG backup) |
+| Templates | Editable-text coverage 86% (384/448); `design_with_template` extracts composition grammar so the AI lays out the whole film instead of repeating a template; stretching syncs `data-duration` |
+| Text | 46 text styles extracted to a single source shared by UI, AI tools, and export |
+| Assets | Per-shot video reading (cut by real scene boundaries), distinct from folder frame-grabbing and output quality checks |
+| Colors | UI unified to pure white + tool blue `#2563EB` with three border tiers |
+| Stability | Deleting a client no longer throws ENOENT; dropping files into chat no longer rejected as "set workspace"; Enter during Chinese IME selection no longer sends a message; image archives no longer lost |
+
+**v0.1.1** (2026-11): Ming voice gender bug fixed (male voices came out female), full re-record workflow with preview/re-record/save, play-button loading states, and all 448 templates made fully offline (zero external CDN dependencies).
+
+---
+
+## 10. Contact
+
+| Purpose | Contact |
+|---|---|
+| Website | [https://riffcut.cn](https://riffcut.cn) |
+| Questions / suggestions | In-app "Feedback" button, or email |
+| Bug reports | GitHub Issue (include repro steps, OS version, logs) |
+| Commercial licensing | Email with subject "Commercial License Inquiry" |
+| Security vulnerabilities | Email directly, do not file a public issue |
+| Infringement complaints | Email with proof of rights and location of infringement |
+
+**Email: China@cyanweb.cn**
+
+---
+
+## 11. Acknowledgements
+
+Built on the shoulders of:
+
+- [Electron](https://github.com/electron/electron) — cross-platform desktop shell
+- [HyperFrames](https://github.com/heygen-com/hyperframes) — HTML-to-video engine
+- [DSH (DeepSeek Harness)](https://github.com/deepseek-ai) — AI agent kernel
+- [FFmpeg](https://ffmpeg.org/) — multimedia foundation
+- [Ming-3.0-tts](https://huggingface.co/inclusionAI/Ming-3.0-tts-0.5B) — Chinese speech synthesis
+- [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) — multilingual ASR (Alibaba Tongyi Lab)
+
+---
+
+> **RiffCut** — make editing feel like directing, and every cut feel like a work of art.
+
+</details>
 
 ## 一、这是什么
 
@@ -450,375 +823,3 @@ DSH 内核通过 `kernel.js` 与 Electron 主进程建立 stdio JSON-RPC 通信�
 
 > **RiffCut 影创** — 让剪辑像导演一样简单，让片子像作品一样出色。
 
----
-
-<details>
-<summary>🇬🇧 English Documentation — click to expand / 点此展开英文版</summary>
-
-# RiffCut · The Professional Editing Agent
-
-> A local-first AI video editing workstation built on Electron + Node.js with a built-in AI director. It covers the whole pipeline — storyboard planning, asset generation, editing and compositing, subtitles, voiceover, and multi-platform publishing. It runs offline; all client data is stored locally and never uploaded to the cloud.
-
-[![Website](https://img.shields.io/badge/🌐_Website-riffcut.cn-2F6BFF?style=for-the-badge)](https://riffcut.cn)
-[![Download for macOS](https://img.shields.io/badge/⬇_Download-macOS-2F6BFF?style=for-the-badge)](../../releases/latest)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Electron](https://img.shields.io/badge/Electron-45.3.4-blue.svg)](https://www.electronjs.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-26-green.svg)](https://nodejs.org/)
-[![hyperframes](https://img.shields.io/badge/hyperframes-0.9.66-purple.svg)](https://github.com/heygen-com/hyperframes)
-[![macOS](https://img.shields.io/badge/macOS-arm64-lightgrey.svg)](https://www.apple.com/macos/)
-
----
-
-## 1. What is it
-
-**RiffCut** is a **local editing agent** for short-video creators, self-media professionals, and content teams.
-
-> **🌐 Website: [https://riffcut.cn](https://riffcut.cn)** — product intro, tutorials, and the latest download.
-
-It is not an online editing site, and you never need to upload your footage to a cloud — all editing, rendering, and publishing happens on your own Mac.
-
-> **⬇ [Download the macOS installer](DOWNLOAD.md)** — 427 MB; 1.2 GB after install. Speech models download on first launch (about 1.9 GB, optional).
-
-Positioning:
-
-| Aspect | Description |
-|---|---|
-| **AI director** | Built-in DSH kernel; understands Chinese prompts, decomposes tasks, calls tools, and delivers finished videos |
-| **Local editing desk** | Multi-track timeline, template reuse, subtitle styles, audio layering, quality checks |
-| **Multi-platform publishing** | Drives a browser via CDP to publish directly to Douyin, Xiaohongshu, WeChat Channels, Bilibili, etc. |
-| **Offline-first** | Footage, projects, and outputs all live locally; no cloud rendering dependency |
-
-**In one sentence**: ask it for a 15-second vertical product video and it decides the direction, writes the storyboard, finds visuals, adds music, renders, then inspects the result before handing it to you.
-
----
-
-## 2. Advantages
-
-### 1. Local-first, data never leaves your machine
-- Client footage, projects, and outputs are stored under local `home/` (or a workspace you choose)
-- The packaged `.app` is read-only; user data goes to `~/Library/Application Support/RiffCut影创`, so upgrades never lose data
-- No cloud upload — suited to creators and teams with strict privacy requirements
-
-### 2. AI director kernel, one sentence to a finished video
-- Built on the DSH (DeepSeek Harness) kernel, communicating with the Electron main process over stdio JSON-RPC
-- Give a natural-language instruction (e.g. "make a 15-second vertical product video") and the AI director handles direction, storyboard, visuals, music, rendering, and review
-- **41 built-in director skills** (`home/资源/技能/` and `home/配置/导演技能/`) covering the full production workflow
-- **Native DSH alignment**: sessions can use the kernel's native tools (file I/O, shell, search, persistent terminal, sub-agents, team collaboration, scheduled tasks) — not just a thin video wrapper. Switch permission to "full access" and the AI can read files across the whole machine, same as raw DSH
-- **Web search**: when the host has no `DEEPSEEK_API_KEY`, native search automatically falls back to the built-in stack (Bing primary, DuckDuckGo backup), so the model never stops just because a key is missing
-
-### 3. Ready-made template library, no footage required
-- Built-in registry `home/模板库/registry/`: **210 block directories**, **456 registered items** (including examples)
-- Categories: subtitles, lower thirds, transitions, intros/outros, charts, product showcases, social packaging, kinetic type, background textures, motion parts
-- Filter by category and keyword; most templates need no real footage — text + template is enough
-- **Editable text**: 384 of 448 templates (86%) support direct text editing — 247 declare `data-composition-variables`, and `tpltext.js` scans the other 137 for on-screen text. In the editor, **click the text on canvas to edit it** — no hunting through side panels
-- **Templates are design references, not assets**: instead of copying one template N times to fill the timeline (which just repeats one layout), `design_with_template` extracts the composition grammar (beats, seconds per beat, offsets, easing, which properties create motion) and uses it to lay out the whole film
-- Stretching a template syncs `data-duration` to the copy so the animation truly fills the duration
-
-### 4. Multi-track timeline + HyperFrames rendering
-- Custom `timeline.json` project format with four tracks: video / graphics / subtitles / audio
-- Local **hyperframes** rendering engine — not npx (avoids a 25 MB first-run download that users mistake for a hang)
-- Unified clip geometry: x/y as center ratio 0–1, w/h as canvas proportion, at as in-clip progress 0–1
-- Built-in animation presets: fade, slideUp/Down/Left/Right, zoomIn/Out, kenburns
-
-### 5. Subtitles: direct ASS output, keyword highlight, entry animation
-- Generates ASS directly, not just SRT — per-line styles and inline override tags
-- Presets: standard, big, pop, vertical, title, card, vertical card, karaoke, vertical karaoke, hook, editorial
-- Font size scales with the short edge; top/bottom anchors, backdrop masks, and other short-video staples
-
-### 6. Four-layer audio level management
-- Four levels: dialogue 0 dB / SFX −6 to −10 dB / music −18 to −24 dB / ambience −26 to −32 dB
-- Music ducks −4 dB under speech
-- Short-video loudness target −14 LUFS, true peak ≤ −1 dB, 1.2 dB headroom for AAC encoding
-- Supports macOS system voice (`say`) and the Ming local TTS engine (GGUF + prebuilt CLI, Metal inference, zero Python dependency)
-
-### 7. Multi-platform delivery specs, one master to many
-- Built-in `delivery.js` spec table: YouTube, Shorts, Reels, TikTok, Douyin, WeChat Channels, Xiaohongshu, Instagram Feed, X, LinkedIn, web
-- Reflows horizontal to vertical (blurred background fill, no black bars), exports per platform
-- Delivery check: is it client-ready, platform-uploadable, web-playable
-
-### 8. Browser automation publishing (CDP)
-- Minimal built-in `cdp.js` Chrome DevTools Protocol client, zero dependencies (no puppeteer — avoids conflicts with the user's logged-in Chrome profile)
-- `publish.js` supports web publishing to Douyin, Xiaohongshu, Kuaishou, WeChat Channels, Bilibili, etc.
-- Dry-run by default: fills every field, stops before the publish button, and waits for your confirmation
-
-### 9. Plugin market + MCP server
-- Built-in `market.js` index (6,112 plugins, ~4.9 MB, 6-hour cache), fetched over HTTP with zero latency
-- `mcp.js` exposes all RiffCut capabilities to the DSH kernel over stdio JSON-RPC 2.0
-- UI and AI see the same tool table — no "it's in the UI but AI can't see it" gap
-
-### 10. Background sub-agent desk, main chat never blocks
-- Long tasks (search copy → write storyboard → render) run in separate kernel sessions in the background; the main chat replies instantly
-- You can chime in mid-run and change requirements; background desks don't step on each other
-- Honest about limits: the kernel SDK has no cancel API, so "stop" is a UI-level mitigation only
-
-### 11. Observable startup, predictable experience
-- Millisecond timing at each key startup node (`RiffCut_STARTUP_TRACE=1`)
-- Single-instance lock prevents double-clicks from launching two processes fighting over one port
-- Debug port only opens when `RiffCut_DEBUG_PORT` is explicitly set; normal users have no listening port
-
-### 12. Packaging-friendly, native macOS feel
-- `构建.app.sh` builds `RiffCut影创.app` in one step with ad-hoc signing (unsigned arm64 apps get `Killed: 9`)
-- Auto-generates 10 sizes of icns
-- `home/` is excluded from the installer; large weights (speech models) are inserted after signing, cutting first-launch validation from 12.1 s to 1.8 s
-
----
-
-## 3. Project structure
-
-```
-RiffCut影创/
-├── README.md                 # this file
-├── LICENSE                   # AGPL-3.0 full text
-├── NOTICE.md                 # third-party components and licenses
-├── 构建.app.sh               # macOS .app build script
-├── app/                      # Electron main + renderer code
-│   ├── main.js               # main entry (window, IPC, kernel, private protocol)
-│   ├── preload.js            # renderer bridge (window.riffcut API)
-│   ├── package.json          # dependencies (electron ^45.3.4, hyperframes ^0.9.66)
-│   ├── lib/                  # core libraries
-│   │   ├── core.js           # clients, workspace, settings, history, costs
-│   │   ├── paths.js          # single source of truth for all paths
-│   │   ├── tools.js          # AI tool registry (99 tools, permission tiers)
-│   │   ├── kernel.js         # DSH kernel client (stdio JSON-RPC)
-│   │   ├── render.js         # render: timeline.json → composition HTML → MP4
-│   │   ├── timeline.js       # multi-track editing project
-│   │   ├── skills.js         # director skill management
-│   │   ├── templates.js      # template library (categories + variables + grammar)
-│   │   ├── tpltext.js        # on-canvas text recognition and replacement
-│   │   ├── vidlook.js        # per-shot video reading (cut by real scene boundaries)
-│   │   ├── publish.js        # multi-platform publishing (CDP)
-│   │   ├── cdp.js            # minimal Chrome DevTools Protocol client
-│   │   ├── mcp.js            # MCP server (stdio JSON-RPC 2.0)
-│   │   ├── market.js         # plugin market index (6,112 plugins)
-│   │   ├── audio.js          # audio: TTS / music / SFX / loudness
-│   │   ├── subtitle.js       # ASS subtitles, highlight, entry animation
-│   │   ├── delivery.js       # platform specs and master derivation
-│   │   ├── ...               # others: image, brand, browser, convo, exec, vendor, ...
-│   ├── renderer/             # renderer pages
-│   └── ui/                   # DSH UI build (src/pages, build.py)
-├── kernel/dsh/               # DSH kernel (bundled)
-├── tools/                    # build and runtime tools
-│   ├── ffmpeg / ffprobe      # binaries (see NOTICE.md §3 for redistribution limits)
-│   └── audio.cpp/            # Ming local TTS engine
-└── home/                     # dev-time data dir (excluded from package)
-    ├── 客户/                 # client footage, projects, outputs
-    ├── 模板库/               # template library
-    ├── 配置/                 # settings, models, clients, tasks, history
-    └── AGENTS.md             # AI director working guide
-```
-
----
-
-## 4. Quick start
-
-### Requirements
-- macOS (Apple Silicon arm64 recommended; Intel Mac also works)
-- Node.js 26+ (development only; end users need not install Node)
-- Python 3 (only for build-script icon generation, not needed at runtime)
-- FFmpeg (rendering and frame extraction; see below)
-
-### Development mode
-```bash
-cd app
-npm install
-npm start
-
-# with a debug port (for external tools reading the DOM)
-RiffCut_DEBUG_PORT=9355 npm run start:debug
-```
-
-### Install FFmpeg
-The bundled `tools/ffmpeg` is a specific build **not meant for source redistribution** (see `NOTICE.md` §3). Install it yourself:
-```bash
-brew install ffmpeg
-```
-Or download an LGPL build from [evermeet.cx](https://evermeet.cx/ffmpeg/) and place it in `tools/`.
-
-### Build the macOS app
-```bash
-# from the project root
-./构建.app.sh
-```
-This produces `RiffCut影创.app`, ready to double-click.
-
-### First use
-1. Double-click `RiffCut影创.app` — **no setup needed; just start chatting** (a shared model quota is included)
-2. Pick a workspace in settings (client footage and outputs go there)
-3. Tell the AI director what you want in plain language, e.g. "make a 15-second vertical product promo"
-
-### Model: works out of the box, or bring your own
-A preset `auto (multimodal)` model routes through the author's own gateway — **no account required**. It exists so first-time users can talk to it immediately and try things out.
-
-To use your own model (more quota, steadier speed, image input):
-1. Open "Model Management"
-2. Click "Add / Configure", pick "BailuCode" or "Agnes CN / Global" from the provider dropdown — endpoint and model ID fill in automatically
-3. Register on the platform, get an API Key, paste it in, save
-4. Click "Test" to verify, then select it in the model dropdown at the top of the home page
-
-Keys are stored in the macOS Keychain (`service = riffcut.apikeys`), never in config files or backups. If the built-in quota is throttled or retired, just switch to your own key — no waiting for an update.
-
----
-
-## 5. Core modules
-
-### 5.1 AI director (kernel layer)
-The DSH kernel talks to Electron over stdio JSON-RPC via `kernel.js`:
-- **Task decomposition**: turns natural language into an executable tool-call sequence
-- **Tool calling**: 99 tools via `tools.js` (assets, templates, timeline, rendering, publishing, ...)
-- **Sub-agents**: `workers.js` runs long tasks in separate background sessions
-- **Events**: `subagent.started` / `subagent.finished` drive UI progress
-
-### 5.2 Chat UI: native DSH parity
-Several details match native DSH behavior:
-- **Reasoning**: the model's step-by-step thinking is collected into a collapsible block above the tool group and the answer — fixed order `me → reasoning → tools → answer`. The summary scrolls with content while running and auto-collapses when done. DSH controls this with `reasoningEffort`; this project declares `reasoningEfforts` tiers (`off/low/medium/high`) in the profile and defaults `high` in `initialize`.
-- **Tool group**: each turn's tool calls are packed into one collapsible group showing a single semantic line by default; expand for per-step input/output.
-- **Elapsed time**: ticks every second ("thinking… Xs"), then freezes at "done in Xs" using kernel `turn/start` / `turn/end` timestamps, not a front-end wall clock.
-- **Byte streaming**: text and reasoning stream in character by character, via `agent/assistant-stream` chunks relayed over JSON-RPC.
-- **Images**: images and text are two blocks in the **same message** (image above, text below); image-only messages leave no empty bubble. Single images are capped at 240 px, thumbnails at 96 px. Both sent images and unsent composer drafts open a lightbox (blurred backdrop; close via Esc / backdrop / close button; focus trapped and restored).
-- **Tables**: Markdown tables follow DSH tokens (13px/22px, thin borders, bold non-wrapping header, zebra striping, `tabular-nums` for numeric columns), with horizontal scroll for long tables.
-
-### 5.3 Editing project (`timeline.js`)
-`timeline.json` holds canvas size, fps, duration (default 1920×1080, 30fps, 10s), four tracks, clip geometry (x/y center ratio, w/h canvas proportion, at in-clip progress, keys keyframe path) and animation presets.
-
-### 5.4 Rendering (`render.js`)
-`timeline.json` → composition HTML → MP4, using local hyperframes (not npx), explicit ffmpeg/ffprobe paths, and the kernel's bundled Node binary (avoids `process.execPath` pointing at Electron after packaging).
-
-### 5.5 Subtitles (`subtitle.js`)
-ASS output with per-line styles and inline tags; presets listed above; font size scales with the short edge; top/bottom anchors and backdrop masks.
-
-### 5.6 Audio (`audio.js`)
-Four levels (dialogue 0 / SFX −8 / music −21 / ambience −29 dB); −14 LUFS target, −1 dB true peak, 1.2 dB AAC headroom; macOS system voice and Ming local TTS (GGUF + Metal).
-
-### 5.7 Publishing (`publish.js` + `cdp.js`)
-CDP connects to the user's logged-in Chrome (separate profile, debug port); publishes to Douyin, Xiaohongshu, Kuaishou, WeChat Channels, Bilibili, etc.; dry-run by default.
-
-### 5.8 Plugins and MCP (`market.js` + `mcp.js`)
-6,112-plugin index with 6-hour HTTP cache; MCP server over stdio JSON-RPC 2.0 exposes RiffCut to the DSH kernel.
-
----
-
-## 6. Tech stack
-
-| Layer | Tech | Version | Notes |
-|---|---|---|---|
-| Desktop | Electron | ^45.3.4 | main + renderer |
-| Rendering | hyperframes | ^0.9.66 | local video compositing |
-| Kernel | DSH (DeepSeek Harness) | 0.2.1-rc.3 | AI director, stdio JSON-RPC |
-| Language | Node.js | 26+ | all core libraries |
-| Build | zsh + Python 3 | — | `构建.app.sh` |
-| Multimedia | ffmpeg / ffprobe | 6.0 | processing, extraction, probing |
-| Local TTS | Ming-3.0-tts-0.5B (GGUF) | — | Metal inference, zero Python deps |
-| ASR | SenseVoice Small (ONNX) | — | local transcription |
-| Browser automation | CDP (native WebSocket) | — | no puppeteer |
-| Plugin protocol | MCP | 2024-11-05 | stdio JSON-RPC 2.0 |
-
----
-
-## 7. License, privacy, compliance
-
-### 7.1 Dual license
-| Use | License | Cost |
-|---|---|---|
-| Study, personal use, modify, redistribute (with source) | **AGPL-3.0** | Free |
-| Closed-source integration, de-branding, warranty / SLA | **Commercial** | Quote |
-
-- Full terms in [LICENSE](LICENSE) and [the licensing note](home/资源/法律/01-开源许可与商业授权.md)
-- **You own the outputs** — videos, images, copy, and voiceovers made with the software; AGPL does not restrict outputs, they may be used commercially
-- Trademarks are outside the open-source grant: modified distributions must change the name and icon
-
-### 7.2 Data and privacy
-- No telemetry, no data collection, no cloud upload of footage
-- All data lives in local `home/` or your chosen workspace
-- Data is sent only to third-party services **you configured**, and only when you actively use online features (model chat, image/video generation, hot-topic search)
-- Publishing to third-party platforms happens in your local browser; the software only assists with automation
-
-### 7.3 What you must check yourself
-- **Asset licensing**: music, fonts, images, portraits, trademarks — obtain proper rights ("free" often means personal use only)
-- **AI output review**: generated copy, visuals, and voiceovers can be wrong; review before publishing
-- **Platform rules**: comply with each platform and advertising regulations
-- **Voice cloning**: only your own voice, or voices with explicit written consent
-
-See the [Disclaimer](home/资源/法律/05-免责声明.md).
-
-### 7.4 Third-party components
-Full list, versions, licenses, and **redistribution limits** in [NOTICE.md](NOTICE.md).
-
-**Note**: the current `tools/ffmpeg` build has `--enable-nonfree` and **must not be redistributed with source**; see NOTICE.md §3.
-
----
-
-## 8. Contributing
-
-Issues and PRs are welcome.
-
-Before submitting:
-1. Read `home/AGENTS.md` for the AI director's working rules
-2. Read `home/配置/RULES.md` for knowledge-base conventions
-3. Match the style of existing lib modules (Chinese comments and variable names are acceptable)
-4. Don't change packaging or path conventions without discussion
-
-When submitting:
-- **Code contributions are licensed under AGPL-3.0** to this project and all downstream users
-- You warrant the content is original or properly licensed
-- One PR per change, with "what / why / how verified"
-
-Not accepted:
-- Changes that remove or weaken license / copyright notices
-- License-incompatible third-party code (check [NOTICE.md](NOTICE.md))
-- Changes that break packaging (unless `构建.app.sh` and this doc are updated too)
-
----
-
-## 9. Version history
-
-- **v0.1.0** (2026-11): first public release. Electron + DSH kernel, 41 director skills, 210 template blocks, multi-platform publishing, local rendering, dual-license open source.
-
-From the v0.1.0 development cycle (most recent first):
-
-| Category | Change |
-|---|---|
-| Installer | Speech weights no longer bundled; installer 2.1 GB → 427 MB; downloaded from domestic mirrors on first launch (ModelScope → hf-mirror → Hugging Face fallback) |
-| Chat UI | Collapsible reasoning block, tool group folding, live elapsed time frozen from real turn timestamps, byte streaming, multimodal images (image/text split, no empty bubble for image-only, shared lightbox for drafts and sent images), DSH-token Markdown tables |
-| AI | Native tools grown 0 → 52 (file I/O, shell, search, persistent terminal, sub-agents, team collaboration, scheduled tasks, skills, demos, ask-user), 99 tools total; "full access" permission reads the whole machine |
-| Search | Native search falls back to the built-in stack when `DEEPSEEK_API_KEY` is missing (Bing primary + DDG backup) |
-| Templates | Editable-text coverage 86% (384/448); `design_with_template` extracts composition grammar so the AI lays out the whole film instead of repeating a template; stretching syncs `data-duration` |
-| Text | 46 text styles extracted to a single source shared by UI, AI tools, and export |
-| Assets | Per-shot video reading (cut by real scene boundaries), distinct from folder frame-grabbing and output quality checks |
-| Colors | UI unified to pure white + tool blue `#2563EB` with three border tiers |
-| Stability | Deleting a client no longer throws ENOENT; dropping files into chat no longer rejected as "set workspace"; Enter during Chinese IME selection no longer sends a message; image archives no longer lost |
-
-**v0.1.1** (2026-11): Ming voice gender bug fixed (male voices came out female), full re-record workflow with preview/re-record/save, play-button loading states, and all 448 templates made fully offline (zero external CDN dependencies).
-
----
-
-## 10. Contact
-
-| Purpose | Contact |
-|---|---|
-| Website | [https://riffcut.cn](https://riffcut.cn) |
-| Questions / suggestions | In-app "Feedback" button, or email |
-| Bug reports | GitHub Issue (include repro steps, OS version, logs) |
-| Commercial licensing | Email with subject "Commercial License Inquiry" |
-| Security vulnerabilities | Email directly, do not file a public issue |
-| Infringement complaints | Email with proof of rights and location of infringement |
-
-**Email: China@cyanweb.cn**
-
----
-
-## 11. Acknowledgements
-
-Built on the shoulders of:
-
-- [Electron](https://github.com/electron/electron) — cross-platform desktop shell
-- [HyperFrames](https://github.com/heygen-com/hyperframes) — HTML-to-video engine
-- [DSH (DeepSeek Harness)](https://github.com/deepseek-ai) — AI agent kernel
-- [FFmpeg](https://ffmpeg.org/) — multimedia foundation
-- [Ming-3.0-tts](https://huggingface.co/inclusionAI/Ming-3.0-tts-0.5B) — Chinese speech synthesis
-- [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) — multilingual ASR (Alibaba Tongyi Lab)
-
----
-
-> **RiffCut** — make editing feel like directing, and every cut feel like a work of art.
-
-</details>
