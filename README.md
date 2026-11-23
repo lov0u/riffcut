@@ -14,8 +14,6 @@
 
 ---
 
-> 🌐 **Language / 语言**：下方默认显示中文；需要英文请点开这个折叠块 — Chinese is shown below by default; expand the box for English.
-
 <details>
 <summary>🇬🇧 English Documentation — click to expand / 点此展开英文版</summary>
 
