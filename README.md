@@ -15,7 +15,7 @@
 ---
 
 <details>
-<summary>🇬🇧 English Documentation — click to expand / 点此展开英文版</summary>
+<summary>🇬🇧 English Documentation — click to expand</summary>
 
 # RiffCut · The Professional Editing Agent
 
